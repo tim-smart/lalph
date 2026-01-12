@@ -1,3 +1,7 @@
+# Information
+
+- The base branch for this repository is `master`.
+
 # Development workflow
 
 - Every commit should pass type checking (`tsc --noEmit`)
