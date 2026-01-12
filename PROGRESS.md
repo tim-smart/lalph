@@ -1,0 +1,1 @@
+- 2026-01-13: Added root README with setup steps, CLI usage, generated files, and check commands.
