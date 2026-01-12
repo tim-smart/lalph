@@ -74,10 +74,11 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
         }
         const existing = currentValue.issues.get(issue.id)
         if (!existing || !existing.isChangedComparedTo(issue)) continue
+        const original = currentValue.orignals.get(issue.id)!
 
         // update existing issue
         yield* linear.use((c) =>
-          c.updateIssue(issue.id!, {
+          c.updateIssue(original.id, {
             description: issue.description,
             stateId: issue.stateId,
           }),
@@ -146,7 +147,7 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
 
   static fromLinearIssue(issue: Issue): PrdIssue {
     return new PrdIssue({
-      id: issue.id,
+      id: issue.identifier,
       title: issue.title,
       description: issue.description ?? "",
       priority: issue.priority,
@@ -164,15 +165,18 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
 
 export class PrdList extends Data.Class<{
   readonly issues: ReadonlyMap<string, PrdIssue>
+  readonly orignals: ReadonlyMap<string, Issue>
 }> {
   static fromLinearIssues(issues: Issue[]): PrdList {
     const map = new Map<string, PrdIssue>()
+    const originalMap = new Map<string, Issue>()
     for (const issue of issues) {
       const prdIssue = PrdIssue.fromLinearIssue(issue)
       if (!prdIssue.id) continue
       map.set(prdIssue.id, prdIssue)
+      originalMap.set(prdIssue.id, issue)
     }
-    return new PrdList({ issues: map })
+    return new PrdList({ issues: map, orignals: originalMap })
   }
 
   static fromJson(json: string): ReadonlyArray<PrdIssue> {
