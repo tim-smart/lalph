@@ -9,10 +9,10 @@ A small CLI that connects to Linear, pulls the next set of unstarted issues into
 
 ## CLI usage
 
-- Run the main loop: `node dist/cli.js`
-- Select a Linear project: `node dist/cli.js select-project`
-- Select a label filter: `node dist/cli.js select-label`
-- Select a CLI agent: `node dist/cli.js select-agent`
+- Run the main loop: `npx -y lalph@latest`
+- Select a Linear project: `npx -y lalph@latest select-project`
+- Select a label filter: `npx -y lalph@latest select-label`
+- Select a CLI agent: `npx -y lalph@latest select-agent`
 
 The first run opens a Linear OAuth flow and stores the token locally.
 
