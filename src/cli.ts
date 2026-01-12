@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import { Command, Flag } from "effect/unstable/cli"
 import { Effect, Layer, Option } from "effect"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
