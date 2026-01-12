@@ -82,7 +82,10 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
 `
           }),
         )
-        yield* HttpRouter.serve(CallbackRoute).pipe(
+        yield* HttpRouter.serve(CallbackRoute, {
+          disableListenLog: true,
+          disableLogger: true,
+        }).pipe(
           Layer.provide(NodeHttpServer.layer(createServer, { port: 34338 })),
           Layer.build,
         )

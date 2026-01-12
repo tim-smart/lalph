@@ -1,0 +1,188 @@
+import {
+  Data,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Schema,
+  ServiceMap,
+  Stream,
+  SubscriptionRef,
+} from "effect"
+import { CurrentProject, Linear } from "./Linear.ts"
+import { selectedLabelId, selectedTeamId, Settings } from "./Settings.ts"
+import type { Issue } from "@linear/sdk"
+
+export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
+  make: Effect.gen(function* () {
+    const fs = yield* FileSystem.FileSystem
+    const linear = yield* Linear
+    const project = yield* CurrentProject
+    const teamId = Option.getOrThrow(yield* selectedTeamId.get)
+    const labelId = yield* selectedLabelId.get
+
+    const getIssues = linear
+      .stream(() =>
+        project.issues({
+          filter: {
+            labels: {
+              id: labelId.pipe(
+                Option.map((eq) => ({ eq })),
+                Option.getOrNull,
+              ),
+            },
+            state: {
+              type: { in: ["backlog", "unstarted", "started"] },
+            },
+          },
+        }),
+      )
+      .pipe(Stream.runCollect)
+
+    const initial = yield* getIssues.pipe(Effect.map(PrdList.fromLinearIssues))
+    if (initial.issues.size === 0) {
+      return yield* new NoMoreWork({})
+    }
+
+    const current = yield* SubscriptionRef.make(initial)
+
+    const prdFile = `.lalph/prd.json`
+
+    yield* fs.writeFileString(prdFile, initial.toJson())
+
+    const sync = Effect.gen(function* () {
+      const json = yield* fs.readFileString(prdFile)
+      const currentValue = yield* SubscriptionRef.get(current)
+      const updated = PrdList.fromJson(json)
+
+      for (const issue of updated) {
+        if (issue.id === null) {
+          // create new issue
+          yield* linear.use((c) =>
+            c.createIssue({
+              teamId,
+              projectId: project.id,
+              labelIds: Option.toArray(labelId),
+              title: issue.title,
+              description: issue.description,
+              priority: issue.priority,
+              estimate: issue.estimate,
+              stateId: issue.stateId,
+            }),
+          )
+          continue
+        }
+        const existing = currentValue.issues.get(issue.id)
+        if (!existing || !existing.isChangedComparedTo(issue)) continue
+
+        // update existing issue
+        yield* linear.use((c) =>
+          c.updateIssue(issue.id!, {
+            description: issue.description,
+            stateId: issue.stateId,
+          }),
+        )
+      }
+    })
+
+    yield* Effect.addFinalizer(() => Effect.orDie(sync))
+
+    yield* fs.watch(prdFile).pipe(
+      Stream.buffer({
+        capacity: 1,
+        strategy: "dropping",
+      }),
+      Stream.runForEach(() => Effect.ignore(sync)),
+      Effect.forkScoped,
+    )
+
+    return { current } as const
+  }),
+}) {
+  static layer = Layer.effect(this, this.make).pipe(
+    Layer.provide([Linear.layer, Settings.layer, CurrentProject.layer]),
+  )
+}
+
+export class NoMoreWork extends Schema.ErrorClass<NoMoreWork>(
+  "lalph/Prd/NoMoreWork",
+)({
+  _tag: Schema.tag("NoMoreWork"),
+}) {
+  readonly message = "No more work to be done!"
+}
+
+export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
+  id: Schema.NullOr(Schema.String).annotate({
+    description:
+      "The unique identifier of the issue. If null, it is considered a new issue.",
+  }),
+  title: Schema.String.annotate({
+    description: "The title of the issue",
+  }),
+  description: Schema.String.annotate({
+    description: "The description of the issue",
+  }),
+  priority: Schema.Finite.annotate({
+    description:
+      "The priority of the issue. 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.",
+  }),
+  estimate: Schema.NullOr(Schema.Finite).annotate({
+    description:
+      "The estimate of the issue in points. Null if no estimate is set.",
+  }),
+  stateId: Schema.String.annotate({
+    description: "The state ID of the issue.",
+  }),
+}) {
+  static Array = Schema.Array(this)
+  static ArrayFromJson = Schema.toCodecJson(this.Array)
+
+  static jsonSchemaDoc = Schema.toJsonSchemaDocument(this)
+  static jsonSchema = {
+    ...this.jsonSchemaDoc.schema,
+    $defs: this.jsonSchemaDoc.definitions,
+  }
+
+  static fromLinearIssue(issue: Issue): PrdIssue {
+    return new PrdIssue({
+      id: issue.id,
+      title: issue.title,
+      description: issue.description ?? "",
+      priority: issue.priority,
+      estimate: issue.estimate ?? null,
+      stateId: issue.stateId!,
+    })
+  }
+
+  isChangedComparedTo(issue: PrdIssue): boolean {
+    return (
+      this.description !== issue.description || this.stateId !== issue.stateId
+    )
+  }
+}
+
+export class PrdList extends Data.Class<{
+  readonly issues: ReadonlyMap<string, PrdIssue>
+}> {
+  static fromLinearIssues(issues: Issue[]): PrdList {
+    const map = new Map<string, PrdIssue>()
+    for (const issue of issues) {
+      const prdIssue = PrdIssue.fromLinearIssue(issue)
+      if (!prdIssue.id) continue
+      map.set(prdIssue.id, prdIssue)
+    }
+    return new PrdList({ issues: map })
+  }
+
+  static fromJson(json: string): ReadonlyArray<PrdIssue> {
+    const issues = Schema.decodeSync(PrdIssue.ArrayFromJson)(JSON.parse(json))
+    return issues
+  }
+
+  toJson(): string {
+    const issuesArray = Array.from(this.issues.values())
+    const encoded = Schema.encodeSync(PrdIssue.ArrayFromJson)(issuesArray)
+    return JSON.stringify(encoded, null, 2)
+  }
+}

@@ -21,6 +21,7 @@
     // Stricter Typechecking Options
     "noUncheckedIndexedAccess": true,
     "exactOptionalPropertyTypes": true,
+    "erasableSyntaxOnly": true,
 
     // Recommended Options
     "strict": true,
