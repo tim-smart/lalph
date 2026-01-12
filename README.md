@@ -5,7 +5,7 @@ A small CLI that connects to Linear, pulls the next set of unstarted issues into
 ## Setup
 
 - Install dependencies: `pnpm install`
-- Build the CLI: `pnpm exec tsc`
+- Build the CLI: `pnpm build`
 
 ## CLI usage
 
@@ -24,5 +24,4 @@ The first run opens a Linear OAuth flow and stores the token locally.
 
 ## Checks
 
-- Type check: `pnpm exec tsc --noEmit`
-- Format check: `pnpm exec prettier --check .`
+- Type check + format: `pnpm check`
