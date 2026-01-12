@@ -32,7 +32,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
               ),
             },
             state: {
-              type: { in: ["backlog", "unstarted", "started"] },
+              type: { eq: "unstarted" },
             },
           },
         }),
