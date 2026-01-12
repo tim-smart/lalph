@@ -20,7 +20,9 @@ export class PromptGen extends ServiceMap.Service<PromptGen>()(
 1. Decide which single task to work on next from the prd.json file. This should
    be the task YOU decide as the most important to work on next, not just the
    first task in the list.
-2. Make the chosen task as "in progress" by updating its \`stateId\` in the prd.json file.
+   - **Important**: Before starting the chosen task, mark it as "in progress" by
+     updating its \`stateId\` in the prd.json file.
+     This prevents other people or agents from working on the same task simultaneously.
 3. Run any checks / feedback loops, such as type checks, unit tests, or linting.
 4. APPEND your progress to the PROGRESS.md file.
 5. Make a git commit when you have made significant progress or completed the task.
