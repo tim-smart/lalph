@@ -1,0 +1,13 @@
+{
+  "type": "module",
+  "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48",
+  "devDependencies": {
+    "@effect/language-service": "^0.64.1",
+    "@effect/platform-node": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/platform-node@bc26c98",
+    "@linear/sdk": "^69.0.0",
+    "effect": "https://pkg.pr.new/Effect-TS/effect-smol/effect@bc26c98",
+    "prettier": "^3.7.4",
+    "tsdown": "^0.19.0",
+    "typescript": "^5.9.3"
+  }
+}

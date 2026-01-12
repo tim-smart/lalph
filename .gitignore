@@ -1,0 +1,4 @@
+.direnv/
+.lalph/
+node_modules/
+dist/
