@@ -26,9 +26,9 @@ export class PromptGen extends ServiceMap.Service<PromptGen>()(
 3. Create a new branch in git for the task, and start working on the chosen task.
 3. Run any checks / feedback loops, such as type checks, unit tests, or linting.
 4. APPEND your progress to the PROGRESS.md file.
-5. Open a pull request with your changes once the task is complete. The PR description
-   should include a summary of the changes made, any relevant context, and
-   include the phrase "Closes {task id}" at the end.
+5. Open a pull request with your changes once the task is complete. The title of
+   the PR should include the task id. The PR description should include a
+   summary of the changes made.
 6. Update the prd.json file to reflect any changes in task states.
    - Add follow up tasks only if needed.
    - Append to the \`description\` field with any notes.
