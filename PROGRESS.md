@@ -2,3 +2,4 @@
 - 2026-01-13: Updated README CLI examples to use `npx -y lalph@latest`.
 - 2026-01-13: Updated README to reference `pnpm build` and `pnpm check` scripts.
 - 2026-01-13: Verified README uses new pnpm scripts; no merge conflicts found.
+- 2026-01-13: Confirmed README already references pnpm build/check scripts.
