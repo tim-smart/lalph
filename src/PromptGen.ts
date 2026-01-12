@@ -10,7 +10,7 @@ export class PromptGen extends ServiceMap.Service<PromptGen>()(
       const fs = yield* FileSystem.FileSystem
 
       yield* Effect.scoped(
-        fs.open(".lalph/progress.md", {
+        fs.open("PROGRESS.md", {
           flag: "a+",
         }),
       )
@@ -21,7 +21,7 @@ export class PromptGen extends ServiceMap.Service<PromptGen>()(
    be the task YOU decide as the most important to work on next, not just the
    first task in the list.
 2. Run any checks / feedback loops, such as type checks, unit tests, or linting.
-3. APPEND your progress to the progress.md file.
+3. APPEND your progress to the PROGRESS.md file.
 4. Make a git commit when you have made significant progress or completed the task.
 5. Update the prd.json file to reflect any changes in task states.
    - Add follow up tasks only if needed.

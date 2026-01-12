@@ -1,33 +1,52 @@
-import { Effect } from "effect"
+import { Array, Effect, Option } from "effect"
 import { PromptGen } from "./PromptGen.ts"
 import { Prd } from "./Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
+import { Prompt } from "effect/unstable/cli"
+import { allCliAgents } from "./domain/CliAgent.ts"
+import { selectedCliAgentId } from "./Settings.ts"
 
 export const run = Effect.gen(function* () {
   const promptGen = yield* PromptGen
-  const command = ChildProcess.make(
-    "npx",
-    [
-      "-y",
-      "opencode-ai@latest",
-      "run",
-      promptGen.prompt,
-      "-f",
-      ".lalph/prd.json",
-      "-f",
-      ".lalph/progress.md",
-    ],
-    {
-      extendEnv: true,
-      stdout: "inherit",
-      stderr: "inherit",
-      stdin: "inherit",
-    },
-  )
-
-  console.log(command)
+  const cliAgent = yield* getOrSelectCliAgent
+  const cliCommand = cliAgent.command({
+    prompt: promptGen.prompt,
+    prdFilePath: ".lalph/prd.json",
+    progressFilePath: "PROGRESS.md",
+  })
+  const command = ChildProcess.make(cliCommand[0]!, cliCommand.slice(1), {
+    extendEnv: true,
+    stdout: "inherit",
+    stderr: "inherit",
+    stdin: "inherit",
+  })
 
   const agent = yield* command
   const exitCode = yield* agent.exitCode
+
   yield* Effect.log(`Agent exited with code: ${exitCode}`)
 }).pipe(Effect.scoped, Effect.provide([PromptGen.layer, Prd.layer]))
+
+export const selectCliAgent = Effect.gen(function* () {
+  const agent = yield* Prompt.select({
+    message: "Select the CLI agent to use",
+    choices: allCliAgents.map((agent) => ({
+      title: agent.name,
+      value: agent,
+    })),
+  })
+  yield* selectedCliAgentId.set(Option.some(agent.id))
+  return agent
+})
+
+const getOrSelectCliAgent = Effect.gen(function* () {
+  const selectedAgent = (yield* selectedCliAgentId.get).pipe(
+    Option.filterMap((id) =>
+      Array.findFirst(allCliAgents, (agent) => agent.id === id),
+    ),
+  )
+  if (Option.isSome(selectedAgent)) {
+    return selectedAgent.value
+  }
+  return yield* selectCliAgent
+})

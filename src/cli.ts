@@ -1,10 +1,10 @@
 import { Command, Flag } from "effect/unstable/cli"
-import { Effect, Option } from "effect"
+import { Effect, Layer, Option } from "effect"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { CurrentProject, labelSelect, Linear } from "./Linear.ts"
 import { layerKvs } from "./Kvs.ts"
 import { Settings } from "./Settings.ts"
-import { run } from "./Runner.ts"
+import { run, selectCliAgent } from "./Runner.ts"
 
 const selectProject = Command.make("select-project").pipe(
   Command.withDescription("Select the current Linear project"),
@@ -16,7 +16,7 @@ const selectProject = Command.make("select-project").pipe(
           `Selected Linear Project: ${project.name} (${project.id})`,
         )
       },
-      Effect.provide([layerKvs, Linear.layer, Settings.layer]),
+      Effect.provide([layerKvs, Linear.layer]),
     ),
   ),
 )
@@ -24,19 +24,21 @@ const selectProject = Command.make("select-project").pipe(
 const selectLabel = Command.make("select-label").pipe(
   Command.withDescription("Select the label to filter issues by"),
   Command.withHandler(
-    Effect.fnUntraced(
-      function* () {
-        const label = yield* labelSelect
-        yield* Effect.log(
-          `Selected Label: ${Option.match(label, {
-            onNone: () => "No Label",
-            onSome: (l) => l.name,
-          })}`,
-        )
-      },
-      Effect.provide([Linear.layer, Settings.layer]),
-    ),
+    Effect.fnUntraced(function* () {
+      const label = yield* labelSelect
+      yield* Effect.log(
+        `Selected Label: ${Option.match(label, {
+          onNone: () => "No Label",
+          onSome: (l) => l.name,
+        })}`,
+      )
+    }, Effect.provide(Linear.layer)),
   ),
+)
+
+const selectAgent = Command.make("select-agent").pipe(
+  Command.withDescription("Select the CLI agent to use"),
+  Command.withHandler(() => selectCliAgent),
 )
 
 const iterations = Flag.integer("iterations").pipe(
@@ -54,9 +56,12 @@ const root = Command.make("lalph", { iterations }).pipe(
       }
     }),
   ),
-  Command.withSubcommands([selectProject, selectLabel]),
+  Command.withSubcommands([selectProject, selectLabel, selectAgent]),
 )
 
 Command.run(root, {
   version: "0.1.0",
-}).pipe(Effect.provide(NodeServices.layer), NodeRuntime.runMain)
+}).pipe(
+  Effect.provide(Settings.layer.pipe(Layer.provideMerge(NodeServices.layer))),
+  NodeRuntime.runMain,
+)

@@ -1,6 +1,7 @@
 import { Cache, Effect, Layer, Option, Schema, ServiceMap } from "effect"
 import { KeyValueStore } from "effect/unstable/persistence"
 import { layerKvs } from "./Kvs.ts"
+import { allCliAgents } from "./domain/CliAgent.ts"
 
 export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
   make: Effect.gen(function* () {
@@ -62,3 +63,8 @@ export class Setting<
 export const selectedTeamId = new Setting("selectedTeamId", Schema.String)
 
 export const selectedLabelId = new Setting("selectedLabelId", Schema.String)
+
+export const selectedCliAgentId = new Setting(
+  "selectedCliAgentId",
+  Schema.Literals(allCliAgents.map((a) => a.id)),
+)
