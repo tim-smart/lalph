@@ -6,6 +6,7 @@ A small CLI that connects to Linear, pulls the next set of unstarted issues into
 
 - Install dependencies: `pnpm install`
 - Build the CLI: `pnpm build`
+- Add `.lalph/` to `.gitignore` to keep local state private
 
 ## CLI usage
 
