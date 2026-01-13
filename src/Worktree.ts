@@ -13,7 +13,7 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
       }),
     )
 
-    yield* exec(ChildProcess.make`git pull`)
+    yield* execIgnore(ChildProcess.make`git pull`)
     yield* exec(ChildProcess.make`git worktree add ${directory} -d HEAD`)
 
     yield* fs.makeDirectory(pathService.join(directory, ".lalph"), {
