@@ -11,6 +11,7 @@ import {
 import {
   FetchHttpClient,
   HttpClient,
+  HttpClientError,
   HttpClientRequest,
   HttpClientResponse,
   HttpRouter,
@@ -44,7 +45,10 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
         Effect.orDie(tokenStore.set("accessToken", token))
       const clear = Effect.orDie(tokenStore.remove("accessToken"))
 
-      const getNoLock: Effect.Effect<AccessToken> = Effect.gen(function* () {
+      const getNoLock: Effect.Effect<
+        AccessToken,
+        HttpClientError.HttpClientError | Schema.SchemaError
+      > = Effect.gen(function* () {
         if (Option.isNone(currentToken)) {
           const newToken = yield* pkce
           yield* set(newToken)
@@ -88,6 +92,7 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
         }).pipe(
           Layer.provide(NodeHttpServer.layer(createServer, { port: 34338 })),
           Layer.build,
+          Effect.orDie,
         )
         const redirectUri = `http://localhost:34338/callback`
 
@@ -119,7 +124,7 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
         )
 
         return AccessToken.fromResponse(res)
-      }).pipe(Effect.scoped, Effect.orDie)
+      }).pipe(Effect.scoped)
 
       const refresh = Effect.fnUntraced(function* (token: AccessToken) {
         const res = yield* HttpClientRequest.post(

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { Command, Flag } from "effect/unstable/cli"
-import { DateTime, Effect, Layer, Option } from "effect"
+import { DateTime, Effect, Filter, Layer, Option } from "effect"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { CurrentProject, labelSelect, Linear } from "./Linear.ts"
 import { layerKvs } from "./Kvs.ts"
@@ -94,6 +94,13 @@ const root = Command.make("lalph", { iterations, concurrency }).pipe(
         inProgress++
 
         yield* run.pipe(
+          Effect.catchFilter(
+            (e) =>
+              e._tag === "NoMoreWork" || e._tag === "QuitError"
+                ? Filter.fail(e)
+                : e,
+            Effect.logWarning,
+          ),
           Effect.catchTag("NoMoreWork", (e) => {
             if (isFinite) {
               // If we have a finite number of iterations, we exit when no more
@@ -105,7 +112,6 @@ const root = Command.make("lalph", { iterations, concurrency }).pipe(
               "No more work to process, waiting 30 seconds...",
             ).pipe(Effect.andThen(Effect.sleep("30 seconds")))
           }),
-          Effect.catchCause(Effect.logWarning),
           Effect.annotateLogs({
             iteration: currentIteration,
           }),

@@ -90,7 +90,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       }
     })
 
-    yield* Effect.addFinalizer(() => Effect.orDie(sync))
+    yield* Effect.addFinalizer(() => Effect.ignore(sync))
 
     yield* fs.watch(prdFile).pipe(
       Stream.buffer({
