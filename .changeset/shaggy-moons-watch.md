@@ -1,0 +1,5 @@
+---
+"lalph": patch
+---
+
+concurrency option
