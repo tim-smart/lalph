@@ -49,9 +49,13 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
 
     const initial = listFromLinear(yield* getIssues(["unstarted"]))
     yield* fs.writeFileString(prdFile, initial.toJson())
-    if (initial.issues.size === 0) {
-      return yield* new NoMoreWork({})
-    }
+
+    const checkForWork = Effect.suspend(() => {
+      if (initial.issues.size > 0) {
+        return new NoMoreWork({}).asEffect()
+      }
+      return Effect.void
+    })
 
     const updatedIssues = new Map<
       string,
@@ -75,6 +79,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
             c.createIssue({
               teamId,
               projectId: project.id,
+              assigneeId: linear.viewer.id,
               labelIds: Option.toArray(labelId),
               title: issue.title,
               description: issue.description,
@@ -154,7 +159,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       Effect.forkScoped,
     )
 
-    return { path: prdFile, mergableGithubPrs } as const
+    return { path: prdFile, mergableGithubPrs, checkForWork } as const
   }),
 }) {
   static layer = Layer.effect(this, this.make).pipe(

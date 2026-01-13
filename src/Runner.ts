@@ -1,4 +1,4 @@
-import { Array, Effect, Option, Path } from "effect"
+import { Effect, Path } from "effect"
 import { PromptGen } from "./PromptGen.ts"
 import { Prd } from "./Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
@@ -12,6 +12,8 @@ export const run = Effect.fnUntraced(
     const promptGen = yield* PromptGen
     const cliAgent = yield* getOrSelectCliAgent
     const prd = yield* Prd
+
+    yield* prd.checkForWork
 
     const cliCommand = cliAgent.command({
       prompt: promptGen.prompt,

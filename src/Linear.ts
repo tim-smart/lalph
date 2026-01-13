@@ -53,8 +53,9 @@ export class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
       () => new Map<string, WorkflowState>(),
       (map, state) => map.set(state.id, state),
     )
+    const viewer = yield* use((client) => client.viewer)
 
-    return { use, stream, projects, labels, states } as const
+    return { use, stream, projects, labels, states, viewer } as const
   }),
 }) {
   static layer = Layer.effect(this, this.make).pipe(
