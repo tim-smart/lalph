@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.4
+
+### Patch Changes
+
+- [`552b7f4`](https://github.com/tim-smart/lalph/commit/552b7f4e23c9c1c5f51323f3cc228109431ae3e3) Thanks [@tim-smart](https://github.com/tim-smart)! - ensure PROGRESS.md exists
+
 ## 0.1.3
 
 ### Patch Changes
