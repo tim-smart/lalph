@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.5
+
+### Patch Changes
+
+- [`111b706`](https://github.com/tim-smart/lalph/commit/111b706db9839ccaf956425210bc4858d0c90b0a) Thanks [@tim-smart](https://github.com/tim-smart)! - make sure task status is updated early
+
 ## 0.1.4
 
 ### Patch Changes
