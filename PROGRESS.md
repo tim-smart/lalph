@@ -12,3 +12,4 @@
 - 2026-01-14: Adjust setup script lookup to repo root per PR review; changed `src/Worktree.ts`. No blockers.
 - 2026-01-14: TIM-14 move README Setup -> Development bottom. Files: `README.md`. Checks: `pnpm exec tsc --noEmit`, `pnpm exec prettier --check .`. No blockers.
 - 2026-01-14: TIM-14 branch `TIM-14/readme-development-section` already has README update; PR #22 open; no changes needed. No blockers.
+- 2026-01-14: TIM-14: verified README already updated; ran `pnpm exec tsc --noEmit` + `pnpm exec prettier --check .`. Files: `PROGRESS.md`. No blockers.
