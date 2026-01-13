@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.3
+
+### Patch Changes
+
+- [#14](https://github.com/tim-smart/lalph/pull/14) [`fa5d1ed`](https://github.com/tim-smart/lalph/commit/fa5d1ed58c28d8b6a689420f2e0268e6eaa93406) Thanks [@tim-smart](https://github.com/tim-smart)! - pull before worktree creation
+
 ## 0.1.2
 
 ### Patch Changes
