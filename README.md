@@ -6,6 +6,7 @@ A small CLI that connects to Linear, pulls the next set of unstarted issues into
 
 - Install dependencies: `pnpm install`
 - Build the CLI: `pnpm build`
+- Add `.lalph/` to `.gitignore` to keep local state private
 
 ## CLI usage
 
@@ -16,7 +17,3 @@ A small CLI that connects to Linear, pulls the next set of unstarted issues into
 - Select a CLI agent: `npx -y lalph@latest select-agent`
 
 The first run opens a Linear OAuth flow and stores the token locally.
-
-## Checks
-
-- Type check + format: `pnpm check`
