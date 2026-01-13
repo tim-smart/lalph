@@ -71,11 +71,9 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       const json = yield* fs.readFileString(prdFile)
       const current = PrdList.fromLinearIssues(yield* getIssues)
       const updated = PrdList.fromJson(json)
-      let changes = 0
 
       for (const issue of updated) {
         if (issue.id === null) {
-          changes++
           // create new issue
           yield* linear.use((c) =>
             c.createIssue({
@@ -95,8 +93,6 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
         if (!existing || !existing.isChangedComparedTo(issue)) continue
         const original = current.orignals.get(issue.id)!
 
-        changes++
-
         // update existing issue
         yield* linear.use((c) =>
           c.updateIssue(original.id, {
@@ -115,10 +111,6 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
           updatedIssues.set(issue.id, entry)
         }
         entry.count++
-      }
-
-      if (changes > 0) {
-        yield* updatePrdFile
       }
     }).pipe(Effect.uninterruptible, Effect.makeSemaphoreUnsafe(1).withPermit)
 
