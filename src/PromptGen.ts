@@ -34,6 +34,7 @@ export class PromptGen extends ServiceMap.Service<PromptGen>()(
    the PR should include the task id. The PR description should include a
    summary of the changes made.
    - None of the files in the \`.lalph\` directory should be committed.
+   - When checking for PR reviews, make sure to check the "reviews" field
 7. Update the prd.json file to reflect any changes in task states.
    - Add follow up tasks only if needed.
    - Append to the \`description\` field with any notes.
