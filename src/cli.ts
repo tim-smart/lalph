@@ -48,14 +48,23 @@ const iterations = Flag.integer("iterations").pipe(
   Flag.withDefault(1),
 )
 
-const root = Command.make("lalph", { iterations }).pipe(
-  Command.withHandler(
-    Effect.fnUntraced(function* ({ iterations }) {
-      yield* Effect.log(`Executing ${iterations} iteration(s)`)
+const concurrency = Flag.integer("concurrency").pipe(
+  Flag.withAlias("c"),
+  Flag.withDefault(1),
+)
 
-      for (let i = 0; i < iterations; i++) {
-        yield* run
-      }
+const root = Command.make("lalph", { iterations, concurrency }).pipe(
+  Command.withHandler(
+    Effect.fnUntraced(function* ({ iterations, concurrency }) {
+      const runConcurrency = Math.max(1, concurrency)
+      yield* Effect.log(
+        `Executing ${iterations} iteration(s) with concurrency ${runConcurrency}`,
+      )
+
+      const runs = Array.from({ length: iterations })
+      yield* Effect.forEach(runs, () => run, {
+        concurrency: runConcurrency,
+      })
     }),
   ),
   Command.withSubcommands([selectProject, selectLabel, selectAgent]),
