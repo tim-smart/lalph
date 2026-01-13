@@ -1,7 +1,15 @@
 #!/usr/bin/env node
 
 import { Command, Flag } from "effect/unstable/cli"
-import { DateTime, Effect, Filter, Layer, Option } from "effect"
+import {
+  Cause,
+  DateTime,
+  Effect,
+  FiberSet,
+  Filter,
+  Layer,
+  Option,
+} from "effect"
 import { NodeRuntime, NodeServices } from "@effect/platform-node"
 import { CurrentProject, labelSelect, Linear } from "./Linear.ts"
 import { layerKvs } from "./Kvs.ts"
@@ -64,6 +72,7 @@ const root = Command.make("lalph", { iterations, concurrency }).pipe(
       const runConcurrency = Math.max(1, concurrency)
       const semaphore = Effect.makeSemaphoreUnsafe(runConcurrency)
       const limiter = yield* RateLimiter.makeSleep
+      const fibers = yield* FiberSet.make()
 
       yield* Effect.log(
         `Executing ${iterationsDisplay} iteration(s) with concurrency ${runConcurrency}`,
@@ -100,22 +109,26 @@ const root = Command.make("lalph", { iterations, concurrency }).pipe(
               e._tag === "NoMoreWork" || e._tag === "QuitError"
                 ? Filter.fail(e)
                 : e,
-            Effect.logWarning,
+            (e) => Effect.logWarning(Cause.fail(e)),
           ),
-          Effect.catchTag("NoMoreWork", (e) => {
-            if (isFinite) {
-              // If we have a finite number of iterations, we exit when no more
-              // work is found
-              iterations = currentIteration
-              return Effect.fail(e)
-            }
-            return Effect.log(
-              "No more work to process, waiting 30 seconds...",
-            ).pipe(Effect.andThen(Effect.sleep("30 seconds")))
-          }),
-          Effect.catchTag("QuitError", (_) => {
-            quit = true
-            return Effect.void
+          Effect.catchTags({
+            NoMoreWork(_) {
+              if (isFinite) {
+                // If we have a finite number of iterations, we exit when no more
+                // work is found
+                iterations = currentIteration
+                return Effect.log(
+                  `No more work to process, ending after ${currentIteration} iteration(s).`,
+                )
+              }
+              return Effect.log(
+                "No more work to process, waiting 30 seconds...",
+              ).pipe(Effect.andThen(Effect.sleep("30 seconds")))
+            },
+            QuitError(_) {
+              quit = true
+              return Effect.void
+            },
           }),
           Effect.annotateLogs({
             iteration: currentIteration,
@@ -126,11 +139,13 @@ const root = Command.make("lalph", { iterations, concurrency }).pipe(
               return semaphore.release(1)
             }),
           ),
-          Effect.forkChild,
+          FiberSet.run(fibers),
         )
         iteration++
       }
-    }),
+
+      yield* FiberSet.awaitEmpty(fibers)
+    }, Effect.scoped),
   ),
   Command.withSubcommands([selectProject, selectLabel, selectAgent]),
 )
