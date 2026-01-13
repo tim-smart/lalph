@@ -12,7 +12,8 @@ export class PromptGen extends ServiceMap.Service<PromptGen>()(
 
 1. Decide which single task to work on next from the prd.json file. This should
    be the task YOU decide as the most important to work on next, not just the
-   first task in the list.
+   first task in the list. You can use the PROGRESS.md file to help inform your
+   decision.
 2. **Before doing anything else**, mark the task as "in progress" by updating its
    \`stateId\` in the prd.json file.
    This prevents other people or agents from working on the same task simultaneously.
@@ -23,16 +24,21 @@ export class PromptGen extends ServiceMap.Service<PromptGen>()(
      changes, and address them as part of the task.
    - New branches should be named using the format \`{task id}/description\`.
 4. Run any checks / feedback loops, such as type checks, unit tests, or linting.
-5. APPEND your progress to the PROGRESS.md file.
-6. Create or update the pull request with your changes once the task is complete. The title of
+5. APPEND your progress to the PROGRESS.md file. Include:
+   - Key decisions made and reasoning
+   - Files changed
+   - Any blockers or notes for next iteration
+   Keep entries concise. Sacrifice grammar for the sake of concision.
+   This file helps future iterations skip exploration.
+6. Create or update the pull request with your progress. The title of
    the PR should include the task id. The PR description should include a
    summary of the changes made.
    - None of the files in the \`.lalph\` directory should be committed.
 7. Update the prd.json file to reflect any changes in task states.
    - Add follow up tasks only if needed.
    - Append to the \`description\` field with any notes.
-   - When a task is complete, set its \`stateId\` to the id that indicates
-     a review is required, or completion if a review state is unavailable.
+   - If you believe the task is complete, update the \`stateId\` for "review" or "done".
+   - If you were unable to finish the task, update the \`stateId\` back to "todo" with notes on what is left to do.
 
 Remember, only work on a single task at a time, that you decide is the most
 important to work on next.
