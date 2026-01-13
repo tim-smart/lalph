@@ -64,8 +64,8 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
 
     const sync = Effect.gen(function* () {
       const json = yield* fs.readFileString(prdFile)
-      const current = listFromLinear(yield* getIssues(["unstarted", "started"]))
       const updated = PrdList.fromJson(json)
+      const current = listFromLinear(yield* getIssues(["unstarted", "started"]))
       let createdIssues = 0
 
       for (const issue of updated) {
@@ -116,6 +116,18 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       yield* fs.writeFileString(prdFile, PrdIssue.arrayToJson(updated))
     }).pipe(Effect.uninterruptible)
 
+    const mergableGithubPrs = Effect.gen(function* () {
+      const json = yield* fs.readFileString(prdFile)
+      const updated = PrdList.fromJson(json)
+      const prs: Array<number> = []
+      for (const issue of updated) {
+        const count = updatedIssues.get(issue.id ?? "")?.count ?? 0
+        if (count <= 1 || !issue.githubPrNumber) continue
+        prs.push(issue.githubPrNumber)
+      }
+      return prs
+    })
+
     yield* Effect.addFinalizer(() =>
       Effect.forEach(
         updatedIssues.values(),
@@ -142,7 +154,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       Effect.forkScoped,
     )
 
-    return { path: prdFile } as const
+    return { path: prdFile, mergableGithubPrs } as const
   }),
 }) {
   static layer = Layer.effect(this, this.make).pipe(

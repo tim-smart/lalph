@@ -64,9 +64,14 @@ const concurrency = Flag.integer("concurrency").pipe(
   Flag.withDefault(1),
 )
 
-const root = Command.make("lalph", { iterations, concurrency }).pipe(
+const autoMerge = Flag.boolean("auto-merge").pipe(
+  Flag.withAlias("a"),
+  Flag.withDescription("Automatically merge eligible PRs"),
+)
+
+const root = Command.make("lalph", { iterations, concurrency, autoMerge }).pipe(
   Command.withHandler(
-    Effect.fnUntraced(function* ({ iterations, concurrency }) {
+    Effect.fnUntraced(function* ({ iterations, concurrency, autoMerge }) {
       const isFinite = Number.isFinite(iterations)
       const iterationsDisplay = isFinite ? iterations : "unlimited"
       const runConcurrency = Math.max(1, concurrency)
@@ -103,7 +108,7 @@ const root = Command.make("lalph", { iterations, concurrency }).pipe(
         lastStartedAt = yield* DateTime.now
         inProgress++
 
-        yield* run.pipe(
+        yield* run({ autoMerge }).pipe(
           Effect.catchFilter(
             (e) =>
               e._tag === "NoMoreWork" || e._tag === "QuitError"
