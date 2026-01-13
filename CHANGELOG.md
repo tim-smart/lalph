@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.7
+
+### Patch Changes
+
+- [`63b7a31`](https://github.com/tim-smart/lalph/commit/63b7a316673213b71cd34c165346ba14a5cc5eac) Thanks [@tim-smart](https://github.com/tim-smart)! - improve error handling
+
+- [`63b7a31`](https://github.com/tim-smart/lalph/commit/63b7a316673213b71cd34c165346ba14a5cc5eac) Thanks [@tim-smart](https://github.com/tim-smart)! - update efefct
+
 ## 0.1.6
 
 ### Patch Changes
