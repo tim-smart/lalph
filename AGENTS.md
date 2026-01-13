@@ -1,13 +1,10 @@
 # Information
 
 - The base branch for this repository is `master`.
-- The package manager used is `pnpm`. Run `pnpm install` to install
-  dependencies if `node_modules` is missing.
+- The package manager used is `pnpm`.
 
 # Development workflow
 
-- First run `pnpm install` to ensure all dependencies are installed and up to
-  date.
 - Every commit should pass type checking (`tsc --noEmit`)
 - Every commit should be formatted correctly (`prettier --check`)
 - Every PR should include a changeset when it affects published packages.
