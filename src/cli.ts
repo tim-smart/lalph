@@ -44,11 +44,13 @@ const selectAgent = Command.make("select-agent").pipe(
 )
 
 const iterations = Flag.integer("iterations").pipe(
+  Flag.withDescription("Number of iterations to run, defaults to unlimited"),
   Flag.withAlias("i"),
   Flag.withDefault(Number.POSITIVE_INFINITY),
 )
 
 const concurrency = Flag.integer("concurrency").pipe(
+  Flag.withDescription("Number of concurrent agents, defaults to 1"),
   Flag.withAlias("c"),
   Flag.withDefault(1),
 )
