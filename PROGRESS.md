@@ -9,3 +9,4 @@
 - 2026-01-13: Added AGENTS.md note to include changesets on PRs.
 - 2026-01-13: Added git pull before creating worktrees.
 - 2026-01-14: TIM-13 start; run `.lalph/setup.sh` when present; updated `src/Worktree.ts`; checks: `pnpm install`, `pnpm exec tsc --noEmit`, `pnpm exec prettier --check .`.
+- 2026-01-14: Adjust setup script lookup to repo root per PR review; changed `src/Worktree.ts`. No blockers.

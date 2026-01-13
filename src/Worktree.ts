@@ -29,13 +29,13 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
       }),
     )
 
-    const setupPath = pathService.join(directory, ".lalph", "setup.sh")
+    const setupPath = pathService.join(process.cwd(), ".lalph", "setup.sh")
     if (yield* fs.exists(setupPath)) {
       yield* ChildProcess.make({
         cwd: directory,
         extendEnv: true,
         shell: process.env.SHELL ?? true,
-      })`./.lalph/setup.sh`.pipe(ChildProcess.exitCode)
+      })`${setupPath}`.pipe(ChildProcess.exitCode)
     }
 
     yield* Effect.forEach(
