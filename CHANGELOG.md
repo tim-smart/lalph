@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.2
+
+### Patch Changes
+
+- [`b8f613b`](https://github.com/tim-smart/lalph/commit/b8f613b118aed461d9ffee3c50d2840ce019f5ab) Thanks [@tim-smart](https://github.com/tim-smart)! - concurrency option
+
 ## 0.1.1
 
 ### Patch Changes
