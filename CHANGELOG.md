@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.6
+
+### Patch Changes
+
+- [`fe3b1c0`](https://github.com/tim-smart/lalph/commit/fe3b1c0c3a8899d4af6592dce0737c64feab85ea) Thanks [@tim-smart](https://github.com/tim-smart)! - prompt tweaks
+
 ## 0.1.5
 
 ### Patch Changes
