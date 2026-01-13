@@ -6,3 +6,4 @@
 - 2026-01-13: Removed generated files section from README.
 - 2026-01-13: Removed checks section from README.
 - 2026-01-13: Documented adding `.lalph/` to `.gitignore` in README.
+- 2026-01-13: Added AGENTS.md note to include changesets on PRs.

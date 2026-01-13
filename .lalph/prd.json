@@ -1,0 +1,10 @@
+[
+  {
+    "id": "TIM-9",
+    "title": "in AGENTS.md add a note about adding changesets to every PR",
+    "description": "Added AGENTS.md note reminding changesets for published packages.",
+    "priority": 3,
+    "estimate": null,
+    "stateId": "9b2ffcbf-a5a9-4d6c-9856-a1be2626c42a"
+  }
+]
