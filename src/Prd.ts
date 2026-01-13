@@ -1,5 +1,4 @@
 import {
-  Data,
   Effect,
   FileSystem,
   Layer,
@@ -13,6 +12,7 @@ import { CurrentProject, Linear } from "./Linear.ts"
 import { selectedLabelId, selectedTeamId } from "./Settings.ts"
 import type { Issue } from "@linear/sdk"
 import { Worktree } from "./Worktree.ts"
+import { PrdIssue, PrdList } from "./domain/PrdIssue.ts"
 
 export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
   make: Effect.gen(function* () {
@@ -46,9 +46,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     const prdFile = pathService.join(worktree.directory, `.lalph/prd.json`)
 
     const updatePrdFile = Effect.gen(function* () {
-      const initial = yield* getIssues.pipe(
-        Effect.map(PrdList.fromLinearIssues),
-      )
+      const initial = yield* getIssues.pipe(Effect.map(listFromLinear))
       yield* fs.writeFileString(prdFile, initial.toJson())
       return initial
     })
@@ -69,7 +67,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
 
     const sync = Effect.gen(function* () {
       const json = yield* fs.readFileString(prdFile)
-      const current = PrdList.fromLinearIssues(yield* getIssues)
+      const current = listFromLinear(yield* getIssues)
       const updated = PrdList.fromJson(json)
 
       for (const issue of updated) {
@@ -91,7 +89,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
         }
         const existing = current.issues.get(issue.id)
         if (!existing || !existing.isChangedComparedTo(issue)) continue
-        const original = current.orignals.get(issue.id)!
+        const original = current.cast<Issue>().orignals.get(issue.id)!
 
         // update existing issue
         yield* linear.use((c) =>
@@ -129,6 +127,8 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       ).pipe(Effect.ignore),
     )
 
+    yield* Effect.addFinalizer(() => Effect.ignore(sync))
+
     yield* fs.watch(prdFile).pipe(
       Stream.buffer({
         capacity: 1,
@@ -154,80 +154,26 @@ export class NoMoreWork extends Schema.ErrorClass<NoMoreWork>(
   readonly message = "No more work to be done!"
 }
 
-export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
-  id: Schema.NullOr(Schema.String).annotate({
-    description:
-      "The unique identifier of the issue. If null, it is considered a new issue.",
-  }),
-  title: Schema.String.annotate({
-    description: "The title of the issue",
-  }),
-  description: Schema.String.annotate({
-    description: "The description of the issue",
-  }),
-  priority: Schema.Finite.annotate({
-    description:
-      "The priority of the issue. 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.",
-  }),
-  estimate: Schema.NullOr(Schema.Finite).annotate({
-    description:
-      "The estimate of the issue in points. Null if no estimate is set.",
-  }),
-  stateId: Schema.String.annotate({
-    description: "The state ID of the issue.",
-  }),
-}) {
-  static Array = Schema.Array(this)
-  static ArrayFromJson = Schema.toCodecJson(this.Array)
-
-  static jsonSchemaDoc = Schema.toJsonSchemaDocument(this)
-  static jsonSchema = {
-    ...this.jsonSchemaDoc.schema,
-    $defs: this.jsonSchemaDoc.definitions,
-  }
-
-  static fromLinearIssue(issue: Issue): PrdIssue {
-    return new PrdIssue({
-      id: issue.identifier,
-      title: issue.title,
-      description: issue.description ?? "",
-      priority: issue.priority,
-      estimate: issue.estimate ?? null,
-      stateId: issue.stateId!,
-    })
-  }
-
-  isChangedComparedTo(issue: PrdIssue): boolean {
-    return (
-      this.description !== issue.description || this.stateId !== issue.stateId
-    )
-  }
+const issueFromLinear = (issue: Issue): PrdIssue => {
+  return new PrdIssue({
+    id: issue.identifier,
+    title: issue.title,
+    description: issue.description ?? "",
+    priority: issue.priority,
+    estimate: issue.estimate ?? null,
+    stateId: issue.stateId!,
+    githubPrNumber: null,
+  })
 }
 
-export class PrdList extends Data.Class<{
-  readonly issues: ReadonlyMap<string, PrdIssue>
-  readonly orignals: ReadonlyMap<string, Issue>
-}> {
-  static fromLinearIssues(issues: Issue[]): PrdList {
-    const map = new Map<string, PrdIssue>()
-    const originalMap = new Map<string, Issue>()
-    for (const issue of issues) {
-      const prdIssue = PrdIssue.fromLinearIssue(issue)
-      if (!prdIssue.id) continue
-      map.set(prdIssue.id, prdIssue)
-      originalMap.set(prdIssue.id, issue)
-    }
-    return new PrdList({ issues: map, orignals: originalMap })
+const listFromLinear = (issues: Array<Issue>): PrdList => {
+  const map = new Map<string, PrdIssue>()
+  const originalMap = new Map<string, Issue>()
+  for (const issue of issues) {
+    const prdIssue = issueFromLinear(issue)
+    if (!prdIssue.id) continue
+    map.set(prdIssue.id, prdIssue)
+    originalMap.set(prdIssue.id, issue)
   }
-
-  static fromJson(json: string): ReadonlyArray<PrdIssue> {
-    const issues = Schema.decodeSync(PrdIssue.ArrayFromJson)(JSON.parse(json))
-    return issues
-  }
-
-  toJson(): string {
-    const issuesArray = Array.from(this.issues.values())
-    const encoded = Schema.encodeSync(PrdIssue.ArrayFromJson)(issuesArray)
-    return JSON.stringify(encoded, null, 2)
-  }
+  return new PrdList({ issues: map, orignals: originalMap })
 }

@@ -16,7 +16,9 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     )
 
     yield* execIgnore(ChildProcess.make`git pull`)
-    yield* exec(ChildProcess.make`git worktree add ${directory} -d HEAD`)
+    yield* ChildProcess.make`git worktree add ${directory} -d HEAD`.pipe(
+      ChildProcess.exitCode,
+    )
 
     yield* fs.makeDirectory(pathService.join(directory, ".lalph"), {
       recursive: true,
@@ -53,15 +55,5 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   static layer = Layer.effect(this, this.make)
 }
 
-const exec = (command: ChildProcess.Command) =>
-  command.asEffect().pipe(
-    Effect.flatMap((proc) => proc.exitCode),
-    Effect.scoped,
-  )
-
 const execIgnore = (command: ChildProcess.Command) =>
-  command.asEffect().pipe(
-    Effect.flatMap((proc) => proc.exitCode),
-    Effect.catchCause(Effect.logWarning),
-    Effect.scoped,
-  )
+  command.pipe(ChildProcess.exitCode, Effect.catchCause(Effect.logWarning))

@@ -17,16 +17,13 @@ export const run = Effect.gen(function* () {
     prdFilePath: ".lalph/prd.json",
     progressFilePath: "PROGRESS.md",
   })
-  const command = ChildProcess.make(cliCommand[0]!, cliCommand.slice(1), {
+  const exitCode = ChildProcess.make(cliCommand[0]!, cliCommand.slice(1), {
     cwd: worktree.directory,
     extendEnv: true,
     stdout: "inherit",
     stderr: "inherit",
     stdin: "inherit",
-  })
-
-  const agent = yield* command
-  const exitCode = yield* agent.exitCode
+  }).pipe(ChildProcess.exitCode)
 
   yield* Effect.log(`Agent exited with code: ${exitCode}`)
 }).pipe(

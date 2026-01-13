@@ -7,6 +7,7 @@ import { CurrentProject, labelSelect, Linear } from "./Linear.ts"
 import { layerKvs } from "./Kvs.ts"
 import { Settings } from "./Settings.ts"
 import { run, selectCliAgent } from "./Runner.ts"
+import { RateLimiter } from "effect/unstable/persistence"
 
 const selectProject = Command.make("select-project").pipe(
   Command.withDescription("Select the current Linear project"),
@@ -62,6 +63,7 @@ const root = Command.make("lalph", { iterations, concurrency }).pipe(
       const iterationsDisplay = isFinite ? iterations : "unlimited"
       const runConcurrency = Math.max(1, concurrency)
       const semaphore = Effect.makeSemaphoreUnsafe(runConcurrency)
+      const limiter = yield* RateLimiter.makeSleep
 
       yield* Effect.log(
         `Executing ${iterationsDisplay} iteration(s) with concurrency ${runConcurrency}`,
@@ -81,14 +83,12 @@ const root = Command.make("lalph", { iterations, concurrency }).pipe(
         const currentIteration = iteration
 
         if (inProgress > 0) {
-          // add delay to try keep task list in sync
-          const nextEarliestStart = lastStartedAt.pipe(
-            DateTime.add({ seconds: 30 }),
-          )
-          const diff = DateTime.distance(yield* DateTime.now, nextEarliestStart)
-          if (diff > 0) {
-            yield* Effect.sleep(diff)
-          }
+          yield* limiter({
+            key: "lalph-runner",
+            algorithm: "fixed-window",
+            limit: 1,
+            window: "30 seconds",
+          })
         }
 
         lastStartedAt = yield* DateTime.now
@@ -139,9 +139,11 @@ Command.run(root, {
   version: "0.1.0",
 }).pipe(
   Effect.provide(
-    Layer.mergeAll(Settings.layer, Linear.layer).pipe(
-      Layer.provideMerge(NodeServices.layer),
-    ),
+    Layer.mergeAll(
+      Settings.layer,
+      Linear.layer,
+      RateLimiter.layer.pipe(Layer.provide(RateLimiter.layerStoreMemory)),
+    ).pipe(Layer.provideMerge(NodeServices.layer)),
   ),
   NodeRuntime.runMain,
 )
