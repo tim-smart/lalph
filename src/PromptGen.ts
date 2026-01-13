@@ -20,18 +20,20 @@ export class PromptGen extends ServiceMap.Service<PromptGen>()(
 1. Decide which single task to work on next from the prd.json file. This should
    be the task YOU decide as the most important to work on next, not just the
    first task in the list.
-2. Check if there is an existing GitHub PR for the chosen task and review any
-   outstanding PR comments or reviews that need addressing.
-3. Before starting the chosen task, mark it as "in progress" by updating its
+2. Before starting the chosen task, mark it as "in progress" by updating its
    \`stateId\` in the prd.json file.
    This prevents other people or agents from working on the same task simultaneously.
-4. Create a new branch in git for the task, and start working on the chosen task.
-5. Run any checks / feedback loops, such as type checks, unit tests, or linting.
-6. APPEND your progress to the PROGRESS.md file.
-7. Open a pull request with your changes once the task is complete. The title of
+3. Check if there is an existing Github PR for the task, otherwise create a new
+   branch for the task.
+   - If there is an existing PR, checkout the branch for that PR.
+   - If there is an existing PR, check if there are any new comments or requested
+     changes, and address them as part of the task.
+4. Run any checks / feedback loops, such as type checks, unit tests, or linting.
+5. APPEND your progress to the PROGRESS.md file.
+6. Open or update the existing pull request with your changes once the task is complete. The title of
    the PR should include the task id. The PR description should include a
    summary of the changes made.
-8. Update the prd.json file to reflect any changes in task states.
+7. Update the prd.json file to reflect any changes in task states.
    - Add follow up tasks only if needed.
    - Append to the \`description\` field with any notes.
    - When a task is complete, set its \`stateId\` to the id that indicates
