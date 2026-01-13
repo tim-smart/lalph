@@ -1,5 +1,17 @@
 # lalph
 
+## 0.1.8
+
+### Patch Changes
+
+- [`5e4bb2b`](https://github.com/tim-smart/lalph/commit/5e4bb2beebaab018aa94cb73df9b6eca55d38ea4) Thanks [@tim-smart](https://github.com/tim-smart)! - revert tasks todo if incomplete
+
+- [`94f6d80`](https://github.com/tim-smart/lalph/commit/94f6d803aab715409f732e59bca7e8b516548eef) Thanks [@tim-smart](https://github.com/tim-smart)! - add plan mode
+
+- [`84e0b9b`](https://github.com/tim-smart/lalph/commit/84e0b9b5c4298cbb7167399ba9b55422b2ba3c7a) Thanks [@tim-smart](https://github.com/tim-smart)! - add github pr auto-merge
+
+- [`c298986`](https://github.com/tim-smart/lalph/commit/c2989866ae73ebf36cceb87bebdf49cd98fe3a4e) Thanks [@tim-smart](https://github.com/tim-smart)! - only show issues assigned to user
+
 ## 0.1.7
 
 ### Patch Changes
