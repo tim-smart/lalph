@@ -10,3 +10,4 @@
 - 2026-01-13: Added git pull before creating worktrees.
 - 2026-01-14: TIM-13 start; run `.lalph/setup.sh` when present; updated `src/Worktree.ts`; checks: `pnpm install`, `pnpm exec tsc --noEmit`, `pnpm exec prettier --check .`.
 - 2026-01-14: Adjust setup script lookup to repo root per PR review; changed `src/Worktree.ts`. No blockers.
+- 2026-01-14: TIM-14 move README Setup -> Development bottom. Files: `README.md`. Checks: `pnpm exec tsc --noEmit`, `pnpm exec prettier --check .`. No blockers.

@@ -2,12 +2,6 @@
 
 A small CLI that connects to Linear, pulls the next set of unstarted issues into a local PRD file, and runs a selected CLI agent against them. It keeps the PRD and progress log in sync with Linear while you iterate.
 
-## Setup
-
-- Install dependencies: `pnpm install`
-- Build the CLI: `pnpm build`
-- Add `.lalph/` to `.gitignore` to keep local state private
-
 ## CLI usage
 
 - Run the main loop: `npx -y lalph@latest`
@@ -17,3 +11,9 @@ A small CLI that connects to Linear, pulls the next set of unstarted issues into
 - Select a CLI agent: `npx -y lalph@latest select-agent`
 
 The first run opens a Linear OAuth flow and stores the token locally.
+
+## Development
+
+- Install dependencies: `pnpm install`
+- Build the CLI: `pnpm build`
+- Add `.lalph/` to `.gitignore` to keep local state private
