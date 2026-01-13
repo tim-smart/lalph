@@ -43,7 +43,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       )
       .pipe(Stream.runCollect)
 
-    const prdFile = pathService.join(worktree.directory, `.lalph/prd.json`)
+    const prdFile = pathService.join(worktree.directory, `.lalph`, `prd.json`)
 
     const updatePrdFile = Effect.gen(function* () {
       const initial = yield* getIssues.pipe(Effect.map(listFromLinear))

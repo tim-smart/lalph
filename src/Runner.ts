@@ -1,4 +1,4 @@
-import { Array, Effect, Option } from "effect"
+import { Array, Effect, Option, Path } from "effect"
 import { PromptGen } from "./PromptGen.ts"
 import { Prd } from "./Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
@@ -8,13 +8,14 @@ import { selectedCliAgentId } from "./Settings.ts"
 import { Worktree } from "./Worktree.ts"
 
 export const run = Effect.gen(function* () {
+  const pathService = yield* Path.Path
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
   const cliAgent = yield* getOrSelectCliAgent
 
   const cliCommand = cliAgent.command({
     prompt: promptGen.prompt,
-    prdFilePath: ".lalph/prd.json",
+    prdFilePath: pathService.join(".lalph", "prd.json"),
     progressFilePath: "PROGRESS.md",
   })
   const exitCode = yield* ChildProcess.make(
