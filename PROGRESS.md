@@ -3,5 +3,6 @@
 - 2026-01-13: Updated README to reference `pnpm build` and `pnpm check` scripts.
 - 2026-01-13: Added prompt guidance to check existing PRs and reviews.
 - 2026-01-13: Added CLI concurrency flag to run iterations in parallel.
+- 2026-01-13: Removed generated files section from README.
 - 2026-01-13: Removed checks section from README.
 - 2026-01-13: Documented adding `.lalph/` to `.gitignore` in README.

@@ -17,9 +17,3 @@ A small CLI that connects to Linear, pulls the next set of unstarted issues into
 - Select a CLI agent: `npx -y lalph@latest select-agent`
 
 The first run opens a Linear OAuth flow and stores the token locally.
-
-## Generated files
-
-- `.lalph/prd.json`: synced task list pulled from Linear; update task states here.
-- `PROGRESS.md`: append-only log of work completed by the agent.
-- `.lalph/config`: local key-value store for Linear tokens and user selections.
