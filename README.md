@@ -22,7 +22,3 @@ The first run opens a Linear OAuth flow and stores the token locally.
 - `.lalph/prd.json`: synced task list pulled from Linear; update task states here.
 - `PROGRESS.md`: append-only log of work completed by the agent.
 - `.lalph/config`: local key-value store for Linear tokens and user selections.
-
-## Checks
-
-- Type check + format: `pnpm check`
