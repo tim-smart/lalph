@@ -9,7 +9,9 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
 
     yield* Effect.addFinalizer(
       Effect.fnUntraced(function* () {
-        yield* execIgnore(ChildProcess.make`git worktree remove ${directory}`)
+        yield* execIgnore(
+          ChildProcess.make`git worktree remove --force ${directory}`,
+        )
       }),
     )
 
