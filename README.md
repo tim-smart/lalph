@@ -10,6 +10,7 @@ A small CLI that connects to Linear, pulls the next set of unstarted issues into
 ## CLI usage
 
 - Run the main loop: `npx -y lalph@latest`
+- Run multiple iterations with concurrency: `npx -y lalph@latest --iterations 4 --concurrency 2`
 - Select a Linear project: `npx -y lalph@latest select-project`
 - Select a label filter: `npx -y lalph@latest select-label`
 - Select a CLI agent: `npx -y lalph@latest select-agent`

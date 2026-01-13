@@ -12,9 +12,6 @@ export const run = Effect.gen(function* () {
   const promptGen = yield* PromptGen
   const cliAgent = yield* getOrSelectCliAgent
 
-  // @effect-diagnostics-next-line missingReturnYieldStar:off
-  yield* Effect.never
-
   const cliCommand = cliAgent.command({
     prompt: promptGen.prompt,
     prdFilePath: ".lalph/prd.json",

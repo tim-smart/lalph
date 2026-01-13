@@ -44,17 +44,59 @@ const selectAgent = Command.make("select-agent").pipe(
 )
 
 const iterations = Flag.integer("iterations").pipe(
+  Flag.withDescription("Number of iterations to run, defaults to unlimited"),
   Flag.withAlias("i"),
+  Flag.withDefault(Number.POSITIVE_INFINITY),
+)
+
+const concurrency = Flag.integer("concurrency").pipe(
+  Flag.withDescription("Number of concurrent agents, defaults to 1"),
+  Flag.withAlias("c"),
   Flag.withDefault(1),
 )
 
-const root = Command.make("lalph", { iterations }).pipe(
+const root = Command.make("lalph", { iterations, concurrency }).pipe(
   Command.withHandler(
-    Effect.fnUntraced(function* ({ iterations }) {
-      yield* Effect.log(`Executing ${iterations} iteration(s)`)
+    Effect.fnUntraced(function* ({ iterations, concurrency }) {
+      const isFinite = Number.isFinite(iterations)
+      const iterationsDisplay = isFinite ? iterations : "unlimited"
+      const runConcurrency = Math.max(1, concurrency)
+      const semaphore = Effect.makeSemaphoreUnsafe(runConcurrency)
 
-      for (let i = 0; i < iterations; i++) {
-        yield* run
+      yield* Effect.log(
+        `Executing ${iterationsDisplay} iteration(s) with concurrency ${runConcurrency}`,
+      )
+
+      let iteration = 0
+
+      while (true) {
+        yield* semaphore.take(1)
+        if (isFinite && iteration >= iterations) {
+          break
+        }
+
+        const currentIteration = iteration
+
+        yield* run.pipe(
+          Effect.catchTag("NoMoreWork", (e) => {
+            if (isFinite) {
+              // If we have a finite number of iterations, we exit when no more
+              // work is found
+              iterations = currentIteration
+              return Effect.fail(e)
+            }
+            return Effect.log(
+              "No more work to process, waiting 30 seconds...",
+            ).pipe(Effect.andThen(Effect.sleep("30 seconds")))
+          }),
+          Effect.catchCause(Effect.logWarning),
+          Effect.annotateLogs({
+            iteration: currentIteration,
+          }),
+          Effect.ensuring(semaphore.release(1)),
+          Effect.forkChild,
+        )
+        iteration++
       }
     }),
   ),
