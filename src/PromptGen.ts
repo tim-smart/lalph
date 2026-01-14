@@ -34,6 +34,8 @@ ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
    be the task YOU decide as the most important to work on next, not just the
    first task in the list. You can use the PROGRESS.md file to help inform your
    decision.
+   - If a task is already completed or in review, skip it.
+   - If a task is blocked by another task, skip it.
 2. **Before doing anything else**, mark the task as "in progress" by updating its
    \`stateId\` in the prd.json file.
    This prevents other people or agents from working on the same task simultaneously.
@@ -44,18 +46,19 @@ ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
      changes, and address them as part of the task.
    - New branches should be named using the format \`{task id}/description\`.
    - When checking for PR reviews, make sure to check the "reviews" field and read ALL unresolved comments.
-4. Run any checks / feedback loops, such as type checks, unit tests, or linting.
-5. APPEND your progress to the PROGRESS.md file. Include:
+4. Implement the task.
+5. Run any checks / feedback loops, such as type checks, unit tests, or linting.
+6. APPEND your progress to the PROGRESS.md file. Include:
    - Key decisions made and reasoning
    - Files changed
    - Any blockers or notes for next iteration
    Keep entries concise. Sacrifice grammar for the sake of concision.
    This file helps future iterations skip exploration.
-6. Create or update the pull request with your progress. The title of
+7. Create or update the pull request with your progress. The title of
    the PR should include the task id. The PR description should include a
    summary of the changes made.
    - None of the files in the \`.lalph\` directory should be committed.
-7. Update the prd.json file to reflect any changes in task states.
+8. Update the prd.json file to reflect any changes in task states.
    - Add follow up tasks only if needed.
    - Append to the \`description\` field with any notes.
    - If you believe the task is complete, update the \`stateId\` for "review" or "done".
@@ -63,18 +66,25 @@ ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
 Remember, only work on a single task at a time, that you decide is the most
 important to work on next.
 
-## Alternate flows
+## Important: Task sizing
 
-- If at any point you decide that a task is too large or complex to complete in a
-  single iteration, break it down into smaller tasks and add them to the prd.json
-  file. Then, mark the original task as "blocked" or "deferred" by updating its
-  \`stateId\`.
-- If for any reason you get stuck on a task, mark the task back as "todo" by updating its
-  \`stateId\` and leaving some notes in the task's \`description\` field about the
-  challenges faced.
+If at any point you decide that a task is too large or complex to complete in a
+single iteration, break it down into smaller tasks and add them to the prd.json
+file. Then, mark the original task as "blocked" or "deferred" by updating its
+\`stateId\`.
 
-**Important:** If it feels like you are brute forcing your way through a task,
-STOP and move the task back to "todo" state with notes on why in the description.
+Each task should be small and take a hour or less to complete.
+Instead of creating tasks like "Refactor the authentication system", create
+smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
+
+## Handling blockers
+
+If for any reason you get stuck on a task, mark the task back as "todo" by updating its
+\`stateId\` and leaving some notes in the task's \`description\` field about the
+challenges faced.
+
+If it feels like you are brute forcing your way through a task, STOP and move the
+task back to "todo" state with notes on why in the description.
 
 ${prdNotes}`
 
@@ -86,9 +96,12 @@ Users idea / request: ${idea}
    that can be added to the prd.json file.
 2. Each task should have a id of \`null\`, a title, and a concise description of what
    needs to be done.
+   - The tasks should start in a backlog state (i.e., not started yet).
    - The tasks should be actionable and specific, avoiding vague or high-level
      descriptions.
-   - The tasks should start in a backlog state (i.e., not started yet).
+   - Each task should be small and take a hour or less to complete.
+     Instead of creating tasks like "Refactor the authentication system", create
+     smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
 3. Add the new tasks to the prd.json file.
 4. Add a brief outline of the plan to a "lalph-plan.md" file, that will help guide future
    iterations.
@@ -102,9 +115,12 @@ Users feedback on plan: ${feedback}
 1. Review the existing plan in the prd.json and lalph-plan.md files.
 2. Based on the user's feedback above, update the plan as needed by adding,
    removing, or modifying tasks in the prd.json file.
+   - The tasks should start in a backlog state (i.e., not started yet).
    - The tasks should be actionable and specific, avoiding vague or high-level
      descriptions.
-   - The tasks should start in a backlog state (i.e., not started yet).
+   - Each task should be small and take a hour or less to complete.
+     Instead of creating tasks like "Refactor the authentication system", create
+     smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
 3. Update the lalph-plan.md file to reflect any changes made to the plan.
 4. Ensure that the tasks remain actionable and specific, avoiding vague or
    high-level descriptions.

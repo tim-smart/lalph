@@ -1,6 +1,7 @@
 import {
   Effect,
   FileSystem,
+  Iterable,
   Layer,
   Option,
   Path,
@@ -25,33 +26,36 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     const teamId = Option.getOrThrow(yield* selectedTeamId.get)
     const labelId = yield* selectedLabelId.get
 
-    const getIssues = (states: Array<string>) =>
-      linear
-        .stream(() =>
-          project.issues({
-            filter: {
-              assignee: { isMe: { eq: true } },
-              labels: {
-                id: labelId.pipe(
-                  Option.map((eq) => ({ eq })),
-                  Option.getOrNull,
-                ),
-              },
-              state: {
-                type: { in: states },
-              },
+    const getIssues = linear
+      .stream(() =>
+        project.issues({
+          filter: {
+            assignee: { isMe: { eq: true } },
+            labels: {
+              id: labelId.pipe(
+                Option.map((eq) => ({ eq })),
+                Option.getOrNull,
+              ),
             },
-          }),
-        )
-        .pipe(Stream.runCollect)
+            state: {
+              type: { in: ["unstarted", "started", "completed"] },
+            },
+          },
+        }),
+      )
+      .pipe(Stream.runCollect)
 
     const prdFile = pathService.join(worktree.directory, `.lalph`, `prd.json`)
 
-    const initial = listFromLinear(yield* getIssues(["unstarted"]))
+    const initial = yield* listFromLinear(yield* getIssues)
     yield* fs.writeFileString(prdFile, initial.toJson())
 
     const checkForWork = Effect.suspend(() => {
-      if (initial.issues.size === 0) {
+      const hasIncomplete = Iterable.some(
+        initial.issues.values(),
+        (issue) => issue.complete === false && issue.blockedBy.length === 0,
+      )
+      if (!hasIncomplete) {
         return Effect.fail(new NoMoreWork({}))
       }
       return Effect.void
@@ -69,7 +73,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     const sync = Effect.gen(function* () {
       const json = yield* fs.readFileString(prdFile)
       const updated = PrdList.fromJson(json)
-      const current = listFromLinear(yield* getIssues(["unstarted", "started"]))
+      const current = yield* listFromLinear(yield* getIssues)
       let createdIssues = 0
 
       for (const issue of updated) {
@@ -176,7 +180,10 @@ export class NoMoreWork extends Schema.ErrorClass<NoMoreWork>(
   readonly message = "No more work to be done!"
 }
 
-const issueFromLinear = (issue: Issue): PrdIssue => {
+const issueFromLinear = Effect.fnUntraced(function* (issue: Issue) {
+  const linear = yield* Linear
+  const state = linear.states.get(issue.stateId!)!
+  const blockedBy = yield* linear.blockedBy(issue)
   return new PrdIssue({
     id: issue.identifier,
     title: issue.title,
@@ -184,18 +191,24 @@ const issueFromLinear = (issue: Issue): PrdIssue => {
     priority: issue.priority,
     estimate: issue.estimate ?? null,
     stateId: issue.stateId!,
+    complete: state.type !== "unstarted",
+    blockedBy: blockedBy.map((i) => i.identifier),
     githubPrNumber: null,
   })
-}
+})
 
-const listFromLinear = (issues: Array<Issue>): PrdList => {
+const listFromLinear = Effect.fnUntraced(function* (issues: Array<Issue>) {
   const map = new Map<string, PrdIssue>()
   const originalMap = new Map<string, Issue>()
-  for (const issue of issues) {
-    const prdIssue = issueFromLinear(issue)
-    if (!prdIssue.id) continue
-    map.set(prdIssue.id, prdIssue)
-    originalMap.set(prdIssue.id, issue)
-  }
+  yield* Effect.forEach(
+    issues,
+    Effect.fnUntraced(function* (issue) {
+      const prdIssue = yield* issueFromLinear(issue)
+      if (!prdIssue.id) return
+      map.set(prdIssue.id, prdIssue)
+      originalMap.set(prdIssue.id, issue)
+    }),
+    { concurrency: "unbounded" },
+  )
   return new PrdList({ issues: map, orignals: originalMap })
-}
+})

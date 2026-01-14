@@ -4,6 +4,7 @@ import { Command, Flag } from "effect/unstable/cli"
 import {
   Cause,
   DateTime,
+  Duration,
   Effect,
   FiberSet,
   Filter,
@@ -76,9 +77,35 @@ const autoMerge = Flag.boolean("auto-merge").pipe(
   Flag.withDescription("Automatically merge eligible PRs"),
 )
 
-const root = Command.make("lalph", { iterations, concurrency, autoMerge }).pipe(
+const maxIterationMinutes = Flag.integer("max-minutes").pipe(
+  Flag.withDescription(
+    "Maximum number of minutes to allow an iteration to run",
+  ),
+  Flag.withDefault(60),
+)
+
+const stallMinutes = Flag.integer("stall-minutes").pipe(
+  Flag.withDescription(
+    "If no activity occurs for this many minutes, the iteration will be stopped",
+  ),
+  Flag.withDefault(5),
+)
+
+const root = Command.make("lalph", {
+  iterations,
+  concurrency,
+  autoMerge,
+  maxIterationMinutes,
+  stallMinutes,
+}).pipe(
   Command.withHandler(
-    Effect.fnUntraced(function* ({ iterations, concurrency, autoMerge }) {
+    Effect.fnUntraced(function* ({
+      iterations,
+      concurrency,
+      autoMerge,
+      maxIterationMinutes,
+      stallMinutes,
+    }) {
       const isFinite = Number.isFinite(iterations)
       const iterationsDisplay = isFinite ? iterations : "unlimited"
       const runConcurrency = Math.max(1, concurrency)
@@ -115,7 +142,11 @@ const root = Command.make("lalph", { iterations, concurrency, autoMerge }).pipe(
         lastStartedAt = yield* DateTime.now
         inProgress++
 
-        yield* run({ autoMerge }).pipe(
+        yield* run({
+          autoMerge,
+          stallTimeout: Duration.minutes(stallMinutes),
+        }).pipe(
+          Effect.timeout(Duration.minutes(maxIterationMinutes)),
           Effect.catchFilter(
             (e) =>
               e._tag === "NoMoreWork" || e._tag === "QuitError"

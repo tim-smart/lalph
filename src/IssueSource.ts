@@ -18,10 +18,7 @@ export class IssueSource extends ServiceMap.Service<
         }
       >
     >
-    readonly unstartedIssues: Effect.Effect<
-      ReadonlyArray<PrdIssue>,
-      IssueSourceError
-    >
+    readonly issues: Effect.Effect<ReadonlyArray<PrdIssue>, IssueSourceError>
     readonly createIssue: (
       issue: PrdIssue,
     ) => Effect.Effect<void, IssueSourceError>

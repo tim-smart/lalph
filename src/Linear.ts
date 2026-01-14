@@ -1,6 +1,15 @@
-import { Effect, Stream, Layer, Schema, ServiceMap, Option } from "effect"
+import {
+  Effect,
+  Stream,
+  Layer,
+  Schema,
+  ServiceMap,
+  Option,
+  Filter,
+} from "effect"
 import {
   Connection,
+  Issue,
   IssueLabel,
   LinearClient,
   Project,
@@ -55,7 +64,36 @@ export class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
     )
     const viewer = yield* use((client) => client.viewer)
 
-    return { use, stream, projects, labels, states, viewer } as const
+    const blockedBy = (issue: Issue) =>
+      stream(() => issue.relations()).pipe(
+        Stream.filter((relation) =>
+          relation.type === "blocks" && relation.relatedIssueId === issue.id
+            ? relation
+            : Filter.failVoid,
+        ),
+        Stream.mapEffect((relation) => use(() => relation.issue!), {
+          concurrency: "unbounded",
+        }),
+        Stream.merge(
+          stream(() => issue.inverseRelations()).pipe(
+            Stream.filter((relation) =>
+              relation.type === "blocks" && relation.relatedIssueId === issue.id
+                ? relation
+                : Filter.failVoid,
+            ),
+            Stream.mapEffect((relation) => use(() => relation.issue!), {
+              concurrency: "unbounded",
+            }),
+          ),
+        ),
+        Stream.filter((issue) => {
+          const state = states.get(issue.stateId!)!
+          return state.type !== "completed" ? issue : Filter.failVoid
+        }),
+        Stream.runCollect,
+      )
+
+    return { use, stream, projects, labels, states, viewer, blockedBy } as const
   }),
 }) {
   static layer = Layer.effect(this, this.make).pipe(

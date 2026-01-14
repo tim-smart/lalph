@@ -9,7 +9,7 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
     description: "The title of the issue",
   }),
   description: Schema.String.annotate({
-    description: "The description of the issue",
+    description: "The description of the issue in markdown format.",
   }),
   priority: Schema.Finite.annotate({
     description:
@@ -21,6 +21,13 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
   }),
   stateId: Schema.String.annotate({
     description: "The state ID of the issue.",
+  }),
+  blockedBy: Schema.Array(Schema.String).annotate({
+    description:
+      "An array of issue IDs that block this issue. These issues must be completed before this issue can be worked on.",
+  }),
+  complete: Schema.Boolean.annotate({
+    description: "Whether the issue is complete.",
   }),
   githubPrNumber: Schema.NullOr(Schema.Number).annotate({
     description:
