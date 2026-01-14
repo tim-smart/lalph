@@ -1,5 +1,15 @@
 # lalph
 
+## 0.1.9
+
+### Patch Changes
+
+- [`83c7cd9`](https://github.com/tim-smart/lalph/commit/83c7cd9fbcbddd83a8f5c7f1ae85cf15355c3a1c) Thanks [@tim-smart](https://github.com/tim-smart)! - prompt tweaks
+
+- [`462389a`](https://github.com/tim-smart/lalph/commit/462389a4d068ac341ac56c8f5bf49569f4b527b8) Thanks [@tim-smart](https://github.com/tim-smart)! - rename project command
+
+- [`142f597`](https://github.com/tim-smart/lalph/commit/142f597ed4bc2a481a0a0a3f23af4a5d142aabdc) Thanks [@tim-smart](https://github.com/tim-smart)! - fix NoMoreWork error
+
 ## 0.1.8
 
 ### Patch Changes
