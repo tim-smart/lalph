@@ -103,6 +103,8 @@ Users idea / request: ${idea}
 
 1. For the users idea / request above, break it down into multiple smaller tasks
    that can be added to the prd.json file.
+   - Make sure to research the codebase before creating any tasks, to ensure they
+     are relevant and feasible.
 2. Each task should have a id of \`null\`, a title, and a concise description of what
    needs to be done.
    - The tasks should start in a backlog state (i.e., not started yet).
@@ -124,6 +126,8 @@ Users feedback on plan: ${feedback}
 1. Review the existing plan in the prd.json and lalph-plan.md files.
 2. Based on the user's feedback above, update the plan as needed by adding,
    removing, or modifying tasks in the prd.json file.
+   - Make sure to research the codebase before creating any tasks, to ensure they
+     are relevant and feasible.
    - The tasks should start in a backlog state (i.e., not started yet).
    - The tasks should be actionable and specific, avoiding vague or high-level
      descriptions.
