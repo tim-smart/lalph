@@ -51,8 +51,8 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     yield* fs.writeFileString(prdFile, initial.toJson())
 
     const checkForWork = Effect.suspend(() => {
-      if (initial.issues.size > 0) {
-        return new NoMoreWork({}).asEffect()
+      if (initial.issues.size === 0) {
+        return Effect.fail(new NoMoreWork({}))
       }
       return Effect.void
     })
