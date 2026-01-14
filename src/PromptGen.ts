@@ -40,26 +40,33 @@ ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
 2. **Before doing anything else**, mark the task as "in progress" by updating its
    \`stateId\` in the prd.json file.
    This prevents other people or agents from working on the same task simultaneously.
-3. Check if there is an existing Github PR for the task, otherwise create a new
+3. Decide if this task is too large or complex to complete in a single iteration.
+   If so, break it down into smaller tasks and add them to the prd.json file.
+   Then, mark the original task as "blocked" or "deferred" by updating its
+   \`stateId\`.
+   - More information on task sizing is provided below.
+   - You can skip the rest of the instructions for this iteration if you break down
+     the task.
+4. Check if there is an existing Github PR for the task, otherwise create a new
    branch for the task.
    - If there is an existing PR, checkout the branch for that PR.
    - If there is an existing PR, check if there are any new comments or requested
      changes, and address them as part of the task.
    - New branches should be named using the format \`{task id}/description\`.
    - When checking for PR reviews, make sure to check the "reviews" field and read ALL unresolved comments.
-4. Implement the task.
-5. Run any checks / feedback loops, such as type checks, unit tests, or linting.
-6. APPEND your progress to the PROGRESS.md file. Include:
+5. Implement the task.
+6. Run any checks / feedback loops, such as type checks, unit tests, or linting.
+7. APPEND your progress to the PROGRESS.md file. Include:
    - Key decisions made and reasoning
    - Files changed
    - Any blockers or notes for next iteration
    Keep entries concise. Sacrifice grammar for the sake of concision.
    This file helps future iterations skip exploration.
-7. Create or update the pull request with your progress. The title of
+8. Create or update the pull request with your progress. The title of
    the PR should include the task id. The PR description should include a
    summary of the changes made.
    - None of the files in the \`.lalph\` directory should be committed.
-8. Update the prd.json file to reflect any changes in task states.
+9. Update the prd.json file to reflect any changes in task states.
    - Add follow up tasks only if needed.
    - Append to the \`description\` field with any notes.
    - If you believe the task is complete, update the \`stateId\` for "review".
