@@ -17,6 +17,7 @@ import { RateLimiter } from "effect/unstable/persistence"
 import { plan } from "./Planner.ts"
 import { getOrSelectCliAgent, selectCliAgent } from "./CliAgent.ts"
 import { CurrentIssueSource, selectIssueSource } from "./IssueSources.ts"
+import { checkForWork } from "./IssueSource.ts"
 
 const selectAgent = Command.make("select-agent").pipe(
   Command.withDescription("Select the CLI agent to use"),
@@ -118,10 +119,13 @@ const root = Command.make("lalph", {
         lastStartedAt = yield* DateTime.now
         inProgress++
 
-        yield* run({
-          autoMerge,
-          stallTimeout: Duration.minutes(stallMinutes),
-        }).pipe(
+        yield* checkForWork.pipe(
+          Effect.andThen(
+            run({
+              autoMerge,
+              stallTimeout: Duration.minutes(stallMinutes),
+            }),
+          ),
           Effect.timeout(Duration.minutes(maxIterationMinutes)),
           Effect.catchFilter(
             (e) =>

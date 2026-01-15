@@ -16,8 +16,6 @@ export const run = Effect.fnUntraced(
     const cliAgent = yield* getOrSelectCliAgent
     const prd = yield* Prd
 
-    yield* prd.checkForWork
-
     const cliCommand = cliAgent.command({
       prompt: promptGen.prompt,
       prdFilePath: pathService.join(".lalph", "prd.json"),

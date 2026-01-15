@@ -1,9 +1,9 @@
 import {
+  Console,
   Effect,
   FileSystem,
   Layer,
   Path,
-  Schema,
   ServiceMap,
   Stream,
 } from "effect"
@@ -24,16 +24,6 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     const initial = yield* source.issues
     yield* fs.writeFileString(prdFile, PrdIssue.arrayToJson(initial))
 
-    const checkForWork = Effect.suspend(() => {
-      const hasIncomplete = initial.some(
-        (issue) => issue.complete === false && issue.blockedBy.length === 0,
-      )
-      if (!hasIncomplete) {
-        return Effect.fail(new NoMoreWork({}))
-      }
-      return Effect.void
-    })
-
     const updatedIssues = new Map<
       string,
       {
@@ -47,9 +37,14 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       const json = yield* fs.readFileString(prdFile)
       const updated = PrdList.fromJson(json)
       const current = yield* source.issues
+      const toRemove = new Set(
+        current.filter((i) => i.id !== null).map((i) => i.id!),
+      )
       let createdIssues = 0
 
       for (const issue of updated) {
+        toRemove.delete(issue.id!)
+
         if (issue.id === null) {
           // create new issue
           const issueId = yield* source.createIssue(issue)
@@ -80,9 +75,19 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
         entry.count++
       }
 
-      if (createdIssues === 0) return
-      yield* fs.writeFileString(prdFile, PrdIssue.arrayToJson(updated))
-    }).pipe(Effect.uninterruptible)
+      yield* Effect.forEach(
+        toRemove,
+        (issueId) => source.removeIssue(issueId),
+        {
+          concurrency: "unbounded",
+        },
+      )
+
+      if (createdIssues === 0 || toRemove.size === 0) return
+
+      const refreshed = yield* source.issues
+      yield* fs.writeFileString(prdFile, PrdIssue.arrayToJson(refreshed))
+    }).pipe(Console.withTime("Prd.sync"), Effect.uninterruptible)
 
     const mergableGithubPrs = Effect.gen(function* () {
       const json = yield* fs.readFileString(prdFile)
@@ -121,18 +126,10 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       Effect.forkScoped,
     )
 
-    return { path: prdFile, mergableGithubPrs, checkForWork } as const
+    return { path: prdFile, mergableGithubPrs } as const
   }),
 }) {
   static layer = Layer.effect(this, this.make).pipe(
     Layer.provide(Worktree.layer),
   )
-}
-
-export class NoMoreWork extends Schema.ErrorClass<NoMoreWork>(
-  "lalph/Prd/NoMoreWork",
-)({
-  _tag: Schema.tag("NoMoreWork"),
-}) {
-  readonly message = "No more work to be done!"
 }

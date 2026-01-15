@@ -133,6 +133,10 @@ export const LinearIssueSource = Layer.effect(
       })
     })
 
+    const canceledState = Array.from(linear.states.values()).find(
+      (state) => state.type === "canceled",
+    )!
+
     const issues = linear
       .stream(() =>
         project.issues({
@@ -206,6 +210,17 @@ export const LinearIssueSource = Layer.effect(
               title: options.title,
               description: options.description,
               stateId: options.stateId,
+            }),
+          )
+        },
+        Effect.mapError((cause) => new IssueSourceError({ cause })),
+      ),
+      removeIssue: Effect.fnUntraced(
+        function* (issueId: string) {
+          const linearIssueId = identifierMap.get(issueId)!
+          yield* linear.use((c) =>
+            c.updateIssue(linearIssueId, {
+              stateId: canceledState.id,
             }),
           )
         },

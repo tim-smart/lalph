@@ -1,6 +1,5 @@
 import { Effect, Schema, ServiceMap } from "effect"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
-import type { Settings } from "./Settings.ts"
 
 /**
  * Current unused, but eventually will represent a source of issues so we can
@@ -32,6 +31,10 @@ export class IssueSource extends ServiceMap.Service<
       readonly description: string
       readonly stateId: string
     }) => Effect.Effect<void, IssueSourceError>
+
+    readonly removeIssue: (
+      issueId: string,
+    ) => Effect.Effect<void, IssueSourceError>
   }
 >()("lalph/IssueSource") {}
 
@@ -41,3 +44,22 @@ export class IssueSourceError extends Schema.ErrorClass<IssueSourceError>(
   _tag: Schema.tag("IssueSourceError"),
   cause: Schema.Defect,
 }) {}
+
+export const checkForWork = Effect.gen(function* () {
+  const source = yield* IssueSource
+  const issues = yield* source.issues
+  const hasIncomplete = issues.some(
+    (issue) => issue.complete === false && issue.blockedBy.length === 0,
+  )
+  if (!hasIncomplete) {
+    return yield* new NoMoreWork({})
+  }
+})
+
+export class NoMoreWork extends Schema.ErrorClass<NoMoreWork>(
+  "lalph/Prd/NoMoreWork",
+)({
+  _tag: Schema.tag("NoMoreWork"),
+}) {
+  readonly message = "No more work to be done!"
+}
