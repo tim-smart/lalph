@@ -9,6 +9,7 @@ import {
   Option,
   pipe,
   Redacted,
+  Schema,
   ServiceMap,
   Stream,
   String,
@@ -17,6 +18,8 @@ import { Octokit } from "octokit"
 import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { PrdIssue } from "./domain/PrdIssue.ts"
+import { Setting } from "./Settings.ts"
+import { Prompt } from "effect/unstable/cli"
 
 export class GithubError extends Data.TaggedError("GithubError")<{
   readonly cause: unknown
@@ -90,6 +93,7 @@ export const GithubIssueSource = Layer.effect(
         Effect.mapError((_) => new GithubRepoNotFound()),
       )
     const [owner, repo] = nameWithOwner.split("/") as [string, string]
+    const labelFilter = yield* getOrSelectLabel
 
     const states = new Map([
       ["open", { id: "open", name: "Open", kind: "unstarted" as const }],
@@ -128,6 +132,23 @@ export const GithubIssueSource = Layer.effect(
         )
         .pipe(Stream.filter((issue) => issue.state === "open"))
 
+    const recentlyClosed = github
+      .stream((rest, page) =>
+        rest.issues.listForRepo({
+          owner,
+          repo,
+          state: "closed",
+          per_page: 100,
+          page,
+          labels: Option.getOrUndefined(labelFilter),
+          since: DateTime.nowUnsafe().pipe(
+            DateTime.subtract({ days: 3 }),
+            DateTime.formatIso,
+          ),
+        }),
+      )
+      .pipe(Stream.filter((issue) => issue.state_reason !== "not_planned"))
+
     const issues = github
       .stream((rest, page) =>
         rest.issues.listForRepo({
@@ -136,24 +157,11 @@ export const GithubIssueSource = Layer.effect(
           state: "open",
           per_page: 100,
           page,
+          labels: Option.getOrUndefined(labelFilter),
         }),
       )
       .pipe(
-        Stream.merge(
-          github.stream((rest, page) =>
-            rest.issues.listForRepo({
-              owner,
-              repo,
-              state: "closed",
-              per_page: 100,
-              page,
-              since: DateTime.nowUnsafe().pipe(
-                DateTime.subtract({ days: 3 }),
-                DateTime.formatIso,
-              ),
-            }),
-          ),
-        ),
+        Stream.merge(recentlyClosed),
         Stream.filter((issue) => issue.pull_request === undefined),
         Stream.mapEffect(
           Effect.fnUntraced(function* (issue) {
@@ -187,12 +195,48 @@ export const GithubIssueSource = Layer.effect(
 
     const createIssue = github.wrap((rest) => rest.issues.create)
     const updateIssue = github.wrap((rest) => rest.issues.update)
-    const addBlockedByDependency = github.wrap(
-      (rest) => rest.issues.addBlockedByDependency,
-    )
-    const removeBlockedByDependency = github.wrap(
-      (rest) => rest.issues.removeDependencyBlockedBy,
-    )
+
+    const addBlockedByDependency = Effect.fnUntraced(function* (options: {
+      readonly issueNumber: number
+      readonly blockedByNumber: number
+    }) {
+      const blockedBy = yield* github.request((rest) =>
+        rest.issues.get({
+          owner,
+          repo,
+          issue_number: options.blockedByNumber,
+        }),
+      )
+      yield* github.request((rest) =>
+        rest.issues.addBlockedByDependency({
+          owner,
+          repo,
+          issue_number: options.issueNumber,
+          issue_id: blockedBy.data.id,
+        }),
+      )
+    })
+
+    const removeBlockedByDependency = Effect.fnUntraced(function* (options: {
+      readonly issueNumber: number
+      readonly blockedByNumber: number
+    }) {
+      const blockedBy = yield* github.request((rest) =>
+        rest.issues.get({
+          owner,
+          repo,
+          issue_number: options.blockedByNumber,
+        }),
+      )
+      yield* github.request((rest) =>
+        rest.issues.removeDependencyBlockedBy({
+          owner,
+          repo,
+          issue_number: options.issueNumber,
+          issue_id: blockedBy.data.id,
+        }),
+      )
+    })
 
     return IssueSource.of({
       states: Effect.succeed(states),
@@ -219,16 +263,16 @@ export const GithubIssueSource = Layer.effect(
               blockedByNumbers,
               (dependencyNumber) =>
                 addBlockedByDependency({
-                  owner,
-                  repo,
-                  issue_number: created.number,
-                  issue_id: dependencyNumber,
+                  issueNumber: created.number,
+                  blockedByNumber: dependencyNumber,
                 }),
               { concurrency: 5, discard: true },
             )
           }
 
-          return created.number.toString()
+          yield* Effect.sleep(2000)
+
+          return `#${created.number}`
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
@@ -247,12 +291,13 @@ export const GithubIssueSource = Layer.effect(
             issue_number: number
             title?: string
             body?: string
-            labels?: string[]
+            labels: string[]
             state?: "open" | "closed"
           } = {
             owner,
             repo,
             issue_number: issueNumber,
+            labels: Option.toArray(labelFilter),
           }
 
           if (options.title !== undefined) {
@@ -265,11 +310,9 @@ export const GithubIssueSource = Layer.effect(
             update.state = options.stateId === "closed" ? "closed" : "open"
 
             if (options.stateId === "in-review") {
-              update.labels = ["in-review"]
+              update.labels.push("in-review")
             } else if (options.stateId === "in-progress") {
-              update.labels = ["in-progress"]
-            } else {
-              update.labels = []
+              update.labels.push("in-progress")
             }
           }
 
@@ -306,10 +349,8 @@ export const GithubIssueSource = Layer.effect(
               toAdd,
               (dependencyNumber) =>
                 addBlockedByDependency({
-                  owner,
-                  repo,
-                  issue_number: issueNumber,
-                  issue_id: dependencyNumber,
+                  issueNumber,
+                  blockedByNumber: dependencyNumber,
                 }),
               { concurrency: 5, discard: true },
             )
@@ -318,16 +359,13 @@ export const GithubIssueSource = Layer.effect(
               toRemove,
               (dependency) =>
                 removeBlockedByDependency({
-                  owner,
-                  repo,
-                  issue_number: issueNumber,
-                  issue_id: dependency,
+                  issueNumber,
+                  blockedByNumber: dependency,
                 }),
               { concurrency: 5, discard: true },
             )
           }
         },
-
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
       cancelIssue: Effect.fnUntraced(
@@ -348,6 +386,33 @@ export const GithubIssueSource = Layer.effect(
 export class GithubRepoNotFound extends Data.TaggedError("GithubRepoNotFound") {
   readonly message = "GitHub repository not found"
 }
+
+// == label filter
+
+const labelFilter = new Setting(
+  "github.labelFilter",
+  Schema.Option(Schema.String),
+)
+const labelSelect = Effect.gen(function* () {
+  const label = yield* Prompt.text({
+    message:
+      "What label do you want to filter issues by? (leave empty for none)",
+  })
+  const labelOption = Option.some(label.trim()).pipe(
+    Option.filter(String.isNonEmpty),
+  )
+  yield* labelFilter.set(Option.some(labelOption))
+  return labelOption
+})
+const getOrSelectLabel = Effect.gen(function* () {
+  const label = yield* labelFilter.get
+  if (Option.isSome(label)) {
+    return label.value
+  }
+  return yield* labelSelect
+})
+
+export const resetGithub = labelFilter.set(Option.none())
 
 // == helpers
 

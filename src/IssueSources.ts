@@ -2,7 +2,7 @@ import { Effect, Layer, Option, Schema, ServiceMap } from "effect"
 import { Setting, Settings } from "./Settings.ts"
 import { LinearIssueSource, resetLinear } from "./Linear.ts"
 import { Prompt } from "effect/unstable/cli"
-import { GithubIssueSource } from "./Github.ts"
+import { GithubIssueSource, resetGithub } from "./Github.ts"
 import type { IssueSource } from "./IssueSource.ts"
 
 const issueSources: ReadonlyArray<typeof CurrentIssueSource.Service> = [
@@ -17,7 +17,7 @@ const issueSources: ReadonlyArray<typeof CurrentIssueSource.Service> = [
     id: "github",
     name: "GitHub Issues",
     layer: GithubIssueSource,
-    reset: Effect.void,
+    reset: resetGithub,
     githubPrInstructions: `At the start of your PR description, include a line that closes the issue, like: Closes {task id}.`,
   },
 ]
