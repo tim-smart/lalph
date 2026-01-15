@@ -13,8 +13,9 @@ import {
   String,
 } from "effect"
 import { Octokit } from "octokit"
-import { IssueSource } from "./IssueSource.ts"
+import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 import { ChildProcess } from "effect/unstable/process"
+import { PrdIssue } from "./domain/PrdIssue.ts"
 
 export class GithubError extends Data.TaggedError("GithubError")<{
   readonly cause: unknown
@@ -89,27 +90,73 @@ export const GithubIssueSource = Layer.effect(
       )
     const [owner, repo] = nameWithOwner.split("/") as [string, string]
 
-    const issues = yield* github
+    const states = new Map([
+      ["open", { id: "open", name: "Open", kind: "unstarted" as const }],
+      ["closed", { id: "closed", name: "Closed", kind: "completed" as const }],
+    ])
+
+    const issues = github
       .stream((rest, page) =>
         rest.issues.listForRepo({
           owner,
           repo,
-          state: "open",
+          state: "all",
           per_page: 100,
           page,
         }),
       )
       .pipe(
         Stream.filter((issue) => issue.pull_request === undefined),
+        Stream.map(
+          (issue) =>
+            new PrdIssue({
+              id: issue.number.toString(),
+              title: issue.title,
+              description: issue.body ?? "",
+              priority: 3,
+              estimate: null,
+              stateId: issue.state === "closed" ? "closed" : "open",
+              complete: issue.state === "closed",
+              blockedBy: [],
+              githubPrNumber: null,
+            }),
+        ),
         Stream.runCollect,
+        Effect.mapError((cause) => new IssueSourceError({ cause })),
       )
 
-    return yield* Effect.never
+    const createIssue = github.wrap((rest) => rest.issues.create)
 
-    // TODO: Implement
-    // return IssueSource.of({
-    //
-    // })
+    return IssueSource.of({
+      states: Effect.succeed(states),
+      issues,
+      createIssue: Effect.fnUntraced(
+        function* (issue: PrdIssue) {
+          const created = yield* createIssue({
+            owner,
+            repo,
+            title: issue.title,
+            body: issue.description,
+          })
+          return created.number.toString()
+        },
+        Effect.mapError((cause) => new IssueSourceError({ cause })),
+      ),
+      updateIssue: Effect.fnUntraced(function* () {
+        return yield* Effect.fail(
+          new IssueSourceError({
+            cause: new Error("GitHub issue updates not implemented"),
+          }),
+        )
+      }),
+      cancelIssue: Effect.fnUntraced(function* () {
+        return yield* Effect.fail(
+          new IssueSourceError({
+            cause: new Error("GitHub issue cancellation not implemented"),
+          }),
+        )
+      }),
+    })
   }),
 ).pipe(Layer.provide(Github.layer))
 

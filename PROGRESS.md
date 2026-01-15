@@ -13,3 +13,4 @@
 - 2026-01-14: TIM-14 move README Setup -> Development bottom. Files: `README.md`. Checks: `pnpm exec tsc --noEmit`, `pnpm exec prettier --check .`. No blockers.
 - 2026-01-14: TIM-14 branch `TIM-14/readme-development-section` already has README update; PR #22 open; no changes needed. No blockers.
 - 2026-01-14: TIM-14: verified README already updated; ran `pnpm exec tsc --noEmit` + `pnpm exec prettier --check .`. Files: `PROGRESS.md`. No blockers.
+- 2026-01-15: TIM-51: implemented GitHub IssueSource states, issue mapping, and createIssue; left update/cancel unimplemented. Files: `src/Github.ts`. Checks: `pnpm exec tsc --noEmit`, `pnpm exec prettier --check .`. No blockers.
