@@ -115,6 +115,10 @@ export const GithubIssueSource = Layer.effect(
     ): boolean =>
       label.some((l) => (typeof l === "string" ? l === name : l.name === name))
 
+    const listDependenciesBlockedBy = github.wrap(
+      (rest) => (rest as any).issues.listDependenciesBlockedBy,
+    )
+
     const issues = github
       .stream((rest, page) =>
         rest.issues.listForRepo({
@@ -142,9 +146,29 @@ export const GithubIssueSource = Layer.effect(
           ),
         ),
         Stream.filter((issue) => issue.pull_request === undefined),
-        Stream.map(
-          (issue) =>
-            new PrdIssue({
+        Stream.mapEffect(
+          Effect.fnUntraced(function* (issue) {
+            const dependencies = (yield* listDependenciesBlockedBy({
+              owner,
+              repo,
+              issue_number: issue.number,
+            })) as Array<{
+              readonly number?: number
+              readonly state?: string
+              readonly issue?: {
+                readonly number?: number
+                readonly state?: string
+              }
+            }>
+            const blockedBy = dependencies.flatMap((dependency) => {
+              const state = dependency.state ?? dependency.issue?.state
+              if (state === "closed") return []
+              const number = dependency.number ?? dependency.issue?.number
+              if (number === undefined) return []
+              return [`#${number}`]
+            })
+
+            return new PrdIssue({
               id: `#${issue.number}`,
               title: issue.title,
               description: issue.body ?? "",
@@ -159,9 +183,11 @@ export const GithubIssueSource = Layer.effect(
                       ? "in-review"
                       : "open",
               complete: issue.state === "closed",
-              blockedBy: [],
+              blockedBy,
               githubPrNumber: null,
-            }),
+            })
+          }),
+          { concurrency: 10 },
         ),
         Stream.runCollect,
         Effect.mapError((cause) => new IssueSourceError({ cause })),
