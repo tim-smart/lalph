@@ -108,7 +108,7 @@ Users idea / request: ${idea}
    - Check if similar tasks already exist in the prd.json file to avoid duplication.
 2. Each task should have a id of \`null\`, a title, and a concise description of what
    needs to be done.
-   - The tasks should start in a backlog state (i.e., not started yet).
+   - The tasks should start in a "Todo" state (i.e., not started yet).
    - The tasks should be actionable and specific, avoiding vague or high-level
      descriptions.
    - Each task should be small and take a hour or less to complete.
@@ -130,7 +130,7 @@ Users feedback on plan: ${feedback}
    - Make sure to research the codebase before creating any tasks, to ensure they
      are relevant and feasible.
    - Check if similar tasks already exist in the prd.json file to avoid duplication.
-   - The tasks should start in a backlog state (i.e., not started yet).
+   - The tasks should start in a "Todo" state (i.e., not started yet).
    - The tasks should be actionable and specific, avoiding vague or high-level
      descriptions.
    - Each task should be small and take a hour or less to complete.
