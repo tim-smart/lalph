@@ -207,6 +207,29 @@ export const GithubIssueSource = Layer.effect(
             title: issue.title,
             body: issue.description,
           })
+
+          const blockedByNumbers = Array.from(
+            new Set(
+              issue.blockedBy
+                .map((id) => Number(id.slice(1)))
+                .filter((id) => Number.isFinite(id)),
+            ),
+          )
+
+          if (blockedByNumbers.length > 0) {
+            yield* Effect.forEach(
+              blockedByNumbers,
+              (dependencyNumber) =>
+                addBlockedByDependency({
+                  owner,
+                  repo,
+                  issue_number: created.number,
+                  issue_id: dependencyNumber,
+                }).pipe(Effect.asVoid),
+              { concurrency: 5 },
+            )
+          }
+
           return created.number.toString()
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
