@@ -83,22 +83,17 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       yield* fs.writeFileString(prdFile, PrdIssue.arrayToJson(current))
     }).pipe(Console.withTime("Prd.sync"), Effect.uninterruptible)
 
-    const mergableGithubPrs = Effect.gen(function* () {
+    const hasMergableIssues = Effect.gen(function* () {
       const json = yield* fs.readFileString(prdFile)
       const updated = PrdList.fromJson(json)
-      const prs: Array<number> = []
       for (const issue of updated) {
         const entry = updatedIssues.get(issue.id ?? "")
-        if (
-          !issue.githubPrNumber ||
-          !entry ||
-          issue.stateId === entry.originalStateId
-        ) {
+        if (!entry || issue.stateId === entry.originalStateId) {
           continue
         }
-        prs.push(issue.githubPrNumber)
+        return true
       }
-      return prs
+      return false
     })
 
     const revertStateIds = Effect.suspend(() =>
@@ -122,7 +117,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       Effect.forkScoped,
     )
 
-    return { path: prdFile, mergableGithubPrs, revertStateIds } as const
+    return { path: prdFile, hasMergableIssues, revertStateIds } as const
   }),
 }) {
   static layer = Layer.effect(this, this.make).pipe(

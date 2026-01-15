@@ -61,13 +61,8 @@ export const run = Effect.fnUntraced(
     const exitCode = yield* handle.exitCode
     yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
-    if (options.autoMerge) {
-      const prs = yield* prd.mergableGithubPrs
-      for (const pr of prs) {
-        yield* ChildProcess.make`gh pr merge ${pr} -sd`.pipe(
-          ChildProcess.exitCode,
-        )
-      }
+    if (options.autoMerge && (yield* prd.hasMergableIssues)) {
+      yield* ChildProcess.make`gh pr merge -sd`.pipe(ChildProcess.exitCode)
     }
   },
   // on interrupt or error, revert any state changes made in the PRD

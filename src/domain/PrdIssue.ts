@@ -29,10 +29,6 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
   complete: Schema.Boolean.annotate({
     description: "Whether the issue is complete.",
   }),
-  githubPrNumber: Schema.NullOr(Schema.Number).annotate({
-    description:
-      "If a Github PR has been created or updated for this issue, this field should be set to the PR number.",
-  }),
 }) {
   static Array = Schema.Array(this)
   static ArrayFromJson = Schema.toCodecJson(this.Array)

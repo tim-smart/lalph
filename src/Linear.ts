@@ -161,7 +161,6 @@ export const LinearIssueSource = Layer.effect(
               stateId: issue.stateId!,
               complete: state.type !== "unstarted",
               blockedBy: blockedBy.map((i) => i.identifier),
-              githubPrNumber: null,
             })
           }),
           { concurrency: 10 },
