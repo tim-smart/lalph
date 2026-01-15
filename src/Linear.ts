@@ -206,7 +206,7 @@ export const LinearIssueSource = Layer.effect(
                   )
                   .pipe(Effect.ignore)
               },
-              { concurrency: 5 },
+              { concurrency: 5, discard: true },
             )
           }
           return linearIssue.identifier
