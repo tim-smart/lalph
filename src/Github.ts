@@ -141,13 +141,45 @@ export const GithubIssueSource = Layer.effect(
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
-      updateIssue: Effect.fnUntraced(function* () {
-        return yield* Effect.fail(
-          new IssueSourceError({
-            cause: new Error("GitHub issue updates not implemented"),
-          }),
-        )
-      }),
+      updateIssue: Effect.fnUntraced(
+        function* (options) {
+          if (options.stateId && !states.has(options.stateId)) {
+            return yield* Effect.fail(
+              new IssueSourceError({
+                cause: new Error(`Unknown GitHub stateId: ${options.stateId}`),
+              }),
+            )
+          }
+
+          const update: {
+            owner: string
+            repo: string
+            issue_number: number
+            title?: string
+            body?: string
+            state?: "open" | "closed"
+          } = {
+            owner,
+            repo,
+            issue_number: Number(options.issueId),
+          }
+
+          if (options.title !== undefined) {
+            update.title = options.title
+          }
+
+          if (options.description !== undefined) {
+            update.body = options.description
+          }
+
+          if (options.stateId !== undefined) {
+            update.state = options.stateId === "closed" ? "closed" : "open"
+          }
+
+          yield* github.wrap((rest) => rest.issues.update)(update)
+        },
+        Effect.mapError((cause) => new IssueSourceError({ cause })),
+      ),
       cancelIssue: Effect.fnUntraced(function* () {
         return yield* Effect.fail(
           new IssueSourceError({
