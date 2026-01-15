@@ -126,6 +126,9 @@ export const GithubIssueSource = Layer.effect(
         }),
       )
 
+    const listBlockedByDependencies = (issueId: number) =>
+      listDeps(issueId).pipe(Stream.runCollect)
+
     const issues = github
       .stream((rest, page) =>
         rest.issues.listForRepo({
@@ -186,6 +189,12 @@ export const GithubIssueSource = Layer.effect(
 
     const createIssue = github.wrap((rest) => rest.issues.create)
     const updateIssue = github.wrap((rest) => rest.issues.update)
+    const addBlockedByDependency = github.wrap(
+      (rest) => rest.issues.addBlockedByDependency,
+    )
+    const removeBlockedByDependency = github.wrap(
+      (rest) => rest.issues.removeDependencyBlockedBy,
+    )
 
     return IssueSource.of({
       states: Effect.succeed(states),
@@ -210,6 +219,7 @@ export const GithubIssueSource = Layer.effect(
             })
           }
 
+          const issueNumber = Number(options.issueId.slice(1))
           const update: {
             owner: string
             repo: string
@@ -221,7 +231,7 @@ export const GithubIssueSource = Layer.effect(
           } = {
             owner,
             repo,
-            issue_number: Number(options.issueId.slice(1)),
+            issue_number: issueNumber,
           }
 
           if (options.title !== undefined) {
@@ -243,7 +253,61 @@ export const GithubIssueSource = Layer.effect(
           }
 
           yield* updateIssue(update)
+
+          if (options.blockedBy !== undefined) {
+            const desiredBlockedBy = options.blockedBy
+            const currentBlockedBy = yield* Effect.scoped(
+              listBlockedByDependencies(issueNumber),
+            )
+            const currentNumbers = new Set(
+              currentBlockedBy.map((dep) => dep.number),
+            )
+            const desiredNumbers = new Set(
+              desiredBlockedBy
+                .map((id) => Number(id.slice(1)))
+                .filter((id) => Number.isFinite(id)),
+            )
+
+            const toAdd = desiredBlockedBy.reduce((acc, id) => {
+              const dependencyNumber = Number(id.slice(1))
+              if (
+                Number.isFinite(dependencyNumber) &&
+                !currentNumbers.has(dependencyNumber)
+              ) {
+                acc.push(dependencyNumber)
+              }
+              return acc
+            }, [] as number[])
+            const toRemove = currentBlockedBy.filter(
+              (dep) => !desiredNumbers.has(dep.number),
+            )
+
+            yield* Effect.forEach(
+              toAdd,
+              (dependencyNumber) =>
+                addBlockedByDependency({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  issue_id: dependencyNumber,
+                }).pipe(Effect.asVoid),
+              { concurrency: 5 },
+            )
+
+            yield* Effect.forEach(
+              toRemove,
+              (dependency) =>
+                removeBlockedByDependency({
+                  owner,
+                  repo,
+                  issue_number: issueNumber,
+                  issue_id: dependency.number,
+                }).pipe(Effect.asVoid),
+              { concurrency: 5 },
+            )
+          }
         },
+
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
       cancelIssue: Effect.fnUntraced(
