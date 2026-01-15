@@ -115,19 +115,18 @@ export const GithubIssueSource = Layer.effect(
     ): boolean =>
       label.some((l) => (typeof l === "string" ? l === name : l.name === name))
 
-    const listDeps = (issueId: number) =>
-      github.stream((rest, page) =>
-        rest.issues.listDependenciesBlockedBy({
-          owner,
-          repo,
-          issue_number: issueId,
-          per_page: 100,
-          page,
-        }),
-      )
-
-    const listBlockedByDependencies = (issueId: number) =>
-      listDeps(issueId).pipe(Stream.runCollect)
+    const listOpenBlockedBy = (issueId: number) =>
+      github
+        .stream((rest, page) =>
+          rest.issues.listDependenciesBlockedBy({
+            owner,
+            repo,
+            issue_number: issueId,
+            per_page: 100,
+            page,
+          }),
+        )
+        .pipe(Stream.filter((issue) => issue.state === "open"))
 
     const issues = github
       .stream((rest, page) =>
@@ -158,8 +157,7 @@ export const GithubIssueSource = Layer.effect(
         Stream.filter((issue) => issue.pull_request === undefined),
         Stream.mapEffect(
           Effect.fnUntraced(function* (issue) {
-            const dependencies = yield* listDeps(issue.number).pipe(
-              Stream.filter((dep) => dep.state === "open"),
+            const dependencies = yield* listOpenBlockedBy(issue.number).pipe(
               Stream.runCollect,
             )
             return new PrdIssue({
@@ -279,12 +277,11 @@ export const GithubIssueSource = Layer.effect(
 
           if (options.blockedBy !== undefined) {
             const desiredBlockedBy = options.blockedBy
-            const currentBlockedBy = yield* Effect.scoped(
-              listBlockedByDependencies(issueNumber),
+            const currentBlockedBy = yield* listOpenBlockedBy(issueNumber).pipe(
+              Stream.map((issue) => issue.number),
+              Stream.runCollect,
             )
-            const currentNumbers = new Set(
-              currentBlockedBy.map((dep) => dep.number),
-            )
+            const currentNumbers = new Set(currentBlockedBy)
             const desiredNumbers = new Set(
               desiredBlockedBy
                 .map((id) => Number(id.slice(1)))
@@ -302,7 +299,7 @@ export const GithubIssueSource = Layer.effect(
               return acc
             }, [] as number[])
             const toRemove = currentBlockedBy.filter(
-              (dep) => !desiredNumbers.has(dep.number),
+              (dep) => !desiredNumbers.has(dep),
             )
 
             yield* Effect.forEach(
@@ -313,8 +310,8 @@ export const GithubIssueSource = Layer.effect(
                   repo,
                   issue_number: issueNumber,
                   issue_id: dependencyNumber,
-                }).pipe(Effect.asVoid),
-              { concurrency: 5 },
+                }),
+              { concurrency: 5, discard: true },
             )
 
             yield* Effect.forEach(
@@ -324,9 +321,9 @@ export const GithubIssueSource = Layer.effect(
                   owner,
                   repo,
                   issue_number: issueNumber,
-                  issue_id: dependency.number,
-                }).pipe(Effect.asVoid),
-              { concurrency: 5 },
+                  issue_id: dependency,
+                }),
+              { concurrency: 5, discard: true },
             )
           }
         },
