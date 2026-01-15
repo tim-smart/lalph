@@ -180,13 +180,17 @@ export const GithubIssueSource = Layer.effect(
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
-      cancelIssue: Effect.fnUntraced(function* () {
-        return yield* Effect.fail(
-          new IssueSourceError({
-            cause: new Error("GitHub issue cancellation not implemented"),
-          }),
-        )
-      }),
+      cancelIssue: Effect.fnUntraced(
+        function* (issueId: string) {
+          yield* github.wrap((rest) => rest.issues.update)({
+            owner,
+            repo,
+            issue_number: Number(issueId),
+            state: "closed",
+          })
+        },
+        Effect.mapError((cause) => new IssueSourceError({ cause })),
+      ),
     })
   }),
 ).pipe(Layer.provide(Github.layer))
