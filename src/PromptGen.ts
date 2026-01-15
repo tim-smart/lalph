@@ -43,7 +43,7 @@ ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
    first task in the list. You can use the PROGRESS.md file to help inform your
    decision.
    - If a task is already completed or in review, skip it.
-   - If a task is blocked by another task, skip it.
+   - If the \`blockedBy\` field is not empty, skip the task.
 2. **Before doing anything else**, mark the task as "in progress" by updating its
    \`stateId\` in the prd.json file.
    This prevents other people or agents from working on the same task simultaneously.
