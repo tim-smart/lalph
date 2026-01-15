@@ -1,7 +1,10 @@
-import { Effect, Layer, Option, Schema } from "effect"
+import { Effect, Layer, Option, Schema, Unify } from "effect"
 import { Setting } from "./Settings.ts"
 import { LinearIssueSource, resetLinear } from "./Linear.ts"
 import { Prompt } from "effect/unstable/cli"
+import { GithubIssueSource } from "./Github.ts"
+import { unify } from "effect/Unify"
+import type { IssueSource } from "./IssueSource.ts"
 
 const issueSources = [
   {
@@ -10,7 +13,19 @@ const issueSources = [
     layer: LinearIssueSource,
     reset: resetLinear,
   },
+  {
+    id: "github",
+    name: "GitHub Issues",
+    layer: GithubIssueSource,
+    reset: Effect.void,
+  },
 ] as const
+
+type IssueLayer = Layer.Layer<
+  IssueSource,
+  Layer.Error<(typeof issueSources)[number]["layer"]>,
+  Layer.Services<(typeof issueSources)[number]["layer"]>
+>
 
 const selectedIssueSource = new Setting(
   "issueSource",
@@ -41,6 +56,6 @@ const getOrSelectIssueSource = Effect.gen(function* () {
 export const CurrentIssueSource = Layer.unwrap(
   Effect.gen(function* () {
     const source = yield* getOrSelectIssueSource
-    return source.layer
+    return source.layer as IssueLayer
   }),
 )

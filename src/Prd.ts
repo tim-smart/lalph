@@ -20,22 +20,26 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
 
     const prdFile = pathService.join(worktree.directory, `.lalph`, `prd.json`)
 
-    const initial = yield* source.issues
-    yield* fs.writeFileString(prdFile, PrdIssue.arrayToJson(initial))
+    let current = yield* source.issues
+    yield* fs.writeFileString(prdFile, PrdIssue.arrayToJson(current))
 
     const updatedIssues = new Map<
       string,
       {
         readonly issue: PrdIssue
         readonly originalStateId: string
-        count: number
       }
     >()
 
     const sync = Effect.gen(function* () {
       const json = yield* fs.readFileString(prdFile)
       const updated = PrdList.fromJson(json)
-      const current = yield* source.issues
+      const anyChanges =
+        updated.length !== current.length ||
+        updated.some((u, i) => u.isChangedComparedTo(current[i]!))
+      if (!anyChanges) {
+        return
+      }
       const toRemove = new Set(
         current.filter((i) => i.id !== null).map((i) => i.id!),
       )
@@ -61,16 +65,12 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
           blockedBy: issue.blockedBy,
         })
 
-        let entry = updatedIssues.get(issue.id)
-        if (!entry) {
-          entry = {
+        if (!updatedIssues.has(issue.id)) {
+          updatedIssues.set(issue.id, {
             issue,
             originalStateId: existing.stateId,
-            count: 0,
-          }
-          updatedIssues.set(issue.id, entry)
+          })
         }
-        entry.count++
       }
 
       yield* Effect.forEach(
@@ -79,10 +79,8 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
         { concurrency: "unbounded" },
       )
 
-      if (createdIssues === 0 || toRemove.size === 0) return
-
-      const refreshed = yield* source.issues
-      yield* fs.writeFileString(prdFile, PrdIssue.arrayToJson(refreshed))
+      current = yield* source.issues
+      yield* fs.writeFileString(prdFile, PrdIssue.arrayToJson(current))
     }).pipe(Console.withTime("Prd.sync"), Effect.uninterruptible)
 
     const mergableGithubPrs = Effect.gen(function* () {
@@ -90,25 +88,29 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       const updated = PrdList.fromJson(json)
       const prs: Array<number> = []
       for (const issue of updated) {
-        const count = updatedIssues.get(issue.id ?? "")?.count ?? 0
-        if (count <= 1 || !issue.githubPrNumber) continue
+        const entry = updatedIssues.get(issue.id ?? "")
+        if (
+          !issue.githubPrNumber ||
+          !entry ||
+          issue.stateId === entry.originalStateId
+        ) {
+          continue
+        }
         prs.push(issue.githubPrNumber)
       }
       return prs
     })
 
-    yield* Effect.addFinalizer(() =>
+    const revertStateIds = Effect.suspend(() =>
       Effect.forEach(
         updatedIssues.values(),
-        ({ issue, count, originalStateId }) => {
-          if (count > 1) return Effect.void
-          return source.updateIssue({
+        ({ issue, originalStateId }) =>
+          source.updateIssue({
             issueId: issue.id!,
             stateId: originalStateId,
-          })
-        },
-        { concurrency: "unbounded" },
-      ).pipe(Effect.ignore),
+          }),
+        { concurrency: "unbounded", discard: true },
+      ),
     )
 
     yield* fs.watch(prdFile).pipe(
@@ -120,7 +122,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       Effect.forkScoped,
     )
 
-    return { path: prdFile, mergableGithubPrs } as const
+    return { path: prdFile, mergableGithubPrs, revertStateIds } as const
   }),
 }) {
   static layer = Layer.effect(this, this.make).pipe(

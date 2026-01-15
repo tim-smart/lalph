@@ -70,8 +70,17 @@ export const run = Effect.fnUntraced(
       }
     }
   },
+  // on interrupt or error, revert any state changes made in the PRD
+  Effect.onError(
+    Effect.fnUntraced(function* () {
+      const prd = yield* Prd
+      yield* Effect.ignore(prd.revertStateIds)
+    }),
+  ),
   Effect.scoped,
   Effect.provide([PromptGen.layer, Prd.layer, Worktree.layer]),
 )
 
-export class RunnerStalled extends Data.TaggedError("RunnerStalled") {}
+export class RunnerStalled extends Data.TaggedError("RunnerStalled") {
+  readonly message = "The runner has stalled due to inactivity."
+}
