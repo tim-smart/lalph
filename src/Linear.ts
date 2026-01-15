@@ -190,6 +190,25 @@ export const LinearIssueSource = Layer.effect(
           )
           const linearIssue = yield* linear.use(() => created.issue!)
           identifierMap.set(linearIssue.identifier, linearIssue.id)
+          if (issue.blockedBy.length > 0) {
+            yield* Effect.forEach(
+              issue.blockedBy,
+              (identifier) => {
+                const blockerIssueId = identifierMap.get(identifier)
+                if (!blockerIssueId) return Effect.void
+                return linear
+                  .use((c) =>
+                    c.createIssueRelation({
+                      issueId: blockerIssueId,
+                      relatedIssueId: linearIssue.id,
+                      type: IssueRelationType.Blocks,
+                    }),
+                  )
+                  .pipe(Effect.ignore)
+              },
+              { concurrency: 5, discard: true },
+            )
+          }
           return linearIssue.identifier
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
