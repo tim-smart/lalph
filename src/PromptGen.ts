@@ -23,6 +23,9 @@ ${Array.from(states.values(), (state) => `- **${state.name}** (stateId: \`${stat
 To add a new task, append a new item to the prd.json file with the id set to
 \`null\`.
 
+When adding a new task, it will take about 5 seconds for the system to update the
+prd.json file with a new id for the task.
+
 ### Removing tasks
 
 To remove a task, simply delete the item from the prd.json file.

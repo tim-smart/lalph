@@ -9,7 +9,6 @@ import {
 } from "effect"
 import { Worktree } from "./Worktree.ts"
 import { PrdIssue, PrdList } from "./domain/PrdIssue.ts"
-import type { Mutable } from "effect/Types"
 import { IssueSource } from "./IssueSource.ts"
 
 export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
@@ -46,13 +45,11 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
         toRemove.delete(issue.id!)
 
         if (issue.id === null) {
-          // create new issue
-          const issueId = yield* source.createIssue(issue)
-          const mutable = issue as Mutable<PrdIssue>
-          mutable.id = issueId
+          yield* source.createIssue(issue)
           createdIssues++
           continue
         }
+
         const existing = current.find((i) => i.id === issue.id)
         if (!existing || !existing.isChangedComparedTo(issue)) continue
 
@@ -61,6 +58,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
           title: issue.title,
           description: issue.description,
           stateId: issue.stateId,
+          blockedBy: issue.blockedBy,
         })
 
         let entry = updatedIssues.get(issue.id)
@@ -77,10 +75,8 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
 
       yield* Effect.forEach(
         toRemove,
-        (issueId) => source.removeIssue(issueId),
-        {
-          concurrency: "unbounded",
-        },
+        (issueId) => source.cancelIssue(issueId),
+        { concurrency: "unbounded" },
       )
 
       if (createdIssues === 0 || toRemove.size === 0) return
@@ -108,8 +104,6 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
           if (count > 1) return Effect.void
           return source.updateIssue({
             issueId: issue.id!,
-            title: issue.title,
-            description: issue.description,
             stateId: originalStateId,
           })
         },

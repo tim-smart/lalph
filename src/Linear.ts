@@ -10,6 +10,7 @@ import {
 import {
   Connection,
   Issue,
+  IssueRelationType,
   LinearClient,
   Project,
   WorkflowState,
@@ -205,17 +206,31 @@ export const LinearIssueSource = Layer.effect(
       updateIssue: Effect.fnUntraced(
         function* (options) {
           const issueId = identifierMap.get(options.issueId)!
-          yield* linear.use((c) =>
-            c.updateIssue(issueId, {
-              title: options.title,
-              description: options.description,
-              stateId: options.stateId,
-            }),
+          const update = { ...options } as any
+          delete update.issueId
+          delete update.blockedBy
+          yield* linear.use((c) => c.updateIssue(issueId, update))
+          if (!options.blockedBy || options.blockedBy.length === 0) return
+          yield* Effect.forEach(
+            options.blockedBy,
+            (identifier) => {
+              const blockerIssueId = identifierMap.get(identifier)!
+              return linear
+                .use((c) =>
+                  c.createIssueRelation({
+                    issueId: blockerIssueId,
+                    relatedIssueId: issueId,
+                    type: IssueRelationType.Blocks,
+                  }),
+                )
+                .pipe(Effect.ignore)
+            },
+            { concurrency: 5 },
           )
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
-      removeIssue: Effect.fnUntraced(
+      cancelIssue: Effect.fnUntraced(
         function* (issueId: string) {
           const linearIssueId = identifierMap.get(issueId)!
           yield* linear.use((c) =>

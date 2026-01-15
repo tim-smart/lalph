@@ -27,12 +27,13 @@ export class IssueSource extends ServiceMap.Service<
 
     readonly updateIssue: (options: {
       readonly issueId: string
-      readonly title: string
-      readonly description: string
-      readonly stateId: string
+      readonly title?: string
+      readonly description?: string
+      readonly stateId?: string
+      readonly blockedBy?: ReadonlyArray<string>
     }) => Effect.Effect<void, IssueSourceError>
 
-    readonly removeIssue: (
+    readonly cancelIssue: (
       issueId: string,
     ) => Effect.Effect<void, IssueSourceError>
   }
