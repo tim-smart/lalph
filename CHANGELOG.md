@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.17
+
+### Patch Changes
+
+- [`bb1006a`](https://github.com/tim-smart/lalph/commit/bb1006a786cb0c4024e1e13545bd64229891d332) Thanks [@tim-smart](https://github.com/tim-smart)! - use yaml for prd file
+
 ## 0.1.16
 
 ### Patch Changes
