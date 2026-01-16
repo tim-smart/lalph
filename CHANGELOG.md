@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.12
+
+### Patch Changes
+
+- [`0cbe2c8`](https://github.com/tim-smart/lalph/commit/0cbe2c8ff7d002f20f89d0bcaa362adaf1bf50ec) Thanks [@tim-smart](https://github.com/tim-smart)! - don't use npx
+
 ## 0.1.11
 
 ### Patch Changes
