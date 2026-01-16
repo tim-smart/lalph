@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.13
+
+### Patch Changes
+
+- [`6558537`](https://github.com/tim-smart/lalph/commit/655853723708fe87d8f84c7ee0cee2b56f053de9) Thanks [@tim-smart](https://github.com/tim-smart)! - ensure plan file exists
+
 ## 0.1.12
 
 ### Patch Changes
