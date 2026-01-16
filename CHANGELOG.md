@@ -1,5 +1,23 @@
 # lalph
 
+## 0.1.10
+
+### Patch Changes
+
+- [`2f9d35e`](https://github.com/tim-smart/lalph/commit/2f9d35e71cb121e80ee2f37f18239143f03337d5) Thanks [@tim-smart](https://github.com/tim-smart)! - check for work before creating workspace
+
+- [`2dd08f1`](https://github.com/tim-smart/lalph/commit/2dd08f1ca281c911ff834ca54caba037e40e337c) Thanks [@tim-smart](https://github.com/tim-smart)! - add Github issue source
+
+- [`02627ef`](https://github.com/tim-smart/lalph/commit/02627ef90c3871f48158369f2c1b56a15c91dcaf) Thanks [@tim-smart](https://github.com/tim-smart)! - abstract the IssueSource
+
+- [`3a54608`](https://github.com/tim-smart/lalph/commit/3a546087d934cdab2085e581202c4a4c64dc7af7) Thanks [@tim-smart](https://github.com/tim-smart)! - add stall timeouts
+
+- [#32](https://github.com/tim-smart/lalph/pull/32) [`2c88c25`](https://github.com/tim-smart/lalph/commit/2c88c2571ff96e390c43bb48772040ccdd12313d) Thanks [@tim-smart](https://github.com/tim-smart)! - sync GitHub issue dependencies on creation
+
+- [#38](https://github.com/tim-smart/lalph/pull/38) [`641ed74`](https://github.com/tim-smart/lalph/commit/641ed744977d6ed05e037e4772d78344c43b8afd) Thanks [@tim-smart](https://github.com/tim-smart)! - Sync Linear blocked-by relations after creating an issue.
+
+- [`3a54608`](https://github.com/tim-smart/lalph/commit/3a546087d934cdab2085e581202c4a4c64dc7af7) Thanks [@tim-smart](https://github.com/tim-smart)! - add issue blockers
+
 ## 0.1.9
 
 ### Patch Changes
