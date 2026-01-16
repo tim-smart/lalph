@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.14
+
+### Patch Changes
+
+- [`32e5262`](https://github.com/tim-smart/lalph/commit/32e52627bbf4cf373b8cd227c12ac4f0b9a80293) Thanks [@tim-smart](https://github.com/tim-smart)! - further clarify instruction permissions
+
 ## 0.1.13
 
 ### Patch Changes
