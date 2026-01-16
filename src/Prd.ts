@@ -30,7 +30,6 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       {
         readonly issue: PrdIssue
         readonly originalStateId: string
-        count: number
       }
     >()
 
@@ -84,12 +83,12 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
           blockedBy: issue.blockedBy,
         })
 
-        let entry = updatedIssues.get(issue.id)
-        if (!entry) {
-          entry = { issue, originalStateId: existing.stateId, count: 0 }
-          updatedIssues.set(issue.id, entry)
+        if (!updatedIssues.has(issue.id!)) {
+          updatedIssues.set(issue.id, {
+            issue,
+            originalStateId: existing.stateId,
+          })
         }
-        entry.count++
       }
 
       yield* Effect.forEach(
@@ -129,24 +128,39 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       return prs
     })
 
-    const revertStateIds = (options: {
-      readonly reason: "inactivity" | "error"
-    }) =>
-      Effect.suspend(() =>
-        Effect.forEach(
-          updatedIssues.values(),
-          ({ issue, originalStateId, count }) =>
-            options.reason === "error" || count === 1
-              ? source.updateIssue({
-                  issueId: issue.id!,
-                  stateId: originalStateId,
-                })
-              : Effect.void,
-          { concurrency: "unbounded", discard: true },
-        ),
-      )
+    const revertStateIds = Effect.suspend(() =>
+      Effect.forEach(
+        updatedIssues.values(),
+        ({ issue, originalStateId }) =>
+          source.updateIssue({
+            issueId: issue.id!,
+            stateId: originalStateId,
+          }),
+        { concurrency: "unbounded", discard: true },
+      ),
+    )
+    const maybeRevertIssue = Effect.fnUntraced(function* (options: {
+      readonly issueId: string
+      readonly todoStateId: string
+      readonly inProgressStateId: string
+      readonly reviewStateId: string
+    }) {
+      const yaml = yield* fs.readFileString(prdFile)
+      const updated = PrdIssue.arrayFromYaml(yaml)
+      const issue = updated.find((i) => i.id === options.issueId)
+      if (!issue || issue.stateId === options.reviewStateId) return
+      yield* source.updateIssue({
+        issueId: issue.id!,
+        stateId: options.todoStateId,
+      })
+    })
 
-    return { path: prdFile, mergableGithubPrs, revertStateIds } as const
+    return {
+      path: prdFile,
+      mergableGithubPrs,
+      revertStateIds,
+      maybeRevertIssue,
+    } as const
   }),
 }) {
   static layer = Layer.effect(this, this.make).pipe(

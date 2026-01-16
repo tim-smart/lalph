@@ -6,6 +6,7 @@ import {
   ServiceMap,
   Option,
   RcMap,
+  DateTime,
 } from "effect"
 import {
   Connection,
@@ -161,9 +162,6 @@ export const LinearIssueSource = Layer.effect(
                 Option.getOrNull,
               ),
             },
-            completedAt: {
-              gte: "-P3D",
-            },
             state: {
               type: { in: ["unstarted", "started", "completed"] },
             },
@@ -171,6 +169,15 @@ export const LinearIssueSource = Layer.effect(
         }),
       )
       .pipe(
+        Stream.filter((issue) => {
+          const completedAt = issue.completedAt
+          if (!completedAt) return true
+          const completed = DateTime.makeUnsafe(completedAt)
+          const threeDaysAgo = DateTime.nowUnsafe().pipe(
+            DateTime.subtract({ days: 3 }),
+          )
+          return DateTime.isGreaterThanOrEqualTo(completed, threeDaysAgo)
+        }),
         Stream.mapEffect(
           Effect.fnUntraced(function* (issue) {
             identifierMap.set(issue.identifier, issue.id)

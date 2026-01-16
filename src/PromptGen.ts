@@ -38,10 +38,11 @@ To remove a task, simply delete the item from the prd.yml file.
 ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
 \`\`\``
 
-      const prompt = `# Instructions
+      const promptChoose = `# Instructions
 
-The following instructions should be done without interaction or asking for
-permission.
+Your job is to choose the next task to work on from the prd.yml file. **DO NOT** implement the task yet.
+
+The following instructions should be done without interaction or asking for permission.
 
 1. Decide which single task to work on next from the prd.yml file. This should
    be the task YOU decide as the most important to work on next, not just the
@@ -51,7 +52,40 @@ permission.
 2. **Before doing anything else**, mark the task as "in progress" by updating its
    \`stateId\` in the prd.yml file.
    This prevents other people or agents from working on the same task simultaneously.
-3. Check if there is an existing Github PR for the task, otherwise create a new
+3. Research the task. If it seems like too many steps are needed to complete the task,
+   break it down into smaller tasks and add them to the prd.yml file, marking the
+   original task as "closed" by updating its \`stateId\`.
+4. Once you have chosen a task of reasonable size, save its information in a
+   "task.json" file alongside the prd.yml file. Use the following format:
+
+\`\`\`json
+{
+  "id": "task id",
+  "todoStateId": "id of the todo state",
+  "inProgressStateId": "id of the in progress state",
+  "reviewStateId": "id of the review state"
+}
+\`\`\`
+
+## Important: Task sizing
+
+If at any point you decide that a task is too large or complex to complete in a
+single iteration, break it down into smaller tasks and add them to the prd.yml
+file. Then, mark the original task as "closed" by updating its \`stateId\`.
+
+Each task should be small and specific.
+Instead of creating tasks like "Refactor the authentication system", create
+smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
+
+${prdNotes}`
+
+      const prompt = (taskId: string) => `# Instructions
+
+The following instructions should be done without interaction or asking for
+permission.
+
+1. Your job is to complete the task with id \`${taskId}\` from the prd.yml file.
+2. Check if there is an existing Github PR for the task, otherwise create a new
    branch for the task.
    - If there is an existing PR, checkout the branch for that PR.
    - If there is an existing PR, check if there are any new comments or requested
@@ -60,10 +94,7 @@ permission.
      HEAD as the base.
    - New branches should be named using the format \`{task id}/description\`.
    - When checking for PR reviews, make sure to check the "reviews" field and read ALL unresolved comments.
-4. Research the task. If it seems like too many steps are needed to complete the task,
-   break it down into smaller tasks and add them to the prd.yml file, marking the
-   original task as "closed" by updating its \`stateId\`.
-   Otherwise, implement the task.
+4. Implement the task.
 5. Run any checks / feedback loops, such as type checks, unit tests, or linting.
 6. Create or update the pull request with your progress.
    ${sourceMeta.githubPrInstructions}
@@ -76,19 +107,6 @@ permission.
    - Append to the \`description\` field with any notes or important discoveries.
    - If you believe the task is complete, update the \`stateId\` for "review".
      Only if no "review" state exists, use a completed state.
-
-Remember, only work on a single task at a time, that you decide is the most
-important to work on next.
-
-## Important: Task sizing
-
-If at any point you decide that a task is too large or complex to complete in a
-single iteration, break it down into smaller tasks and add them to the prd.yml
-file. Then, mark the original task as "closed" by updating its \`stateId\`.
-
-Each task should be small and specific.
-Instead of creating tasks like "Refactor the authentication system", create
-smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
 
 ## Handling blockers
 
@@ -141,7 +159,7 @@ ${prdNotes}`
  
 ${prdNotes}`
 
-      return { prompt, planPrompt, planContinuePrompt } as const
+      return { promptChoose, prompt, planPrompt, planContinuePrompt } as const
     }),
   },
 ) {

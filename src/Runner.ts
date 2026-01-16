@@ -1,4 +1,13 @@
-import { Data, DateTime, Duration, Effect, Path, Stream } from "effect"
+import {
+  Data,
+  DateTime,
+  Duration,
+  Effect,
+  FileSystem,
+  Path,
+  Schema,
+  Stream,
+} from "effect"
 import { PromptGen } from "./PromptGen.ts"
 import { Prd } from "./Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
@@ -10,14 +19,33 @@ export const run = Effect.fnUntraced(
     readonly autoMerge: boolean
     readonly stallTimeout: Duration.Duration
   }) {
+    const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
     const worktree = yield* Worktree
     const promptGen = yield* PromptGen
     const cliAgent = yield* getOrSelectCliAgent
     const prd = yield* Prd
 
+    const chooseCommand = cliAgent.command({
+      prompt: promptGen.promptChoose,
+      prdFilePath: pathService.join(".lalph", "prd.yml"),
+    })
+
+    yield* ChildProcess.make(chooseCommand[0]!, chooseCommand.slice(1), {
+      cwd: worktree.directory,
+      extendEnv: true,
+      stdout: "inherit",
+      stderr: "inherit",
+      stdin: "inherit",
+    }).pipe(ChildProcess.exitCode)
+
+    const taskJson = yield* fs.readFileString(
+      pathService.join(worktree.directory, ".lalph", "task.json"),
+    )
+    const task = yield* Schema.decodeEffect(ChosenTask)(taskJson)
+
     const cliCommand = cliAgent.command({
-      prompt: promptGen.prompt,
+      prompt: promptGen.prompt(task.id),
       prdFilePath: pathService.join(".lalph", "prd.yml"),
     })
     const handle = yield* ChildProcess.make(
@@ -62,7 +90,10 @@ export const run = Effect.fnUntraced(
 
     const prs = yield* prd.mergableGithubPrs
     if (prs.length === 0) {
-      yield* prd.revertStateIds({ reason: "inactivity" })
+      yield* prd.maybeRevertIssue({
+        ...task,
+        issueId: task.id,
+      })
     } else if (options.autoMerge) {
       for (const pr of prs) {
         yield* ChildProcess.make`gh pr merge ${pr} -sd`.pipe(
@@ -75,7 +106,7 @@ export const run = Effect.fnUntraced(
   Effect.onError(
     Effect.fnUntraced(function* () {
       const prd = yield* Prd
-      yield* Effect.ignore(prd.revertStateIds({ reason: "error" }))
+      yield* Effect.ignore(prd.revertStateIds)
     }),
   ),
   Effect.scoped,
@@ -85,3 +116,12 @@ export const run = Effect.fnUntraced(
 export class RunnerStalled extends Data.TaggedError("RunnerStalled") {
   readonly message = "The runner has stalled due to inactivity."
 }
+
+const ChosenTask = Schema.fromJsonString(
+  Schema.Struct({
+    id: Schema.String,
+    todoStateId: Schema.String,
+    inProgressStateId: Schema.String,
+    reviewStateId: Schema.String,
+  }),
+)
