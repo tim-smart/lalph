@@ -2,13 +2,13 @@
 
 A LLM agent orchestrator driven by your chosen source of issues.
 
-## Features
+## ✨ Features
 
-- Integrate with various issue sources (GitHub Issues, Linear, etc.)
-- Plan mode to generate issues from high-level goals
-- Uses git worktrees to allow for multiple concurrent iterations
-- Creates pull requests for each task, with optional auto-merge for vibe coding
-- Support issue dependencies to ensure correct task order
+- 🔌 Integrate with various issue sources (GitHub Issues, Linear, etc.)
+- 🧭 Plan mode to generate issues from high-level goals
+- 🌳 Uses git worktrees to allow for multiple concurrent iterations
+- 🧵 Creates pull requests for each task, with optional auto-merge for vibe coding
+- 🧩 Support issue dependencies to ensure correct task order
 
 ## Installation
 
