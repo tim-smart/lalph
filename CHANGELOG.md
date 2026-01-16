@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.11
+
+### Patch Changes
+
+- [`e97aa38`](https://github.com/tim-smart/lalph/commit/e97aa3803eeea4984edafc2f7529a1ae2f9ae839) Thanks [@tim-smart](https://github.com/tim-smart)! - support token rotation
+
 ## 0.1.10
 
 ### Patch Changes
