@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.18
+
+### Patch Changes
+
+- [`6ca78fc`](https://github.com/tim-smart/lalph/commit/6ca78fcda68a7a0ace0bc38e0ff3624cfecdaea7) Thanks [@tim-smart](https://github.com/tim-smart)! - Filter linear completed issues for last 3 days
+
+- [`b25d665`](https://github.com/tim-smart/lalph/commit/b25d665d84c8d1c5f6e48dac64906f6f5ea0e822) Thanks [@tim-smart](https://github.com/tim-smart)! - split task choosing to reduce context usage
+
 ## 0.1.17
 
 ### Patch Changes
