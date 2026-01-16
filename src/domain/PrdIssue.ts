@@ -1,4 +1,4 @@
-import { Schema, Data } from "effect"
+import { Schema, Data, Array, Equal } from "effect"
 
 export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
   id: Schema.NullOr(Schema.String).annotate({
@@ -54,7 +54,11 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
     return (
       this.title !== issue.title ||
       this.description !== issue.description ||
-      this.stateId !== issue.stateId
+      this.stateId !== issue.stateId ||
+      !Array.makeEquivalence(Equal.asEquivalence())(
+        this.blockedBy,
+        issue.blockedBy,
+      )
     )
   }
 }
@@ -69,7 +73,7 @@ export class PrdList<O = unknown> extends Data.Class<{
   }
 
   toJson(): string {
-    const issuesArray = Array.from(this.issues.values())
+    const issuesArray = Array.fromIterable(this.issues.values())
     return PrdIssue.arrayToJson(issuesArray)
   }
 

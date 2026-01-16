@@ -63,22 +63,17 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
           (relation) =>
             relation.type === "blocks" && relation.relatedIssueId === issue.id,
         ),
-        Stream.runCollect,
       )
 
     const blockedBy = (issue: Issue) =>
       blockedByRelations(issue).pipe(
-        Effect.flatMap((relations) =>
-          Effect.forEach(relations, (relation) => use(() => relation.issue!), {
-            concurrency: "unbounded",
-          }),
-        ),
-        Effect.map((issues) =>
-          issues.filter((issue) => {
-            const state = states.get(issue.stateId!)!
-            return state.type !== "completed"
-          }),
-        ),
+        Stream.mapEffect((relation) => use(() => relation.issue!), {
+          concurrency: "unbounded",
+        }),
+        Stream.filter((issue) => {
+          const state = states.get(issue.stateId!)!
+          return state.type !== "completed"
+        }),
       )
 
     return {
@@ -157,7 +152,7 @@ export const LinearIssueSource = Layer.effect(
           Effect.fnUntraced(function* (issue) {
             identifierMap.set(issue.identifier, issue.id)
             const state = linear.states.get(issue.stateId!)!
-            const blockedBy = yield* linear.blockedBy(issue)
+            const blockedBy = yield* Stream.runCollect(linear.blockedBy(issue))
             return new PrdIssue({
               id: issue.identifier,
               title: issue.title,
@@ -215,8 +210,9 @@ export const LinearIssueSource = Layer.effect(
           })
 
           const linearIssue = yield* linear.use((c) => c.issue(issueId))
-          const existingRelations =
-            yield* linear.blockedByRelations(linearIssue)
+          const existingRelations = yield* Stream.runCollect(
+            linear.blockedByRelations(linearIssue),
+          )
           const existingBlockers = new Map(
             existingRelations.map((relation) => [
               relation.issueId!,
