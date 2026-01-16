@@ -185,21 +185,22 @@ export const GithubIssueSource = Layer.effect(
             const dependencies = yield* listOpenBlockedBy(issue.number).pipe(
               Stream.runCollect,
             )
+            const stateId =
+              issue.state === "closed"
+                ? "closed"
+                : hasLabel(issue.labels, "in-progress")
+                  ? "in-progress"
+                  : hasLabel(issue.labels, "in-review")
+                    ? "in-review"
+                    : "open"
             return new PrdIssue({
               id: `#${issue.number}`,
               title: issue.title,
               description: issue.body ?? "",
               priority: 0,
               estimate: null,
-              stateId:
-                issue.state === "closed"
-                  ? "closed"
-                  : hasLabel(issue.labels, "in-progress")
-                    ? "in-progress"
-                    : hasLabel(issue.labels, "in-review")
-                      ? "in-review"
-                      : "open",
-              complete: issue.state === "closed",
+              stateId,
+              complete: stateId === "closed" || stateId === "in-review",
               blockedBy: dependencies.map((dep) => `#${dep.number}`),
               githubPrNumber: null,
             })
