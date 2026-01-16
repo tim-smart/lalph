@@ -1,14 +1,12 @@
 import type { Api } from "@octokit/plugin-rest-endpoint-methods"
 import type { OctokitResponse } from "@octokit/types"
 import {
-  Config,
   Data,
   DateTime,
   Effect,
   Layer,
   Option,
   pipe,
-  Redacted,
   Schema,
   ServiceMap,
   Stream,
@@ -20,6 +18,7 @@ import { ChildProcess } from "effect/unstable/process"
 import { PrdIssue } from "./domain/PrdIssue.ts"
 import { Setting } from "./Settings.ts"
 import { Prompt } from "effect/unstable/cli"
+import { TokenManager } from "./Github/TokenManager.ts"
 
 export class GithubError extends Data.TaggedError("GithubError")<{
   readonly cause: unknown
@@ -27,10 +26,8 @@ export class GithubError extends Data.TaggedError("GithubError")<{
 
 export class Github extends ServiceMap.Service<Github>()("lalph/Github", {
   make: Effect.gen(function* () {
-    const token = yield* Config.redacted("GITHUB_TOKEN").pipe(
-      Config.orElse(() => Config.redacted("GH_TOKEN")),
-    )
-    const octokit = new Octokit({ auth: Redacted.value(token) })
+    const tokens = yield* TokenManager
+    const octokit = new Octokit({ auth: (yield* tokens.get).token })
 
     const rest = octokit.rest
 
@@ -69,10 +66,12 @@ export class Github extends ServiceMap.Service<Github>()("lalph/Github", {
         ),
       )
 
-    return { token, request, wrap, stream } as const
+    return { request, wrap, stream } as const
   }),
 }) {
-  static layer = Layer.effect(this, this.make)
+  static layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(TokenManager.layer),
+  )
 }
 
 export const GithubIssueSource = Layer.effect(
