@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.15
+
+### Patch Changes
+
+- [`02e0fcc`](https://github.com/tim-smart/lalph/commit/02e0fcc4840b0730cbcb38b00f198b3f924e0d30) Thanks [@tim-smart](https://github.com/tim-smart)! - use HEAD as the base for new branches
+
 ## 0.1.14
 
 ### Patch Changes
