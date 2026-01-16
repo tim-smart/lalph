@@ -40,6 +40,9 @@ ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
 
       const prompt = `# Instructions
 
+The following instructions should be done without interaction or asking for
+permission.
+
 1. Decide which single task to work on next from the prd.json file. This should
    be the task YOU decide as the most important to work on next, not just the
    first task in the list.
