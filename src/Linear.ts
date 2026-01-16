@@ -150,15 +150,6 @@ export const LinearIssueSource = Layer.effect(
       (state) => state.type === "canceled",
     )!
 
-    const completedLookbackMs = 3 * 24 * 60 * 60 * 1000
-    const completedCutoff = new Date(Date.now() - completedLookbackMs)
-    const shouldIncludeIssue = (issue: Issue) => {
-      const state = linear.states.get(issue.stateId!)!
-      if (state.type !== "completed") return true
-      const completedAt = issue.completedAt
-      return completedAt ? completedAt >= completedCutoff : false
-    }
-
     const issues = linear
       .stream(() =>
         project.issues({
@@ -170,6 +161,9 @@ export const LinearIssueSource = Layer.effect(
                 Option.getOrNull,
               ),
             },
+            completedAt: {
+              gte: "-P3D",
+            },
             state: {
               type: { in: ["unstarted", "started", "completed"] },
             },
@@ -177,7 +171,6 @@ export const LinearIssueSource = Layer.effect(
         }),
       )
       .pipe(
-        Stream.filter(shouldIncludeIssue),
         Stream.mapEffect(
           Effect.fnUntraced(function* (issue) {
             identifierMap.set(issue.identifier, issue.id)
