@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.16
+
+### Patch Changes
+
+- [`5ee9e8d`](https://github.com/tim-smart/lalph/commit/5ee9e8d8c50ffad2d8ed27b8c28b77f60cff2bbd) Thanks [@tim-smart](https://github.com/tim-smart)! - permission to commit
+
 ## 0.1.15
 
 ### Patch Changes
