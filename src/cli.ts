@@ -11,7 +11,7 @@ import { getOrSelectCliAgent, selectCliAgent } from "./CliAgent.ts"
 import { CurrentIssueSource, selectIssueSource } from "./IssueSources.ts"
 import { checkForWork } from "./IssueSource.ts"
 
-const selectAgent = Command.make("select-agent").pipe(
+const selectAgent = Command.make("agent").pipe(
   Command.withDescription("Select the CLI agent to use"),
   Command.withHandler(() => selectCliAgent),
 )
