@@ -143,20 +143,16 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     const flagUnmergable = Effect.fnUntraced(function* (options: {
       readonly issueId: string
     }) {
-      const yaml = yield* fs.readFileString(prdFile)
-      const updated = PrdIssue.arrayFromYaml(yaml)
-      const issue = updated.find((i) => i.id === options.issueId)
+      const issue = current.find((entry) => entry.id === options.issueId)
       if (!issue) return
       if (issue.description.includes(mergeConflictInstruction)) return
 
       const nextDescription = `${issue.description.trimEnd()}\n\n${mergeConflictInstruction}`
-      const nextIssues = updated.map((entry) =>
-        entry.id === options.issueId
-          ? new PrdIssue({ ...entry, description: nextDescription })
-          : entry,
-      )
 
-      yield* fs.writeFileString(prdFile, PrdIssue.arrayToYaml(nextIssues))
+      yield* source.updateIssue({
+        issueId: issue.id!,
+        description: nextDescription,
+      })
     })
 
     return {
