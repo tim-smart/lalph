@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.25
+
+### Patch Changes
+
+- [`48bfef8`](https://github.com/tim-smart/lalph/commit/48bfef88a4fa3f744ae174fd2fd499b9806259c5) Thanks [@tim-smart](https://github.com/tim-smart)! - add opencode permissions
+
 ## 0.1.24
 
 ### Patch Changes
