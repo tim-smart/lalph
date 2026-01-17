@@ -105,10 +105,12 @@ permission.
    - You have permission to create or update the PR as needed. You have full
      permission to push branches, create PRs or create git commits.
 7. Update the prd.yml file to reflect any changes in task states.
+   - Only update the prd.yml file after the GitHub PR has been created or updated.
    - Add follow up tasks only if needed.
    - Append to the \`description\` field with any notes or important discoveries.
    - If you believe the task is complete, update the \`stateId\` for "review".
      Only if no "review" state exists, use a completed state.
+
 
 ## Handling blockers
 

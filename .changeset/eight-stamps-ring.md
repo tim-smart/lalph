@@ -2,4 +2,4 @@
 "lalph": patch
 ---
 
-wait between edits
+note that prd.yml updates should happen after PR updates
