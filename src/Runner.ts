@@ -4,6 +4,7 @@ import {
   Duration,
   Effect,
   FileSystem,
+  Option,
   Path,
   Schema,
   Stream,
@@ -17,6 +18,7 @@ import { getOrSelectCliAgent } from "./CliAgent.ts"
 export const run = Effect.fnUntraced(
   function* (options: {
     readonly autoMerge: boolean
+    readonly targetBranch: Option.Option<string>
     readonly stallTimeout: Duration.Duration
   }) {
     const fs = yield* FileSystem.FileSystem
@@ -25,6 +27,12 @@ export const run = Effect.fnUntraced(
     const promptGen = yield* PromptGen
     const cliAgent = yield* getOrSelectCliAgent
     const prd = yield* Prd
+
+    if (Option.isSome(options.targetBranch)) {
+      yield* ChildProcess.make`git checkout ${`origin/${options.targetBranch.value}`}`.pipe(
+        ChildProcess.exitCode,
+      )
+    }
 
     const chooseCommand = cliAgent.command({
       prompt: promptGen.promptChoose,
@@ -45,7 +53,10 @@ export const run = Effect.fnUntraced(
     const task = yield* Schema.decodeEffect(ChosenTask)(taskJson)
 
     const cliCommand = cliAgent.command({
-      prompt: promptGen.prompt(task.id),
+      prompt: promptGen.prompt({
+        taskId: task.id,
+        targetBranch: Option.getOrUndefined(options.targetBranch),
+      }),
       prdFilePath: pathService.join(".lalph", "prd.yml"),
     })
     const handle = yield* ChildProcess.make(
@@ -96,6 +107,12 @@ export const run = Effect.fnUntraced(
       })
     } else if (options.autoMerge) {
       for (const pr of prs) {
+        if (Option.isSome(options.targetBranch)) {
+          yield* ChildProcess.make`gh pr edit ${pr} --base ${options.targetBranch.value}`.pipe(
+            ChildProcess.exitCode,
+          )
+        }
+
         yield* ChildProcess.make`gh pr merge ${pr} -sd`.pipe(
           ChildProcess.exitCode,
         )

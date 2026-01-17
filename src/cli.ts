@@ -58,6 +58,12 @@ const autoMerge = Flag.boolean("auto-merge").pipe(
   Flag.withDescription("Automatically merge eligible PRs"),
 )
 
+const targetBranch = Flag.string("target-branch").pipe(
+  Flag.withDescription("Target branch for PRs"),
+  Flag.withAlias("b"),
+  Flag.optional,
+)
+
 const maxIterationMinutes = Flag.integer("max-minutes").pipe(
   Flag.withDescription(
     "Maximum number of minutes to allow an iteration to run",
@@ -76,6 +82,7 @@ const root = Command.make("lalph", {
   iterations,
   concurrency,
   autoMerge,
+  targetBranch,
   maxIterationMinutes,
   stallMinutes,
 }).pipe(
@@ -84,6 +91,7 @@ const root = Command.make("lalph", {
       iterations,
       concurrency,
       autoMerge,
+      targetBranch,
       maxIterationMinutes,
       stallMinutes,
     }) {
@@ -129,6 +137,7 @@ const root = Command.make("lalph", {
           Effect.andThen(
             run({
               autoMerge,
+              targetBranch,
               stallTimeout: Duration.minutes(stallMinutes),
             }),
           ),

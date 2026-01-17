@@ -81,14 +81,17 @@ smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mec
 
 ${prdNotes}`
 
-      const prompt = (taskId: string) => `# Instructions
+      const prompt = (options: {
+        readonly taskId: string
+        readonly targetBranch: string | undefined
+      }) => `# Instructions
 
 The following instructions should be done without interaction or asking for
 permission.
 
-1. Your job is to complete the task with id \`${taskId}\` from the prd.yml file.
+1. Your job is to complete the task with id \`${options.taskId}\` from the prd.yml file.
 2. Check if there is an existing Github PR for the task, otherwise create a new
-   branch for the task.
+   branch for the task.${options.targetBranch ? ` The target branch for the PR should be \`${options.targetBranch}\`.` : ""}
    - If there is an existing PR, checkout the branch for that PR.
    - If there is an existing PR, check if there are any new comments or requested
      changes, and address them as part of the task.
