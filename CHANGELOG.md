@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.22
+
+### Patch Changes
+
+- [`5f0e86e`](https://github.com/tim-smart/lalph/commit/5f0e86e8d9fd7a08468cd5ef682387a0df816c0e) Thanks [@tim-smart](https://github.com/tim-smart)! - prevent task update race conditions
+
 ## 0.1.21
 
 ### Patch Changes
