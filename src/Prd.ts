@@ -102,13 +102,13 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     const mergableGithubPrs = Effect.gen(function* () {
       const yaml = yield* fs.readFileString(prdFile)
       const updated = PrdIssue.arrayFromYaml(yaml)
-      const prs = Array.empty<number>()
+      const prs = Array.empty<{ issueId: string; prNumber: number }>()
       for (const issue of updated) {
         const entry = updatedIssues.get(issue.id ?? "")
         if (!entry || !issue.githubPrNumber || issue.state !== "in-review") {
           continue
         }
-        prs.push(issue.githubPrNumber)
+        prs.push({ issueId: issue.id!, prNumber: issue.githubPrNumber })
       }
       return prs
     })
@@ -145,13 +145,18 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     }) {
       const issue = current.find((entry) => entry.id === options.issueId)
       if (!issue) return
-      if (issue.description.includes(mergeConflictInstruction)) return
 
-      const nextDescription = `${issue.description.trimEnd()}\n\n${mergeConflictInstruction}`
+      const hasInstruction = issue.description.includes(
+        mergeConflictInstruction,
+      )
+      const nextDescription = hasInstruction
+        ? issue.description
+        : `${issue.description.trimEnd()}\n\n${mergeConflictInstruction}`
 
       yield* source.updateIssue({
         issueId: issue.id!,
         description: nextDescription,
+        state: "todo",
       })
     })
 

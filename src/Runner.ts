@@ -118,14 +118,18 @@ export const run = Effect.fnUntraced(
     } else if (options.autoMerge) {
       for (const pr of prs) {
         if (Option.isSome(options.targetBranch)) {
-          yield* ChildProcess.make`gh pr edit ${pr} --base ${options.targetBranch.value}`.pipe(
+          yield* ChildProcess.make`gh pr edit ${pr.prNumber} --base ${options.targetBranch.value}`.pipe(
             ChildProcess.exitCode,
           )
         }
 
-        yield* ChildProcess.make`gh pr merge ${pr} -sd`.pipe(
-          ChildProcess.exitCode,
-        )
+        const exitCode =
+          yield* ChildProcess.make`gh pr merge ${pr.prNumber} -sd`.pipe(
+            ChildProcess.exitCode,
+          )
+        if (exitCode !== 0) {
+          yield* prd.flagUnmergable({ issueId: pr.issueId })
+        }
       }
     }
   },
