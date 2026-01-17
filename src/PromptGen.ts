@@ -123,7 +123,7 @@ task back to "todo" state with notes on why in the description.
 
 ${prdNotes}`
 
-      const planPrompt = () => `# Instructions
+      const planPrompt = `# Instructions
 
 1. Ask the user for the idea / request, then break it down into multiple smaller tasks
    that can be added to the prd.yml file.

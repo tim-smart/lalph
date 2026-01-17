@@ -16,7 +16,7 @@ export const plan = Effect.gen(function* () {
   yield* Effect.scoped(fs.open(lalphPlanPath, { flag: "a+" }))
 
   const cliCommand = cliAgent.commandPlan({
-    prompt: promptGen.planPrompt(),
+    prompt: promptGen.planPrompt,
     prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
   })
   const exitCode = yield* ChildProcess.make(
