@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.20
+
+### Patch Changes
+
+- [`0e0aa36`](https://github.com/tim-smart/lalph/commit/0e0aa36b3d0b4e96e3e3dac3379c0084e6679039) Thanks [@tim-smart](https://github.com/tim-smart)! - allow setting the target/base branch for PRs
+
+- [`46e9602`](https://github.com/tim-smart/lalph/commit/46e9602882c1647032bd3f4dd0e442da372b1774) Thanks [@tim-smart](https://github.com/tim-smart)! - use literals for task states
+
 ## 0.1.19
 
 ### Patch Changes
