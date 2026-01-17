@@ -2,4 +2,4 @@
 "lalph": patch
 ---
 
-Add changeset entry for unmergable change handling.
+Handle PRs that don't auto merge
