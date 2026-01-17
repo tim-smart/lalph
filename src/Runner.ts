@@ -137,8 +137,5 @@ export class RunnerStalled extends Data.TaggedError("RunnerStalled") {
 const ChosenTask = Schema.fromJsonString(
   Schema.Struct({
     id: Schema.String,
-    todoStateId: Schema.String,
-    inProgressStateId: Schema.String,
-    reviewStateId: Schema.String,
   }),
 )
