@@ -112,19 +112,6 @@ export const GithubIssueSource = Layer.effect(
     const [owner, repo] = nameWithOwner.split("/") as [string, string]
     const labelFilter = yield* getOrSelectLabel
 
-    const states = new Map([
-      ["open", { id: "open", name: "Open", kind: "unstarted" as const }],
-      [
-        "in-progress",
-        { id: "in-progress", name: "In progress", kind: "started" as const },
-      ],
-      [
-        "in-review",
-        { id: "in-review", name: "In review", kind: "completed" as const },
-      ],
-      ["closed", { id: "closed", name: "Closed", kind: "completed" as const }],
-    ])
-
     const hasLabel = (
       label: ReadonlyArray<
         | string
@@ -185,22 +172,22 @@ export const GithubIssueSource = Layer.effect(
             const dependencies = yield* listOpenBlockedBy(issue.number).pipe(
               Stream.runCollect,
             )
-            const stateId =
+            const state: PrdIssue["state"] =
               issue.state === "closed"
-                ? "closed"
+                ? "done"
                 : hasLabel(issue.labels, "in-progress")
                   ? "in-progress"
                   : hasLabel(issue.labels, "in-review")
                     ? "in-review"
-                    : "open"
+                    : "todo"
             return new PrdIssue({
               id: `#${issue.number}`,
               title: issue.title,
               description: issue.body ?? "",
               priority: 0,
               estimate: null,
-              stateId,
-              complete: stateId === "closed" || stateId === "in-review",
+              state,
+              complete: state === "done" || state === "in-review",
               blockedBy: dependencies.map((dep) => `#${dep.number}`),
               githubPrNumber: null,
             })
@@ -257,7 +244,6 @@ export const GithubIssueSource = Layer.effect(
     })
 
     return IssueSource.of({
-      states: Effect.succeed(states),
       issues,
       createIssue: Effect.fnUntraced(
         function* (issue: PrdIssue) {
@@ -296,12 +282,6 @@ export const GithubIssueSource = Layer.effect(
       ),
       updateIssue: Effect.fnUntraced(
         function* (options) {
-          if (options.stateId && !states.has(options.stateId)) {
-            return yield* new IssueSourceError({
-              cause: new Error(`Unknown GitHub stateId: ${options.stateId}`),
-            })
-          }
-
           const issueNumber = Number(options.issueId.slice(1))
           const update: {
             owner: string
@@ -318,18 +298,18 @@ export const GithubIssueSource = Layer.effect(
             labels: Option.toArray(labelFilter),
           }
 
-          if (options.title !== undefined) {
+          if (options.title) {
             update.title = options.title
           }
-          if (options.description !== undefined) {
+          if (options.description) {
             update.body = options.description
           }
-          if (options.stateId !== undefined) {
-            update.state = options.stateId === "closed" ? "closed" : "open"
+          if (options.state) {
+            update.state = options.state === "done" ? "closed" : "open"
 
-            if (options.stateId === "in-review") {
+            if (options.state === "in-review") {
               update.labels.push("in-review")
-            } else if (options.stateId === "in-progress") {
+            } else if (options.state === "in-progress") {
               update.labels.push("in-progress")
             }
           }

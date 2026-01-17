@@ -20,8 +20,14 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
     description:
       "The estimate of the issue in points. Null if no estimate is set. Roughly 1 point = 1 hour of work.",
   }),
-  stateId: Schema.String.annotate({
-    description: "The state ID of the issue.",
+  state: Schema.Literals([
+    "backlog",
+    "todo",
+    "in-progress",
+    "in-review",
+    "done",
+  ]).annotate({
+    description: "The state of the issue.",
   }),
   blockedBy: Schema.Array(Schema.String).annotate({
     description:
@@ -57,7 +63,7 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
     return (
       this.title !== issue.title ||
       this.description !== issue.description ||
-      this.stateId !== issue.stateId ||
+      this.state !== issue.state ||
       !Array.makeEquivalence(Equal.asEquivalence())(
         this.blockedBy,
         issue.blockedBy,

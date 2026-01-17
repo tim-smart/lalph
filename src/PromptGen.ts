@@ -1,6 +1,5 @@
 import { Effect, Layer, ServiceMap } from "effect"
 import { PrdIssue } from "./domain/PrdIssue.ts"
-import { IssueSource } from "./IssueSource.ts"
 import { CurrentIssueSource } from "./IssueSources.ts"
 
 export class PromptGen extends ServiceMap.Service<PromptGen>()(
@@ -8,8 +7,6 @@ export class PromptGen extends ServiceMap.Service<PromptGen>()(
   {
     make: Effect.gen(function* () {
       const sourceMeta = yield* CurrentIssueSource
-      const source = yield* IssueSource
-      const states = yield* source.states
 
       const prdNotes = `## prd.yml file
 
@@ -17,10 +14,14 @@ export class PromptGen extends ServiceMap.Service<PromptGen>()(
 
 Each item in the prd.yml file represents a task for the current project.
 
-The \`stateId\` field indicates the current state of the task. The possible states
+The \`state\` field indicates the current state of the task. The possible states
 are:
 
-${Array.from(states.values(), (state) => `- **${state.name}** (stateId: \`${state.id}\`)`).join("\n")}
+- backlog
+- todo
+- in-progress
+- in-review
+- done
 
 ### Adding tasks
 
@@ -49,23 +50,20 @@ The following instructions should be done without interaction or asking for perm
 1. Decide which single task to work on next from the prd.yml file. This should
    be the task YOU decide as the most important to work on next, not just the
    first task in the list.
-   - Only start tasks that are in a "todo" state (i.e., not started yet).
+   - Only start tasks that are in a "todo" state.
    - If the \`blockedBy\` field is not empty, skip the task.
-2. **Before doing anything else**, mark the task as "in progress" by updating its
-   \`stateId\` in the prd.yml file.
+2. **Before doing anything else**, mark the task as "in-progress" by updating its
+   \`state\` in the prd.yml file.
    This prevents other people or agents from working on the same task simultaneously.
 3. Research the task. If it seems like too many steps are needed to complete the task,
    break it down into smaller tasks and add them to the prd.yml file, marking the
-   original task as "closed" by updating its \`stateId\`.
+   original task as "done" by updating its \`state\`.
 4. Once you have chosen a task of reasonable size, save its information in a
    "task.json" file alongside the prd.yml file. Use the following format:
 
 \`\`\`json
 {
   "id": "task id",
-  "todoStateId": "id of the todo state",
-  "inProgressStateId": "id of the in progress state",
-  "reviewStateId": "id of the review state"
 }
 \`\`\`
 
@@ -73,7 +71,7 @@ The following instructions should be done without interaction or asking for perm
 
 If at any point you decide that a task is too large or complex to complete in a
 single iteration, break it down into smaller tasks and add them to the prd.yml
-file. Then, mark the original task as "closed" by updating its \`stateId\`.
+file. Then, mark the original task as "done" by updating its \`state\`.
 
 Each task should be small and specific.
 Instead of creating tasks like "Refactor the authentication system", create
@@ -108,17 +106,16 @@ permission.
    - You have permission to create or update the PR as needed. You have full
      permission to push branches, create PRs or create git commits.
 7. Update the prd.yml file to reflect any changes in task states.
-   - Only update the prd.yml file after the GitHub PR has been created or updated.
+   - Update the prd.yml file after the GitHub PR has been created or updated.
    - Add follow up tasks only if needed.
    - Append to the \`description\` field with any notes or important discoveries.
-   - If you believe the task is complete, update the \`stateId\` for "review".
-     Only if no "review" state exists, use a completed state.
+   - If you believe the task is complete, update the \`state\` to "in-review".
 
 
 ## Handling blockers
 
 If for any reason you get stuck on a task, mark the task back as "todo" by updating its
-\`stateId\` and leaving some notes in the task's \`description\` field about the
+\`state\` and leaving some notes in the task's \`description\` field about the
 challenges faced.
 
 If it feels like you are brute forcing your way through a task, STOP and move the
@@ -137,7 +134,7 @@ Users idea / request: ${idea}
    - Check if similar tasks already exist in the prd.yml file to avoid duplication.
 2. Each task should have a id of \`null\`, a title, and a concise description that
    includes a short summary of the task and a brief list of steps to complete it.
-   - The tasks should start in a "Todo" state (i.e., not started yet).
+   - The tasks should start in the "todo" state.
    - Each task should be small and specific.
      Instead of creating tasks like "Refactor the authentication system", create
      smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
@@ -157,7 +154,7 @@ ${prdNotes}`
 
 - Each task should have a id of \`null\`, a title, and a concise description that
   includes a short summary of the task and a brief list of steps to complete it.
-  - The tasks should start in a "Todo" state (i.e., not started yet).
+  - The tasks should start in a "todo" state.
   - Each task should be small and specific.
     Instead of creating tasks like "Refactor the authentication system", create
     smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.

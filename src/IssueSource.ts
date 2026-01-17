@@ -8,17 +8,6 @@ import type { PrdIssue } from "./domain/PrdIssue.ts"
 export class IssueSource extends ServiceMap.Service<
   IssueSource,
   {
-    readonly states: Effect.Effect<
-      ReadonlyMap<
-        string,
-        {
-          readonly id: string
-          readonly name: string
-          readonly kind: "unstarted" | "started" | "completed"
-        }
-      >
-    >
-
     readonly issues: Effect.Effect<ReadonlyArray<PrdIssue>, IssueSourceError>
 
     readonly createIssue: (
@@ -29,7 +18,7 @@ export class IssueSource extends ServiceMap.Service<
       readonly issueId: string
       readonly title?: string
       readonly description?: string
-      readonly stateId?: string
+      readonly state?: PrdIssue["state"]
       readonly blockedBy?: ReadonlyArray<string>
     }) => Effect.Effect<void, IssueSourceError>
 

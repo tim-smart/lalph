@@ -70,10 +70,8 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
 
     const projects = stream((client) => client.projects())
     const labels = stream((client) => client.issueLabels())
-    const states = yield* Stream.runFold(
+    const states = yield* Stream.runCollect(
       stream((client) => client.workflowStates()),
-      () => new Map<string, WorkflowState>(),
-      (map, state) => map.set(state.id, state),
     )
     const viewer = yield* use((client) => client.viewer)
 
@@ -92,7 +90,7 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
           concurrency: "unbounded",
         }),
         Stream.filter((issue) => {
-          const state = states.get(issue.stateId!)!
+          const state = states.find((s) => s.id === issue.stateId)!
           return state.type !== "completed"
         }),
       )
@@ -126,30 +124,68 @@ export const LinearIssueSource = Layer.effect(
     // Map of linear identifier to issue id
     const identifierMap = new Map<string, string>()
 
-    const statesMap = new Map<
-      string,
-      {
-        readonly id: string
-        readonly name: string
-        readonly kind: "unstarted" | "started" | "completed"
-      }
-    >()
-    linear.states.forEach((state) => {
-      statesMap.set(state.id, {
-        id: state.id,
-        name: state.name,
-        kind:
-          state.type === "started"
-            ? "started"
-            : state.type === "unstarted"
-              ? "unstarted"
-              : "completed",
-      })
-    })
+    const backlogState =
+      linear.states.find(
+        (s) => s.type === "backlog" && s.name.toLowerCase().includes("backlog"),
+      ) || linear.states.find((s) => s.type === "backlog")!
+    const todoState =
+      linear.states.find(
+        (s) =>
+          s.type === "unstarted" &&
+          (s.name.toLowerCase().includes("todo") ||
+            s.name.toLowerCase().includes("unstarted")),
+      ) || linear.states.find((s) => s.type === "unstarted")!
+    const inProgressState =
+      linear.states.find(
+        (s) =>
+          s.type === "started" &&
+          (s.name.toLowerCase().includes("progress") ||
+            s.name.toLowerCase().includes("started")),
+      ) || linear.states.find((s) => s.type === "started")!
+    const inReviewState =
+      linear.states.find(
+        (s) => s.type === "started" && s.name.toLowerCase().includes("review"),
+      ) || linear.states.find((s) => s.type === "completed")!
+    const doneState = linear.states.find((s) => s.type === "completed")!
 
-    const canceledState = Array.from(linear.states.values()).find(
+    const canceledState = linear.states.find(
       (state) => state.type === "canceled",
     )!
+
+    const linearStateToPrdState = (state: WorkflowState): PrdIssue["state"] => {
+      switch (state.id) {
+        case backlogState.id:
+          return "backlog"
+        case todoState.id:
+          return "todo"
+        case inProgressState.id:
+          return "in-progress"
+        case inReviewState.id:
+          return "in-review"
+        case doneState.id:
+          return "done"
+        default:
+          if (state.type === "backlog") return "backlog"
+          if (state.type === "unstarted") return "todo"
+          if (state.type === "started") return "in-progress"
+          if (state.type === "completed") return "done"
+          return "backlog"
+      }
+    }
+    const prdStateToLinearStateId = (state: PrdIssue["state"]): string => {
+      switch (state) {
+        case "backlog":
+          return backlogState.id
+        case "todo":
+          return todoState.id
+        case "in-progress":
+          return inProgressState.id
+        case "in-review":
+          return inReviewState.id
+        case "done":
+          return doneState.id
+      }
+    }
 
     const issues = linear
       .stream(() =>
@@ -181,18 +217,19 @@ export const LinearIssueSource = Layer.effect(
         Stream.mapEffect(
           Effect.fnUntraced(function* (issue) {
             identifierMap.set(issue.identifier, issue.id)
-            const state = linear.states.get(issue.stateId!)!
+            const linearState = linear.states.find(
+              (s) => s.id === issue.stateId,
+            )!
             const blockedBy = yield* Stream.runCollect(linear.blockedBy(issue))
+            const state = linearStateToPrdState(linearState)
             return new PrdIssue({
               id: issue.identifier,
               title: issue.title,
               description: issue.description ?? "",
               priority: issue.priority,
               estimate: issue.estimate ?? null,
-              stateId: issue.stateId!,
-              complete:
-                state.type === "completed" ||
-                state.name.toLowerCase().includes("review"),
+              state,
+              complete: state === "in-review" || state === "done",
               blockedBy: blockedBy.map((i) => i.identifier),
               githubPrNumber: null,
             })
@@ -204,7 +241,6 @@ export const LinearIssueSource = Layer.effect(
       )
 
     return IssueSource.of({
-      states: Effect.succeed(statesMap),
       issues,
       createIssue: Effect.fnUntraced(
         function* (issue: PrdIssue) {
@@ -218,7 +254,7 @@ export const LinearIssueSource = Layer.effect(
               description: issue.description,
               priority: issue.priority,
               estimate: issue.estimate,
-              stateId: issue.stateId,
+              stateId: prdStateToLinearStateId(issue.state),
             }),
           )
           const linearIssue = yield* linear.use(() => created.issue!)
@@ -249,9 +285,16 @@ export const LinearIssueSource = Layer.effect(
       updateIssue: Effect.fnUntraced(
         function* (options) {
           const issueId = identifierMap.get(options.issueId)!
-          const update = { ...options } as any
-          delete update.issueId
-          delete update.blockedBy
+          const update = {} as any
+          if (options.title) {
+            update.title = options.title
+          }
+          if (options.description) {
+            update.description = options.description
+          }
+          if (options.state) {
+            update.stateId = prdStateToLinearStateId(options.state)
+          }
           yield* linear.use((c) => c.updateIssue(issueId, update))
           if (!options.blockedBy) return
 

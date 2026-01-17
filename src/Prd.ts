@@ -25,13 +25,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     let current = yield* source.issues
     yield* fs.writeFileString(prdFile, PrdIssue.arrayToYaml(current))
 
-    const updatedIssues = new Map<
-      string,
-      {
-        readonly issue: PrdIssue
-        readonly originalStateId: string
-      }
-    >()
+    const updatedIssues = new Map<string, PrdIssue>()
 
     yield* fs.watch(lalphDir).pipe(
       Stream.buffer({
@@ -79,15 +73,12 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
           issueId: issue.id,
           title: issue.title,
           description: issue.description,
-          stateId: issue.stateId,
+          state: issue.state,
           blockedBy: issue.blockedBy,
         })
 
         if (!updatedIssues.has(issue.id!)) {
-          updatedIssues.set(issue.id, {
-            issue,
-            originalStateId: existing.stateId,
-          })
+          updatedIssues.set(issue.id, issue)
         }
       }
 
@@ -116,11 +107,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       const prs = Array.empty<number>()
       for (const issue of updated) {
         const entry = updatedIssues.get(issue.id ?? "")
-        if (
-          !entry ||
-          !issue.githubPrNumber ||
-          issue.stateId === entry.originalStateId
-        ) {
+        if (!entry || !issue.githubPrNumber || issue.state !== "in-review") {
           continue
         }
         prs.push(issue.githubPrNumber)
@@ -131,27 +118,24 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     const revertStateIds = Effect.suspend(() =>
       Effect.forEach(
         updatedIssues.values(),
-        ({ issue, originalStateId }) =>
+        (issue) =>
           source.updateIssue({
             issueId: issue.id!,
-            stateId: originalStateId,
+            state: "todo",
           }),
         { concurrency: "unbounded", discard: true },
       ),
     )
     const maybeRevertIssue = Effect.fnUntraced(function* (options: {
       readonly issueId: string
-      readonly todoStateId: string
-      readonly inProgressStateId: string
-      readonly reviewStateId: string
     }) {
       const yaml = yield* fs.readFileString(prdFile)
       const updated = PrdIssue.arrayFromYaml(yaml)
       const issue = updated.find((i) => i.id === options.issueId)
-      if (!issue || issue.stateId === options.reviewStateId) return
+      if (!issue || issue.state === "in-review") return
       yield* source.updateIssue({
         issueId: issue.id!,
-        stateId: options.todoStateId,
+        state: "todo",
       })
     })
 
