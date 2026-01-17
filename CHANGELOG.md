@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.19
+
+### Patch Changes
+
+- [`bcfb331`](https://github.com/tim-smart/lalph/commit/bcfb331337389f9e17650f61f2e9434a1b281e62) Thanks [@tim-smart](https://github.com/tim-smart)! - note that prd.yml updates should happen after PR updates
+
 ## 0.1.18
 
 ### Patch Changes
