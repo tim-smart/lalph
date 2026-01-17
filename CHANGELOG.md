@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.21
+
+### Patch Changes
+
+- [`893ae5b`](https://github.com/tim-smart/lalph/commit/893ae5bf9e21d794da106da3dc3df2073635a38a) Thanks [@tim-smart](https://github.com/tim-smart)! - fix ChosenTask schema
+
 ## 0.1.20
 
 ### Patch Changes
