@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.23
+
+### Patch Changes
+
+- [#63](https://github.com/tim-smart/lalph/pull/63) [`5c455a7`](https://github.com/tim-smart/lalph/commit/5c455a7579fd39160c7a73ff7b6dfe1802cb0bc9) Thanks [@tim-smart](https://github.com/tim-smart)! - Handle PRs that don't auto merge
+
 ## 0.1.22
 
 ### Patch Changes
