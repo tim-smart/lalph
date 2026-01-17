@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.24
+
+### Patch Changes
+
+- [`8810bcd`](https://github.com/tim-smart/lalph/commit/8810bcd8c07a9b566258ba30449b5bad315a008d) Thanks [@tim-smart](https://github.com/tim-smart)! - update plan mode to ask for the idea in the agent
+
 ## 0.1.23
 
 ### Patch Changes
