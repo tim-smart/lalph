@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.27
+
+### Patch Changes
+
+- [`011a07b`](https://github.com/tim-smart/lalph/commit/011a07bc4bc4a742fdd9d0068f8794c82c942810) Thanks [@tim-smart](https://github.com/tim-smart)! - break up task if it times out
+
 ## 0.1.26
 
 ### Patch Changes
