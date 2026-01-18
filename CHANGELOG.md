@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.29
+
+### Patch Changes
+
+- [`1806a32`](https://github.com/tim-smart/lalph/commit/1806a3216205a05253fd5f969f8a7aa88744c145) Thanks [@tim-smart](https://github.com/tim-smart)! - increase default max minutes to 90
+
 ## 0.1.28
 
 ### Patch Changes
