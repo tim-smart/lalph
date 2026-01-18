@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.30
+
+### Patch Changes
+
+- [`93f0406`](https://github.com/tim-smart/lalph/commit/93f04062887ec9ee34fa78daac45ff0f4d08e0fc) Thanks [@tim-smart](https://github.com/tim-smart)! - try use task description as a learning tool
+
 ## 0.1.29
 
 ### Patch Changes
