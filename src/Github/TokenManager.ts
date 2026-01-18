@@ -140,7 +140,7 @@ export class AccessToken extends Schema.Class<AccessToken>(
 
   isExpired(): boolean {
     return DateTime.isPastUnsafe(
-      this.expiresAt.pipe(DateTime.subtract({ minutes: 5 })),
+      this.expiresAt.pipe(DateTime.subtract({ minutes: 30 })),
     )
   }
 }
