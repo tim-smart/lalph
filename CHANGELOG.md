@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.32
+
+### Patch Changes
+
+- [`bfadddb`](https://github.com/tim-smart/lalph/commit/bfadddb6c7176778e6f25cc7312fb6adbfa0f390) Thanks [@tim-smart](https://github.com/tim-smart)! - more context gathering steering
+
 ## 0.1.31
 
 ### Patch Changes
