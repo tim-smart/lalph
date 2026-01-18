@@ -39,7 +39,7 @@ export const checkForWork = Effect.gen(function* () {
   const source = yield* IssueSource
   const issues = yield* source.issues
   const hasIncomplete = issues.some(
-    (issue) => issue.complete === false && issue.blockedBy.length === 0,
+    (issue) => issue.state === "todo" && issue.blockedBy.length === 0,
   )
   if (!hasIncomplete) {
     return yield* new NoMoreWork({})
