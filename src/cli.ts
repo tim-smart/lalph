@@ -59,14 +59,14 @@ const targetBranch = Flag.string("target-branch").pipe(
 
 const maxIterationMinutes = Flag.integer("max-minutes").pipe(
   Flag.withDescription(
-    "Maximum number of minutes to allow an iteration to run",
+    "Maximum number of minutes to allow an iteration to run. Defaults to 90 minutes",
   ),
-  Flag.withDefault(60),
+  Flag.withDefault(90),
 )
 
 const stallMinutes = Flag.integer("stall-minutes").pipe(
   Flag.withDescription(
-    "If no activity occurs for this many minutes, the iteration will be stopped",
+    "If no activity occurs for this many minutes, the iteration will be stopped. Defaults to 5 minutes",
   ),
   Flag.withDefault(5),
 )
