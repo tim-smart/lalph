@@ -73,7 +73,7 @@ If at any point you decide that a task is too large or complex to complete in a
 single iteration, break it down into smaller tasks and add them to the prd.yml
 file. Then, mark the original task as "done" by updating its \`state\`.
 
-Each task should be an atomic, commitable piece of work.
+Each task should be an atomic, committable piece of work.
 Instead of creating tasks like "Refactor the authentication system", create
 smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
 
@@ -139,7 +139,7 @@ permission.
 4. Each new task should have an id of \`null\`, a title, and a concise description that
    includes a short summary of the task and a brief list of steps to complete it.
    - The tasks should start in the "todo" state.
-   - Each task should be an atomic, commitable piece of work.
+   - Each task should be an atomic, committable piece of work.
      Instead of creating tasks like "Refactor the authentication system", create
      smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
 5. Setup task dependencies using the \`blockedBy\` field as needed. You will need
@@ -159,7 +159,7 @@ ${prdNotes}`
 2. Each task should have a id of \`null\`, a title, and a concise description that
    includes a short summary of the task and a brief list of steps to complete it.
    - The tasks should start in the "todo" state.
-   - Each task should be an atomic, commitable piece of work.
+   - Each task should be an atomic, committable piece of work.
      Instead of creating tasks like "Refactor the authentication system", create
      smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
 3. Add the new tasks to the prd.yml file.
