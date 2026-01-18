@@ -111,7 +111,6 @@ permission.
    - Append to the \`description\` field with any notes or important discoveries.
    - If you believe the task is complete, update the \`state\` to "in-review".
 
-
 ## Handling blockers
 
 If for any reason you get stuck on a task, mark the task back as "todo" by updating its
@@ -120,6 +119,30 @@ challenges faced.
 
 If it feels like you are brute forcing your way through a task, STOP and move the
 task back to "todo" state with notes on why in the description.
+
+${prdNotes}`
+
+      const promptTimeout = (options: {
+        readonly taskId: string
+      }) => `# Instructions
+
+Your earlier attempt to complete the task with id \`${options.taskId}\` took too
+long and has timed out.
+
+The following instructions should be done without interaction or asking for
+permission.
+
+1. Research and break down the task into smaller tasks and add them to the prd.yml file.
+2. Mark the original task as "done" by updating its \`state\` in the prd.yml file.
+3. Each new task should have an id of \`null\`, a title, and a concise description that
+   includes a short summary of the task and a brief list of steps to complete it.
+   - The tasks should start in the "todo" state.
+   - Each task should be small and specific.
+     Instead of creating tasks like "Refactor the authentication system", create
+     smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
+4. Setup task dependencies using the \`blockedBy\` field as needed. You will need
+   to wait 5 seconds after adding tasks to the prd.yml file to allow the system
+   to assign ids to the new tasks before you can setup dependencies.
 
 ${prdNotes}`
 
@@ -145,7 +168,7 @@ ${prdNotes}`
  
 ${prdNotes}`
 
-      return { promptChoose, prompt, planPrompt } as const
+      return { promptChoose, prompt, promptTimeout, planPrompt } as const
     }),
   },
 ) {

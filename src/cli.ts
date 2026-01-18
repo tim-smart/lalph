@@ -120,9 +120,9 @@ const root = Command.make("lalph", {
               autoMerge,
               targetBranch,
               stallTimeout: Duration.minutes(stallMinutes),
+              runTimeout: Duration.minutes(maxIterationMinutes),
             }),
           ),
-          Effect.timeout(Duration.minutes(maxIterationMinutes)),
           Effect.catchFilter(
             (e) =>
               e._tag === "NoMoreWork" || e._tag === "QuitError"

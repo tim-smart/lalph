@@ -116,11 +116,14 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     const revertStateIds = Effect.suspend(() =>
       Effect.forEach(
         updatedIssues.values(),
-        (issue) =>
-          source.updateIssue({
+        (issue) => {
+          const currentIssue = current.find((i) => i.id === issue.id)!
+          if (currentIssue.state === "done") return Effect.void
+          return source.updateIssue({
             issueId: issue.id!,
             state: "todo",
-          }),
+          })
+        },
         { concurrency: "unbounded", discard: true },
       ),
     )

@@ -22,6 +22,7 @@ export const run = Effect.fnUntraced(
     readonly autoMerge: boolean
     readonly targetBranch: Option.Option<string>
     readonly stallTimeout: Duration.Duration
+    readonly runTimeout: Duration.Duration
   }) {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
@@ -39,6 +40,49 @@ export const run = Effect.fnUntraced(
         extendEnv: true,
         env: cliAgent.env,
       })(template, ...args).pipe(ChildProcess.exitCode)
+
+    const execWithStallTimeout = Effect.fnUntraced(function* (
+      command: ReadonlyArray<string>,
+    ) {
+      let lastOutputAt = yield* DateTime.now
+
+      const stallTimeout = Effect.suspend(function loop(): Effect.Effect<
+        never,
+        RunnerStalled
+      > {
+        const now = DateTime.nowUnsafe()
+        const deadline = DateTime.addDuration(
+          lastOutputAt,
+          options.stallTimeout,
+        )
+        if (DateTime.isLessThan(deadline, now)) {
+          return Effect.fail(new RunnerStalled())
+        }
+        const timeUntilDeadline = DateTime.distanceDuration(deadline, now)
+        return Effect.flatMap(Effect.sleep(timeUntilDeadline), loop)
+      })
+
+      const handle = yield* ChildProcess.make(command[0]!, command.slice(1), {
+        cwd: worktree.directory,
+        extendEnv: true,
+        env: cliAgent.env,
+        stdout: "pipe",
+        stderr: "pipe",
+        stdin: "inherit",
+      })
+
+      yield* handle.all.pipe(
+        Stream.runForEachArray((output) => {
+          lastOutputAt = DateTime.nowUnsafe()
+          for (const chunk of output) {
+            process.stdout.write(chunk)
+          }
+          return Effect.void
+        }),
+        Effect.raceFirst(stallTimeout),
+      )
+      return yield* handle.exitCode
+    }, Effect.scoped)
 
     if (Option.isSome(options.targetBranch)) {
       yield* exec`git checkout ${`origin/${options.targetBranch.value}`}`
@@ -78,45 +122,23 @@ export const run = Effect.fnUntraced(
       }),
       prdFilePath: pathService.join(".lalph", "prd.yml"),
     })
-    const handle = yield* ChildProcess.make(
-      cliCommand[0]!,
-      cliCommand.slice(1),
-      {
-        cwd: worktree.directory,
-        extendEnv: true,
-        env: cliAgent.env,
-        stdout: "pipe",
-        stderr: "pipe",
-        stdin: "inherit",
-      },
+
+    const exitCode = yield* execWithStallTimeout(cliCommand).pipe(
+      Effect.timeout(options.runTimeout),
+      Effect.catchTag(
+        "TimeoutError",
+        Effect.fnUntraced(function* (error) {
+          const timeoutCommand = cliAgent.command({
+            prompt: promptGen.promptTimeout({
+              taskId: task.id,
+            }),
+            prdFilePath: pathService.join(".lalph", "prd.yml"),
+          })
+          yield* execWithStallTimeout(timeoutCommand)
+          return yield* error
+        }),
+      ),
     )
-
-    let lastOutputAt = yield* DateTime.now
-
-    const stallTimeout = Effect.suspend(function loop(): Effect.Effect<
-      never,
-      RunnerStalled
-    > {
-      const now = DateTime.nowUnsafe()
-      const deadline = DateTime.addDuration(lastOutputAt, options.stallTimeout)
-      if (DateTime.isLessThan(deadline, now)) {
-        return Effect.fail(new RunnerStalled())
-      }
-      const timeUntilDeadline = DateTime.distanceDuration(deadline, now)
-      return Effect.flatMap(Effect.sleep(timeUntilDeadline), loop)
-    })
-
-    yield* handle.all.pipe(
-      Stream.runForEachArray((output) => {
-        lastOutputAt = DateTime.nowUnsafe()
-        for (const chunk of output) {
-          process.stdout.write(chunk)
-        }
-        return Effect.void
-      }),
-      Effect.raceFirst(stallTimeout),
-    )
-    const exitCode = yield* handle.exitCode
     yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
     const prs = yield* prd.mergableGithubPrs
@@ -145,7 +167,6 @@ export const run = Effect.fnUntraced(
       yield* Effect.ignore(prd.revertStateIds)
     }),
   ),
-  Effect.scoped,
   Effect.provide([PromptGen.layer, Prd.layer, Worktree.layer]),
 )
 
