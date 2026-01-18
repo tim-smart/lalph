@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.33
+
+### Patch Changes
+
+- [`069252d`](https://github.com/tim-smart/lalph/commit/069252dc6ae368daae1b18d46b2f77be8944a446) Thanks [@tim-smart](https://github.com/tim-smart)! - adjust rebase instruction
+
+- [`7fe2625`](https://github.com/tim-smart/lalph/commit/7fe26259892a422ac8e16b3b57fb70d5facc624a) Thanks [@tim-smart](https://github.com/tim-smart)! - improve has more work check
+
 ## 0.1.32
 
 ### Patch Changes
