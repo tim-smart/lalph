@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.28
+
+### Patch Changes
+
+- [`d125487`](https://github.com/tim-smart/lalph/commit/d125487d4b767df8a67258b0e71c40f6ee141c51) Thanks [@tim-smart](https://github.com/tim-smart)! - tweak timeout prompt
+
+- [`98aa91c`](https://github.com/tim-smart/lalph/commit/98aa91cb53b78a3dcd82452c07e6f18ad860f1a5) Thanks [@tim-smart](https://github.com/tim-smart)! - tweak "small task" wording
+
 ## 0.1.27
 
 ### Patch Changes
