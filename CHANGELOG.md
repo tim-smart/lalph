@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.26
+
+### Patch Changes
+
+- [`9adeed7`](https://github.com/tim-smart/lalph/commit/9adeed7c476a32af6f6f42e8cb4d38ee94bb4c3f) Thanks [@tim-smart](https://github.com/tim-smart)! - fix target branch checkout
+
 ## 0.1.25
 
 ### Patch Changes
