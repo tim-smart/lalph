@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Path } from "effect"
+import { Effect, Path } from "effect"
 import { PromptGen } from "./PromptGen.ts"
 import { Prd } from "./Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
@@ -6,14 +6,10 @@ import { Worktree } from "./Worktree.ts"
 import { getOrSelectCliAgent } from "./CliAgent.ts"
 
 export const plan = Effect.gen(function* () {
-  const fs = yield* FileSystem.FileSystem
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
   const cliAgent = yield* getOrSelectCliAgent
-
-  const lalphPlanPath = pathService.join(worktree.directory, "lalph-plan.md")
-  yield* Effect.scoped(fs.open(lalphPlanPath, { flag: "a+" }))
 
   const cliCommand = cliAgent.commandPlan({
     prompt: promptGen.planPrompt,
@@ -35,9 +31,6 @@ export const plan = Effect.gen(function* () {
   ).pipe(ChildProcess.exitCode)
 
   yield* Effect.log(`Agent exited with code: ${exitCode}`)
-
-  const planContent = yield* fs.readFileString(lalphPlanPath)
-  yield* fs.writeFileString(pathService.resolve("lalph-plan.md"), planContent)
 }).pipe(
   Effect.scoped,
   Effect.provide([PromptGen.layer, Prd.layer, Worktree.layer]),

@@ -152,6 +152,7 @@ permission.
 3. Mark the original task as "done" by updating its \`state\` in the prd.yml file.
 4. Each new task should have an id of \`null\`, a title, and a concise description that
    includes a short summary of the task and a brief list of steps to complete it.
+   - Include where to find the plan specification in the description (if applicable).
    - The tasks should start in the "todo" state.
    - Each task should be an atomic, committable piece of work.
      Instead of creating tasks like "Refactor the authentication system", create
@@ -164,24 +165,37 @@ ${prdNotes}`
 
       const planPrompt = `# Instructions
 
-1. Ask the user for the idea / request, then break it down into multiple smaller tasks
-   that can be added to the prd.yml file. If a plan already exists in "lalph-plan.md",
-   then your job is to iterate on the existing plan by updating the existing tasks.
-   - Make sure to research the codebase before creating any tasks, to ensure they
-     are relevant and feasible.
-   - Check if similar tasks already exist in the prd.yml file to avoid duplication.
-2. Each task should have a id of \`null\`, a title, and a concise description that
-   includes a short summary of the task and a brief list of steps to complete it.
+1. Ask the user for the idea / request, then your job is to create a detailed
+   specification for the project based on that input and save it to a file.
+   - If the user is asking to update an existing plan, then read the
+     existing specification before continuing.
+   - Make sure to research the codebase before creating the specification, to
+     ensure it is relevant and feasible.
+2. Once you have saved the specification, your next job is to break down the
+   specification into smaller, manageable tasks.
+   Each task should have a id of \`null\`, a title, and a concise description that
+   includes a where to find the plan specification, a short summary of the task and a
+   brief list of steps to complete it.
    - The tasks should start in the "todo" state.
    - Each task should be an atomic, committable piece of work.
      Instead of creating tasks like "Refactor the authentication system", create
      smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
-3. Add the new tasks to the prd.yml file.
+3. Add the new or updated tasks to the prd.yml file.
 4. Wait until the tasks are saved, then setup task dependencies using the \`blockedBy\` field.
 5. Add a outline of the plan to a "lalph-plan.md" file, that will help guide future iterations.
 6. Start a subagent with a copy of this prompt, to review the plan and provide feedback or improvements.
 
-**Important:** You are only creating or updating the plan, not implementing any tasks yet.
+**Important:** You are only creating or updating a plan, not implementing any tasks yet.
+
+## Specifications
+
+- Should go into a \`.specs\` directory, unless specified otherwise.
+
+A specification file should include:
+
+- Requirements: functional and non-functional requirements.
+- Design: technical design, architecture decisions, data models, etc.
+- Acceptance criteria that define when the project is considered complete.
  
 ${prdNotes}`
 
