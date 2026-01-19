@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.35
+
+### Patch Changes
+
+- [`4d12ae0`](https://github.com/tim-smart/lalph/commit/4d12ae01d35c8e858aa511062b9ba39427dc7da3) Thanks [@tim-smart](https://github.com/tim-smart)! - change worktree setup script path
+
 ## 0.1.34
 
 ### Patch Changes
