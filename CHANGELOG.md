@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.34
+
+### Patch Changes
+
+- [`8b210f7`](https://github.com/tim-smart/lalph/commit/8b210f77f9db8b925759a8e76465c3ecd896efdc) Thanks [@tim-smart](https://github.com/tim-smart)! - create specs in plan mode
+
 ## 0.1.33
 
 ### Patch Changes
