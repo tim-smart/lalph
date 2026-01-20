@@ -23,9 +23,7 @@ export const plan = Effect.fnUntraced(
       {
         cwd: worktree.directory,
         extendEnv: true,
-        env: {
-          PWD: worktree.directory,
-        },
+        env: cliAgent.env,
         stdout: "inherit",
         stderr: "inherit",
         stdin: "inherit",
