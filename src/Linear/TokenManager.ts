@@ -44,30 +44,42 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
       )
 
       let currentToken = yield* Effect.orDie(tokenStore.get(""))
-      const set = (token: AccessToken) =>
-        Effect.orDie(tokenStore.set("", token))
-      const clear = Effect.orDie(tokenStore.remove(""))
+      const set = (token: Option.Option<AccessToken>) =>
+        Option.match(token, {
+          onNone: () =>
+            Effect.orDie(tokenStore.remove("")).pipe(
+              Effect.map(() => {
+                currentToken = Option.none()
+              }),
+            ),
+          onSome: (token) =>
+            Effect.orDie(tokenStore.set("", token)).pipe(
+              Effect.map(() => {
+                currentToken = Option.some(token)
+              }),
+            ),
+        })
 
       const getNoLock: Effect.Effect<
         AccessToken,
         HttpClientError.HttpClientError | Schema.SchemaError
-      > = Effect.gen(function* () {
-        if (Option.isNone(currentToken)) {
-          const newToken = yield* pkce
-          yield* set(newToken)
-          return newToken
-        } else if (currentToken.value.isExpired()) {
-          const newToken = yield* refresh(currentToken.value)
-          if (Option.isNone(newToken)) {
-            yield* clear
-            return yield* getNoLock
+      > = Effect.uninterruptibleMask(
+        Effect.fnUntraced(function* (restore) {
+          if (Option.isNone(currentToken)) {
+            const newToken = yield* restore(pkce)
+            yield* set(Option.some(newToken))
+            return newToken
+          } else if (currentToken.value.isExpired()) {
+            const newToken = yield* refresh(currentToken.value)
+            yield* set(newToken)
+            if (Option.isNone(newToken)) {
+              return yield* getNoLock
+            }
+            return newToken.value
           }
-          yield* set(newToken.value)
-          currentToken = newToken
-          return newToken.value
-        }
-        return currentToken.value
-      })
+          return currentToken.value
+        }),
+      )
       const get = Effect.makeSemaphoreUnsafe(1).withPermit(getNoLock)
 
       const pkce = Effect.gen(function* () {

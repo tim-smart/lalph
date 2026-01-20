@@ -38,9 +38,21 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
       )
 
       let currentToken = yield* Effect.orDie(tokenStore.get(""))
-      const set = (token: AccessToken) =>
-        Effect.orDie(tokenStore.set("", token))
-      const clear = Effect.orDie(tokenStore.remove(""))
+      const set = (token: Option.Option<AccessToken>) =>
+        Option.match(token, {
+          onNone: () =>
+            Effect.orDie(tokenStore.remove("")).pipe(
+              Effect.map(() => {
+                currentToken = Option.none()
+              }),
+            ),
+          onSome: (t) =>
+            Effect.orDie(tokenStore.set("", t)).pipe(
+              Effect.map(() => {
+                currentToken = token
+              }),
+            ),
+        })
 
       const getNoLock: Effect.Effect<
         AccessToken,
@@ -48,16 +60,14 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
       > = Effect.gen(function* () {
         if (Option.isNone(currentToken)) {
           const newToken = yield* deviceCode
-          yield* set(newToken)
+          yield* set(Option.some(newToken))
           return newToken
         } else if (currentToken.value.isExpired()) {
           const newToken = yield* refresh(currentToken.value)
+          yield* set(newToken)
           if (Option.isNone(newToken)) {
-            yield* clear
             return yield* getNoLock
           }
-          yield* set(newToken.value)
-          currentToken = newToken
           return newToken.value
         }
         return currentToken.value
