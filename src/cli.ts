@@ -24,39 +24,6 @@ import { checkForWork } from "./IssueSource.ts"
 import { editPrd } from "./Edit.ts"
 import { createIssue } from "./CreateIssue.ts"
 
-const selectAgent = Command.make("agent").pipe(
-  Command.withDescription("Select the CLI agent to use"),
-  Command.withHandler(() => selectCliAgent),
-)
-
-const selectSource = Command.make("source").pipe(
-  Command.withDescription("Select the issue source to use"),
-  Command.withHandler(() => selectIssueSource),
-)
-
-const specsDirectory = Flag.directory("specs").pipe(
-  Flag.withDescription("Directory to store plan specifications"),
-  Flag.withAlias("s"),
-  Flag.withDefault(".specs"),
-)
-
-const reset = Flag.boolean("reset").pipe(
-  Flag.withDescription("Reset the current issue source before running"),
-  Flag.withAlias("r"),
-)
-
-const planMode = Command.make("plan", { specsDirectory, reset }).pipe(
-  Command.withDescription("Iterate on an issue plan and create PRD tasks"),
-  Command.withHandler(
-    Effect.fnUntraced(function* (options) {
-      if (options.reset) {
-        yield* resetCurrentIssueSource
-      }
-      yield* plan(options).pipe(Effect.provide(CurrentIssueSource.layer))
-    }),
-  ),
-)
-
 const iterations = Flag.integer("iterations").pipe(
   Flag.withDescription("Number of iterations to run, defaults to unlimited"),
   Flag.withAlias("i"),
@@ -92,6 +59,17 @@ const stallMinutes = Flag.integer("stall-minutes").pipe(
     "If no activity occurs for this many minutes, the iteration will be stopped. Defaults to 5 minutes",
   ),
   Flag.withDefault(5),
+)
+
+const specsDirectory = Flag.directory("specs").pipe(
+  Flag.withDescription("Directory to store plan specifications"),
+  Flag.withAlias("s"),
+  Flag.withDefault(".specs"),
+)
+
+const reset = Flag.boolean("reset").pipe(
+  Flag.withDescription("Reset the current issue source before running"),
+  Flag.withAlias("r"),
 )
 
 const root = Command.make("lalph", {
@@ -194,6 +172,32 @@ const root = Command.make("lalph", {
     }, Effect.scoped),
   ),
   Command.provide(CurrentIssueSource.layer),
+)
+
+const selectAgent = Command.make("agent").pipe(
+  Command.withDescription("Select the CLI agent to use"),
+  Command.withHandler(() => selectCliAgent),
+)
+
+const selectSource = Command.make("source").pipe(
+  Command.withDescription("Select the issue source to use"),
+  Command.withHandler(() => selectIssueSource),
+)
+
+const planMode = Command.make("plan", { specsDirectory }).pipe(
+  Command.withDescription("Iterate on an issue plan and create PRD tasks"),
+  Command.withHandler(
+    Effect.fnUntraced(function* (options) {
+      const { reset } = yield* root
+      if (reset) {
+        yield* resetCurrentIssueSource
+      }
+      yield* plan(options).pipe(Effect.provide(CurrentIssueSource.layer))
+    }),
+  ),
+)
+
+root.pipe(
   Command.withSubcommands([
     planMode,
     createIssue,
@@ -201,11 +205,10 @@ const root = Command.make("lalph", {
     selectSource,
     selectAgent,
   ]),
-)
-
-Command.run(root, {
-  version: "0.1.0",
-}).pipe(
+  (_) =>
+    Command.run(_, {
+      version: "0.1.0",
+    }),
   Effect.provide(Settings.layer.pipe(Layer.provideMerge(NodeServices.layer))),
   NodeRuntime.runMain,
 )
