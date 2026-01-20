@@ -69,16 +69,6 @@ The following instructions should be done without interaction or asking for perm
 }
 \`\`\`
 
-## Important: Task sizing
-
-If at any point you decide that a task is too large or complex to complete in a
-single iteration, break it down into smaller tasks and add them to the prd.yml
-file. Then, mark the original task as "done" by updating its \`state\`.
-
-Each task should be an atomic, committable piece of work.
-Instead of creating tasks like "Refactor the authentication system", create
-smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
-
 ${prdNotes}`
 
       const prompt = (options: {
@@ -116,6 +106,11 @@ permission.
      and information that could speed up future work on other tasks.
    - If you believe the task is complete, update the \`state\` to "in-review".
 
+## Important: Adding new tasks
+
+**If at any point** you discover something that needs fixing, or another task
+that needs doing, immediately add it to the prd.yml file as a new task.
+
 ## Important: Recording key information
 
 This session will time out after a certain period, so make sure to record
@@ -128,9 +123,6 @@ do not wait until the end of the task. Things to record include:
   - If it took multiple attempts to get something working, record what worked.
   - If you found a library api was renamed or moved, record the new name.
 - Any other information that could help future work on similar tasks.
-
-**If at any point** you discover something that needs fixing, or another task
-that needs doing, immediately add it to the prd.yml file as a new task.
 
 ## Handling blockers
 
