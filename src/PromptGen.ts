@@ -112,7 +112,7 @@ permission.
 6. Create or update the pull request with your progress.
    ${sourceMeta.githubPrInstructions}
    The PR description should include a summary of the changes made.
-   - None of the files in the \`.lalph\` directory should be committed.
+   - **DO NOT** commit any of the files in the \`.lalph\` directory.
    - You have permission to create or update the PR as needed. You have full
      permission to push branches, create PRs or create git commits.
 7. Update the prd.yml file to reflect any changes in task states.
