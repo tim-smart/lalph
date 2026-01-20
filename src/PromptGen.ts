@@ -182,6 +182,8 @@ ${prdNotes}`
    - Each task should be an atomic, committable piece of work.
      Instead of creating tasks like "Refactor the authentication system", create
      smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
+   - **Never** create a research task. You should do all the necessary research
+     before creating the specification and tasks.
 3. Add the new or updated tasks to the prd.yml file.
 4. Wait until the tasks are saved, then setup task dependencies using the \`blockedBy\` field.
 5. Start a subagent with a copy of this prompt, to review the plan and provide feedback or improvements.
