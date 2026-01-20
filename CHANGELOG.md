@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.40
+
+### Patch Changes
+
+- [`8ea1fed`](https://github.com/tim-smart/lalph/commit/8ea1fed789f6dcfc88a212a0f3d8b92c459ed6cd) Thanks [@tim-smart](https://github.com/tim-smart)! - more prompt tweaks
+
 ## 0.1.39
 
 ### Patch Changes
