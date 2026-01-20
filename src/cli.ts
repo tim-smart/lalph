@@ -15,7 +15,11 @@ import { Settings } from "./Settings.ts"
 import { run } from "./Runner.ts"
 import { plan } from "./Planner.ts"
 import { getOrSelectCliAgent, selectCliAgent } from "./CliAgent.ts"
-import { CurrentIssueSource, selectIssueSource } from "./IssueSources.ts"
+import {
+  CurrentIssueSource,
+  resetCurrentIssueSource,
+  selectIssueSource,
+} from "./IssueSources.ts"
 import { checkForWork } from "./IssueSource.ts"
 import { editPrd } from "./Edit.ts"
 import { createIssue } from "./CreateIssue.ts"
@@ -36,10 +40,21 @@ const specsDirectory = Flag.directory("specs").pipe(
   Flag.withDefault(".specs"),
 )
 
-const planMode = Command.make("plan", { specsDirectory }).pipe(
+const reset = Flag.boolean("reset").pipe(
+  Flag.withDescription("Reset the current issue source before planning"),
+  Flag.withAlias("r"),
+)
+
+const planMode = Command.make("plan", { specsDirectory, reset }).pipe(
   Command.withDescription("Iterate on an issue plan and create PRD tasks"),
-  Command.withHandler(plan),
-  Command.provide(CurrentIssueSource.layer),
+  Command.withHandler(
+    Effect.fnUntraced(function* (options) {
+      if (options.reset) {
+        yield* resetCurrentIssueSource
+      }
+      yield* plan(options).pipe(Effect.provide(CurrentIssueSource.layer))
+    }),
+  ),
 )
 
 const iterations = Flag.integer("iterations").pipe(

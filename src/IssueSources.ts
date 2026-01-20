@@ -48,6 +48,11 @@ const getOrSelectIssueSource = Effect.gen(function* () {
   return yield* selectIssueSource
 })
 
+export const resetCurrentIssueSource = Effect.gen(function* () {
+  const source = yield* getOrSelectIssueSource
+  yield* source.reset
+})
+
 export class CurrentIssueSource extends ServiceMap.Service<
   CurrentIssueSource,
   {
