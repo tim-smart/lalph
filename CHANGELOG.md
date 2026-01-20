@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.41
+
+### Patch Changes
+
+- [`5a5ea69`](https://github.com/tim-smart/lalph/commit/5a5ea69a504689a861e1dac19388f94628027aba) Thanks [@tim-smart](https://github.com/tim-smart)! - more prompt changes
+
 ## 0.1.40
 
 ### Patch Changes
