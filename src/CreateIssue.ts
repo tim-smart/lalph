@@ -47,6 +47,10 @@ export const createIssue = Command.make("issue").pipe(
       if (exitCode !== 0) return
 
       const content = yield* fs.readFileString(tempFile)
+      if (content.trim() === issueTemplate.trim()) {
+        return
+      }
+
       const lines = content.split("\n")
       const yamlLines: string[] = []
       let descriptionStartIndex = 0
