@@ -161,7 +161,6 @@ ${prdNotes}`
       }) => `1. Ask the user for the idea / request, then your job is to create a detailed
    specification to fulfill the request and save it as a file. Interview the user
    to gather all the necessary requirements and details for the specification.
-   You need to be curious and ask lots of questions.
 2. Once you have saved the specification, your next job is to create an implementation
    plan by breaking down the specification into smaller, manageable tasks and add
    them to the prd.yml file.
