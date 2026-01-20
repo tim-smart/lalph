@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.39
+
+### Patch Changes
+
+- [`af58d30`](https://github.com/tim-smart/lalph/commit/af58d30ef4743e1b107daa21836814f5a293afda) Thanks [@tim-smart](https://github.com/tim-smart)! - add option to reset source before planning
+
+- [`f36de86`](https://github.com/tim-smart/lalph/commit/f36de864072606c11d570654b987e79b93c2233f) Thanks [@tim-smart](https://github.com/tim-smart)! - prompt tweaks
+
 ## 0.1.38
 
 ### Patch Changes
