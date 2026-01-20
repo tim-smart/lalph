@@ -41,6 +41,19 @@ export const run = Effect.fnUntraced(
         env: cliAgent.env,
       })(template, ...args).pipe(ChildProcess.exitCode)
 
+    const execOutput = (
+      template: TemplateStringsArray,
+      ...args: Array<string | number | boolean>
+    ) =>
+      ChildProcess.make({
+        cwd: worktree.directory,
+        extendEnv: true,
+        env: cliAgent.env,
+      })(template, ...args).pipe(
+        ChildProcess.string,
+        Effect.map((output) => output.trim()),
+      )
+
     const execWithStallTimeout = Effect.fnUntraced(function* (
       command: ReadonlyArray<string>,
     ) {
@@ -88,77 +101,85 @@ export const run = Effect.fnUntraced(
       yield* exec`git checkout ${`origin/${options.targetBranch.value}`}`
     }
 
-    const chooseCommand = cliAgent.command({
-      prompt: promptGen.promptChoose,
-      prdFilePath: pathService.join(".lalph", "prd.yml"),
-    })
-
-    yield* ChildProcess.make(chooseCommand[0]!, chooseCommand.slice(1), {
-      cwd: worktree.directory,
-      extendEnv: true,
-      env: cliAgent.env,
-      stdout: "inherit",
-      stderr: "inherit",
-      stdin: "inherit",
-    }).pipe(
-      ChildProcess.exitCode,
-      Effect.timeoutOrElse({
-        duration: options.stallTimeout,
-        onTimeout: () => Effect.fail(new RunnerStalled()),
-      }),
+    const baseRef = yield* execOutput`git rev-parse HEAD`
+    const cleanupBranch = exec`git checkout --detach ${baseRef}`.pipe(
+      Effect.catchCause(Effect.logWarning),
+      Effect.asVoid,
     )
 
-    const taskJson = yield* fs.readFileString(
-      pathService.join(worktree.directory, ".lalph", "task.json"),
-    )
-    const task = yield* Schema.decodeEffect(ChosenTask)(taskJson)
-
-    yield* Deferred.completeWith(options.startedDeferred, Effect.void)
-
-    const cliCommand = cliAgent.command({
-      prompt: promptGen.prompt({
-        taskId: task.id,
-        targetBranch: Option.getOrUndefined(options.targetBranch),
-      }),
-      prdFilePath: pathService.join(".lalph", "prd.yml"),
-    })
-
-    const exitCode = yield* execWithStallTimeout(cliCommand).pipe(
-      Effect.timeout(options.runTimeout),
-      Effect.catchTag(
-        "TimeoutError",
-        Effect.fnUntraced(function* (error) {
-          const timeoutCommand = cliAgent.command({
-            prompt: promptGen.promptTimeout({
-              taskId: task.id,
-            }),
-            prdFilePath: pathService.join(".lalph", "prd.yml"),
-          })
-          yield* execWithStallTimeout(timeoutCommand)
-          return yield* error
-        }),
-      ),
-    )
-    yield* Effect.log(`Agent exited with code: ${exitCode}`)
-
-    const prs = yield* prd.mergableGithubPrs
-    if (prs.length === 0) {
-      yield* prd.maybeRevertIssue({
-        ...task,
-        issueId: task.id,
+    yield* Effect.gen(function* () {
+      const chooseCommand = cliAgent.command({
+        prompt: promptGen.promptChoose,
+        prdFilePath: pathService.join(".lalph", "prd.yml"),
       })
-    } else if (options.autoMerge) {
-      for (const pr of prs) {
-        if (Option.isSome(options.targetBranch)) {
-          yield* exec`gh pr edit ${pr.prNumber} --base ${options.targetBranch.value}`
-        }
 
-        const exitCode = yield* exec`gh pr merge ${pr.prNumber} -sd`
-        if (exitCode !== 0) {
-          yield* prd.flagUnmergable({ issueId: pr.issueId })
+      yield* ChildProcess.make(chooseCommand[0]!, chooseCommand.slice(1), {
+        cwd: worktree.directory,
+        extendEnv: true,
+        env: cliAgent.env,
+        stdout: "inherit",
+        stderr: "inherit",
+        stdin: "inherit",
+      }).pipe(
+        ChildProcess.exitCode,
+        Effect.timeoutOrElse({
+          duration: options.stallTimeout,
+          onTimeout: () => Effect.fail(new RunnerStalled()),
+        }),
+      )
+
+      const taskJson = yield* fs.readFileString(
+        pathService.join(worktree.directory, ".lalph", "task.json"),
+      )
+      const task = yield* Schema.decodeEffect(ChosenTask)(taskJson)
+
+      yield* Deferred.completeWith(options.startedDeferred, Effect.void)
+
+      const cliCommand = cliAgent.command({
+        prompt: promptGen.prompt({
+          taskId: task.id,
+          targetBranch: Option.getOrUndefined(options.targetBranch),
+        }),
+        prdFilePath: pathService.join(".lalph", "prd.yml"),
+      })
+
+      const exitCode = yield* execWithStallTimeout(cliCommand).pipe(
+        Effect.timeout(options.runTimeout),
+        Effect.catchTag(
+          "TimeoutError",
+          Effect.fnUntraced(function* (error) {
+            const timeoutCommand = cliAgent.command({
+              prompt: promptGen.promptTimeout({
+                taskId: task.id,
+              }),
+              prdFilePath: pathService.join(".lalph", "prd.yml"),
+            })
+            yield* execWithStallTimeout(timeoutCommand)
+            return yield* error
+          }),
+        ),
+      )
+      yield* Effect.log(`Agent exited with code: ${exitCode}`)
+
+      const prs = yield* prd.mergableGithubPrs
+      if (prs.length === 0) {
+        yield* prd.maybeRevertIssue({
+          ...task,
+          issueId: task.id,
+        })
+      } else if (options.autoMerge) {
+        for (const pr of prs) {
+          if (Option.isSome(options.targetBranch)) {
+            yield* exec`gh pr edit ${pr.prNumber} --base ${options.targetBranch.value}`
+          }
+
+          const exitCode = yield* exec`gh pr merge ${pr.prNumber} -sd`
+          if (exitCode !== 0) {
+            yield* prd.flagUnmergable({ issueId: pr.issueId })
+          }
         }
       }
-    }
+    }).pipe(Effect.ensuring(cleanupBranch))
   },
   // on interrupt or error, revert any state changes made in the PRD
   Effect.onError(
