@@ -41,7 +41,7 @@ const specsDirectory = Flag.directory("specs").pipe(
 )
 
 const reset = Flag.boolean("reset").pipe(
-  Flag.withDescription("Reset the current issue source before planning"),
+  Flag.withDescription("Reset the current issue source before running"),
   Flag.withAlias("r"),
 )
 
@@ -101,6 +101,7 @@ const root = Command.make("lalph", {
   targetBranch,
   maxIterationMinutes,
   stallMinutes,
+  reset,
 }).pipe(
   Command.withHandler(
     Effect.fnUntraced(function* ({
@@ -110,7 +111,11 @@ const root = Command.make("lalph", {
       targetBranch,
       maxIterationMinutes,
       stallMinutes,
+      reset,
     }) {
+      if (reset) {
+        yield* resetCurrentIssueSource
+      }
       yield* getOrSelectCliAgent
 
       const isFinite = Number.isFinite(iterations)
