@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.37
+
+### Patch Changes
+
+- [`5b28733`](https://github.com/tim-smart/lalph/commit/5b28733bbb267aab4aede500aa261578b619b6bf) Thanks [@tim-smart](https://github.com/tim-smart)! - clean up branches
+
 ## 0.1.36
 
 ### Patch Changes
