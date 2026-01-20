@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.36
+
+### Patch Changes
+
+- [`af004cd`](https://github.com/tim-smart/lalph/commit/af004cd64f569a0641bf123c29d6e7a87a543421) Thanks [@tim-smart](https://github.com/tim-smart)! - add command to create an issue
+
 ## 0.1.35
 
 ### Patch Changes
