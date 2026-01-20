@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.43
+
+### Patch Changes
+
+- [`2148773`](https://github.com/tim-smart/lalph/commit/2148773192deba72d319aaeb94cee6743f052763) Thanks [@tim-smart](https://github.com/tim-smart)! - fix token managers not setting current token
+
 ## 0.1.42
 
 ### Patch Changes
