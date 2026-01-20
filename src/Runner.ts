@@ -186,7 +186,7 @@ export const run = Effect.fnUntraced(
           const currentBranchName = yield* currentBranch
           if (!currentBranchName) return
           // enter detached state
-          yield* exec`git checkout --detached ${currentBranchName}`
+          yield* exec`git checkout --detach ${currentBranchName}`
           // delete the branch
           yield* exec`git branch -D ${currentBranchName}`
         }).pipe(Effect.ignore),
