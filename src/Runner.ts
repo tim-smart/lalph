@@ -101,10 +101,11 @@ export const run = Effect.fnUntraced(
       yield* exec`git checkout ${`origin/${options.targetBranch.value}`}`
     }
 
-    const baseRef = yield* execOutput`git rev-parse HEAD`
-    const cleanupBranch = exec`git checkout --detach ${baseRef}`.pipe(
-      Effect.catchCause(Effect.logWarning),
-      Effect.asVoid,
+    const currentBranch = execOutput`git branch --show-current`.pipe(
+      Effect.map((branch) => {
+        branch = branch.trim()
+        return branch === "" ? null : branch
+      }),
     )
 
     yield* Effect.gen(function* () {
@@ -179,7 +180,18 @@ export const run = Effect.fnUntraced(
           }
         }
       }
-    }).pipe(Effect.ensuring(cleanupBranch))
+    }).pipe(
+      Effect.ensuring(
+        Effect.gen(function* () {
+          const currentBranchName = yield* currentBranch
+          if (!currentBranchName) return
+          // enter detached state
+          yield* exec`git checkout --detached ${currentBranchName}`
+          // delete the branch
+          yield* exec`git branch -D ${currentBranchName}`
+        }).pipe(Effect.ignore),
+      ),
+    )
   },
   // on interrupt or error, revert any state changes made in the PRD
   Effect.onError(
