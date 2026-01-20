@@ -24,10 +24,10 @@ npx -y lalph@latest
 
 ## CLI usage 🖥️
 
-- Run the main loop: `lalph`
-- Run multiple iterations with concurrency: `lalph --iterations 4 --concurrency 2`
-- Start plan mode: `lalph plan`
-- Choose your issue source: `lalph source`
+- ▶️ Run the main loop: `lalph`
+- ⚡️ Run multiple iterations with concurrency: `lalph --iterations 4 --concurrency 2`
+- 🧠 Start plan mode: `lalph plan`
+- 🧭 Choose your issue source: `lalph source`
 
 It is recommended to add `.lalph/` to your `.gitignore` to avoid committing your
 credentials.
