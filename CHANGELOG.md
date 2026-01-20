@@ -1,5 +1,15 @@
 # lalph
 
+## 0.1.42
+
+### Patch Changes
+
+- [`709c677`](https://github.com/tim-smart/lalph/commit/709c677e36d8e329c7c18a57f3f763f6dda09eae) Thanks [@tim-smart](https://github.com/tim-smart)! - add cli agent env to planner
+
+- [`129255b`](https://github.com/tim-smart/lalph/commit/129255b770ee771504f87b09e40009fa2aacf63b) Thanks [@tim-smart](https://github.com/tim-smart)! - less questions
+
+- [#90](https://github.com/tim-smart/lalph/pull/90) [`e8c8616`](https://github.com/tim-smart/lalph/commit/e8c86169db6039185c99c7b97ecbfc7e17d233e4) Thanks [@tim-smart](https://github.com/tim-smart)! - add reset option to the main run command
+
 ## 0.1.41
 
 ### Patch Changes
