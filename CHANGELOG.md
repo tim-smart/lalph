@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.46
+
+### Patch Changes
+
+- [`17b918d`](https://github.com/tim-smart/lalph/commit/17b918d61a05076391caf4a7c9e3c2e25c93a857) Thanks [@tim-smart](https://github.com/tim-smart)! - implement two-way prd sync
+
 ## 0.1.45
 
 ### Patch Changes
