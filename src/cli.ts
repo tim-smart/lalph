@@ -202,7 +202,6 @@ const planMode = Command.make("plan").pipe(
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const { reset, specsDirectory, targetBranch } = yield* root
-      console.log({ reset, specsDirectory, targetBranch })
       if (reset) {
         yield* resetCurrentIssueSource
       }
