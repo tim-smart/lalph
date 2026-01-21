@@ -11,6 +11,7 @@ title: Issue Title
 priority: 3
 estimate: null
 blockedBy: []
+autoMerge: false
 ---
 
 Describe the issue here.`
@@ -21,6 +22,7 @@ const FrontMatterSchema = Schema.toCodecJson(
     priority: Schema.Finite,
     estimate: Schema.NullOr(Schema.Finite),
     blockedBy: Schema.Array(Schema.String),
+    autoMerge: Schema.Boolean,
   }),
 )
 

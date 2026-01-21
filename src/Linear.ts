@@ -120,6 +120,7 @@ export const LinearIssueSource = Layer.effect(
     const project = yield* getOrSelectProject
     const teamId = yield* getOrSelectTeamId(project)
     const labelId = yield* getOrSelectLabel
+    const autoMergeLabelId = yield* getOrSelectAutoMergeLabel
 
     // Map of linear identifier to issue id
     const identifierMap = new Map<string, string>()
@@ -231,6 +232,10 @@ export const LinearIssueSource = Layer.effect(
               state,
               complete: state === "in-review" || state === "done",
               blockedBy: blockedBy.map((i) => i.identifier),
+              autoMerge: autoMergeLabelId.pipe(
+                Option.map((labelId) => issue.labelIds.includes(labelId)),
+                Option.getOrElse(() => false),
+              ),
               githubPrNumber: null,
             })
           }),
@@ -372,6 +377,7 @@ export const resetLinear = Effect.gen(function* () {
   yield* selectedProjectId.set(Option.none())
   yield* selectedTeamId.set(Option.none())
   yield* selectedLabelId.set(Option.none())
+  yield* selectedAutoMergeLabelId.set(Option.none())
 })
 
 export class LinearError extends Schema.ErrorClass("lalph/LinearError")({
@@ -459,9 +465,43 @@ const labelIdSelect = Effect.gen(function* () {
   return labelId
 })
 const getOrSelectLabel = Effect.gen(function* () {
-  const labedId = yield* selectedLabelId.get
-  if (Option.isSome(labedId)) {
-    return labedId.value
+  const labelId = yield* selectedLabelId.get
+  if (Option.isSome(labelId)) {
+    return labelId.value
   }
   return yield* labelIdSelect
+})
+
+// Auto merge label selection
+
+const selectedAutoMergeLabelId = new Setting(
+  "linear.selectedAutoMergeLabelId",
+  Schema.Option(Schema.String),
+)
+const autoMergeLabelIdSelect = Effect.gen(function* () {
+  const linear = yield* Linear
+  const labels = yield* Stream.runCollect(linear.labels)
+  const labelId = yield* Prompt.select({
+    message: "Select a label to mark issues for auto merge",
+    choices: [
+      {
+        title: "Disabled",
+        value: Option.none<string>(),
+      },
+    ].concat(
+      labels.map((label) => ({
+        title: label.name,
+        value: Option.some(label.id),
+      })),
+    ),
+  })
+  yield* selectedAutoMergeLabelId.set(Option.some(labelId))
+  return labelId
+})
+const getOrSelectAutoMergeLabel = Effect.gen(function* () {
+  const labelId = yield* selectedAutoMergeLabelId.get
+  if (Option.isSome(labelId)) {
+    return labelId.value
+  }
+  return yield* autoMergeLabelIdSelect
 })

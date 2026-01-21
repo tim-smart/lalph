@@ -19,7 +19,6 @@ import { getOrSelectCliAgent } from "./CliAgent.ts"
 export const run = Effect.fnUntraced(
   function* (options: {
     readonly startedDeferred: Deferred.Deferred<void>
-    readonly autoMerge: boolean
     readonly targetBranch: Option.Option<string>
     readonly specsDirectory: string
     readonly stallTimeout: Duration.Duration
@@ -38,7 +37,6 @@ export const run = Effect.fnUntraced(
     ) =>
       ChildProcess.make({
         cwd: worktree.directory,
-        extendEnv: true,
       })(template, ...args).pipe(ChildProcess.exitCode)
 
     const execOutput = (
@@ -47,7 +45,6 @@ export const run = Effect.fnUntraced(
     ) =>
       ChildProcess.make({
         cwd: worktree.directory,
-        extendEnv: true,
       })(template, ...args).pipe(
         ChildProcess.string,
         Effect.map((output) => output.trim()),
@@ -131,13 +128,15 @@ export const run = Effect.fnUntraced(
       const taskJson = yield* fs.readFileString(
         pathService.join(worktree.directory, ".lalph", "task.json"),
       )
-      const task = yield* Schema.decodeEffect(ChosenTask)(taskJson)
+      const taskId = (yield* Schema.decodeEffect(ChosenTask)(taskJson)).id
+      const task = yield* prd.findById(taskId)
+      if (!task) return
 
       yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 
       const cliCommand = cliAgent.command({
         prompt: promptGen.prompt({
-          taskId: task.id,
+          taskId,
           targetBranch: Option.getOrUndefined(options.targetBranch),
           specsDirectory: options.specsDirectory,
         }),
@@ -151,7 +150,7 @@ export const run = Effect.fnUntraced(
           Effect.fnUntraced(function* (error) {
             const timeoutCommand = cliAgent.command({
               prompt: promptGen.promptTimeout({
-                taskId: task.id,
+                taskId,
               }),
               prdFilePath: pathService.join(".lalph", "prd.yml"),
             })
@@ -164,11 +163,8 @@ export const run = Effect.fnUntraced(
 
       const prs = yield* prd.mergableGithubPrs
       if (prs.length === 0) {
-        yield* prd.maybeRevertIssue({
-          ...task,
-          issueId: task.id,
-        })
-      } else if (options.autoMerge) {
+        yield* prd.maybeRevertIssue({ issueId: taskId })
+      } else if (task.autoMerge) {
         for (const pr of prs) {
           if (Option.isSome(options.targetBranch)) {
             yield* exec`gh pr edit ${pr.prNumber} --base ${options.targetBranch.value}`

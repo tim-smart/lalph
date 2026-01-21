@@ -36,6 +36,10 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
   complete: Schema.Boolean.annotate({
     description: "Whether the issue is complete.",
   }),
+  autoMerge: Schema.Boolean.annotate({
+    description:
+      "Whether the issue should be auto-merged when complete. Read-only field",
+  }),
   githubPrNumber: Schema.NullOr(Schema.Finite).annotate({
     description:
       "The created or updated Github pull request number for this task.",

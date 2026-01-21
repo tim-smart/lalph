@@ -112,6 +112,7 @@ export const GithubIssueSource = Layer.effect(
       )
     const [owner, repo] = nameWithOwner.split("/") as [string, string]
     const labelFilter = yield* getOrSelectLabel
+    const autoMergeLabelName = yield* getOrSelectAutoMergeLabel
 
     const hasLabel = (
       label: ReadonlyArray<
@@ -190,6 +191,10 @@ export const GithubIssueSource = Layer.effect(
               state,
               complete: state === "done" || state === "in-review",
               blockedBy: dependencies.map((dep) => `#${dep.number}`),
+              autoMerge: autoMergeLabelName.pipe(
+                Option.map((labelName) => hasLabel(issue.labels, labelName)),
+                Option.getOrElse(() => false),
+              ),
               githubPrNumber: null,
             })
           }),
@@ -411,7 +416,34 @@ const getOrSelectLabel = Effect.gen(function* () {
   return yield* labelSelect
 })
 
-export const resetGithub = labelFilter.set(Option.none())
+// == auto merge label
+
+const autoMergeLabel = new Setting(
+  "github.autoMergeLabel",
+  Schema.Option(Schema.String),
+)
+const autoMergeLabelSelect = Effect.gen(function* () {
+  const label = yield* Prompt.text({
+    message:
+      "What label do you want to use for auto-mergable issues? (leave empty for none)",
+  })
+  const labelOption = Option.some(label.trim()).pipe(
+    Option.filter(String.isNonEmpty),
+  )
+  yield* autoMergeLabel.set(Option.some(labelOption))
+  return labelOption
+})
+const getOrSelectAutoMergeLabel = Effect.gen(function* () {
+  const label = yield* autoMergeLabel.get
+  if (Option.isSome(label)) {
+    return label.value
+  }
+  return yield* autoMergeLabelSelect
+})
+
+export const resetGithub = labelFilter
+  .set(Option.none())
+  .pipe(Effect.andThen(autoMergeLabel.set(Option.none())))
 
 // == helpers
 

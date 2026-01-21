@@ -193,12 +193,16 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
       })
     })
 
+    const findById = (issueId: string) =>
+      Effect.sync(() => current.find((i) => i.id === issueId) ?? null)
+
     return {
       path: prdFile,
       mergableGithubPrs,
       revertStateIds,
       maybeRevertIssue,
       flagUnmergable,
+      findById,
     } as const
   }),
 }) {

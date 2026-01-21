@@ -37,11 +37,6 @@ const concurrency = Flag.integer("concurrency").pipe(
   Flag.withDefault(1),
 )
 
-const autoMerge = Flag.boolean("auto-merge").pipe(
-  Flag.withAlias("a"),
-  Flag.withDescription("Automatically merge eligible PRs"),
-)
-
 const targetBranch = Flag.string("target-branch").pipe(
   Flag.withDescription(
     "Target branch for PRs. Env variable: LALPH_TARGET_BRANCH",
@@ -84,7 +79,6 @@ const reset = Flag.boolean("reset").pipe(
 const root = Command.make("lalph", {
   iterations,
   concurrency,
-  autoMerge,
   targetBranch,
   maxIterationMinutes,
   stallMinutes,
@@ -95,7 +89,6 @@ const root = Command.make("lalph", {
     Effect.fnUntraced(function* ({
       iterations,
       concurrency,
-      autoMerge,
       targetBranch,
       maxIterationMinutes,
       stallMinutes,
@@ -135,7 +128,6 @@ const root = Command.make("lalph", {
           Effect.andThen(
             run({
               startedDeferred,
-              autoMerge,
               targetBranch,
               specsDirectory,
               stallTimeout: Duration.minutes(stallMinutes),
