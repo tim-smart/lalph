@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.47
+
+### Patch Changes
+
+- [`d759f8d`](https://github.com/tim-smart/lalph/commit/d759f8de7ad61bb78e98a59d194b851cba8d2057) Thanks [@tim-smart](https://github.com/tim-smart)! - load edit mode without worktree
+
 ## 0.1.46
 
 ### Patch Changes
