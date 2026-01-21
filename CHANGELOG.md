@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.45
+
+### Patch Changes
+
+- [`1017d39`](https://github.com/tim-smart/lalph/commit/1017d39f7477f21a4a6ae07349813d1500ca5e0f) Thanks [@tim-smart](https://github.com/tim-smart)! - pass specs directory to prompt
+
 ## 0.1.44
 
 ### Patch Changes
