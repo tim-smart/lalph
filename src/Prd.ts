@@ -28,16 +28,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     yield* fs.writeFileString(prdFile, PrdIssue.arrayToYaml(current))
 
     const updatedIssues = new Map<string, PrdIssue>()
-
-    yield* fs.watch(lalphDir).pipe(
-      Stream.buffer({
-        capacity: 1,
-        strategy: "dropping",
-      }),
-      Stream.runForEach((_) => Effect.ignore(sync)),
-      Effect.retry(Schedule.forever),
-      Effect.forkScoped,
-    )
+    let syncInProgress = false
 
     const sync = Effect.gen(function* () {
       const yaml = yield* fs.readFileString(prdFile)
@@ -100,6 +91,36 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
         ),
       )
     }).pipe(Effect.uninterruptible)
+
+    const runSync = Effect.gen(function* () {
+      const shouldRun = yield* Effect.sync(() => {
+        if (syncInProgress) return false
+        syncInProgress = true
+        return true
+      })
+      if (!shouldRun) return
+      yield* sync.pipe(
+        Effect.ensuring(
+          Effect.sync(() => {
+            syncInProgress = false
+          }),
+        ),
+      )
+    })
+
+    yield* fs.watch(lalphDir).pipe(
+      Stream.buffer({
+        capacity: 1,
+        strategy: "dropping",
+      }),
+      Stream.runForEach((_) => Effect.ignore(runSync)),
+      Effect.retry(Schedule.forever),
+      Effect.forkScoped,
+    )
+
+    yield* Effect.repeat(Effect.ignore(runSync), Schedule.spaced(30000)).pipe(
+      Effect.forkScoped,
+    )
 
     const mergableGithubPrs = Effect.gen(function* () {
       const yaml = yield* fs.readFileString(prdFile)
