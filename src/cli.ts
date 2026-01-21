@@ -204,6 +204,21 @@ const planMode = Command.make("plan").pipe(
   ),
 )
 
+const shell = Command.make("shell").pipe(
+  Command.withDescription("Open an interactive shell in a worktree"),
+  Command.withHandler(
+    Effect.fnUntraced(function* () {
+      const { reset, targetBranch } = yield* root
+      if (reset) {
+        yield* resetCurrentIssueSource
+      }
+      // yield* plan({ targetBranch }).pipe(
+      //   Effect.provide(CurrentIssueSource.layer),
+      // )
+    }),
+  ),
+)
+
 root.pipe(
   Command.withSubcommands([
     planMode,

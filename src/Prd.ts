@@ -20,6 +20,10 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     const fs = yield* FileSystem.FileSystem
     const source = yield* IssueSource
 
+    // TODO: Return service with sync disabled
+    // if (worktree.inExisting) {
+    // }
+
     const lalphDir = pathService.join(worktree.directory, `.lalph`)
     const prdFile = pathService.join(worktree.directory, `.lalph`, `prd.yml`)
 
