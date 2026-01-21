@@ -1,6 +1,7 @@
 import {
   Array,
   Effect,
+  FiberHandle,
   FileSystem,
   Layer,
   Path,
@@ -28,16 +29,6 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     yield* fs.writeFileString(prdFile, PrdIssue.arrayToYaml(current))
 
     const updatedIssues = new Map<string, PrdIssue>()
-
-    yield* fs.watch(lalphDir).pipe(
-      Stream.buffer({
-        capacity: 1,
-        strategy: "dropping",
-      }),
-      Stream.runForEach((_) => Effect.ignore(sync)),
-      Effect.retry(Schedule.forever),
-      Effect.forkScoped,
-    )
 
     const sync = Effect.gen(function* () {
       const yaml = yield* fs.readFileString(prdFile)
@@ -100,6 +91,43 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
         ),
       )
     }).pipe(Effect.uninterruptible)
+
+    const updateSyncHandle = yield* FiberHandle.make()
+    const updateSync = Effect.gen(function* () {
+      const tempFile = yield* fs.makeTempFileScoped()
+      const sourceIssues = yield* source.issues
+      const anyChanges =
+        sourceIssues.length !== current.length ||
+        sourceIssues.some((u, i) => u.isChangedComparedTo(current[i]!))
+      if (!anyChanges) return
+
+      yield* fs.writeFileString(tempFile, PrdIssue.arrayToYaml(sourceIssues))
+      yield* fs.rename(tempFile, prdFile)
+      current = sourceIssues
+    }).pipe(
+      Effect.scoped,
+      FiberHandle.run(updateSyncHandle, { onlyIfMissing: true }),
+    )
+
+    yield* fs.watch(lalphDir).pipe(
+      Stream.buffer({
+        capacity: 1,
+        strategy: "dropping",
+      }),
+      Stream.runForEach((_) =>
+        FiberHandle.clear(updateSyncHandle).pipe(
+          Effect.andThen(Effect.ignore(sync)),
+        ),
+      ),
+      Effect.retry(Schedule.forever),
+      Effect.forkScoped,
+    )
+
+    yield* updateSync.pipe(
+      Effect.delay("30 seconds"),
+      Effect.forever,
+      Effect.forkScoped,
+    )
 
     const mergableGithubPrs = Effect.gen(function* () {
       const yaml = yield* fs.readFileString(prdFile)
