@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.51
+
+### Patch Changes
+
+- [`45a6391`](https://github.com/tim-smart/lalph/commit/45a63914a5ccdbe4f1e1ece84c943270b5cfe9cb) Thanks [@tim-smart](https://github.com/tim-smart)! - move auto merge to issue labels
+
 ## 0.1.50
 
 ### Patch Changes
