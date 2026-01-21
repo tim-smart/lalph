@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.48
+
+### Patch Changes
+
+- [`d21e35d`](https://github.com/tim-smart/lalph/commit/d21e35dbe09ebcb3c53912d2f12093c23d76890f) Thanks [@tim-smart](https://github.com/tim-smart)! - allow setting target branch for plan mode
+
 ## 0.1.47
 
 ### Patch Changes
