@@ -124,7 +124,7 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     )
 
     yield* updateSync.pipe(
-      Effect.delay("30 seconds"),
+      Effect.delay("1 minute"),
       Effect.forever,
       Effect.forkScoped,
     )
