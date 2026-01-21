@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.49
+
+### Patch Changes
+
+- [`e45b53f`](https://github.com/tim-smart/lalph/commit/e45b53f7c278ceb372a1ce3b9d967482a11d57f4) Thanks [@tim-smart](https://github.com/tim-smart)! - allow configuring using env vars
+
 ## 0.1.48
 
 ### Patch Changes
