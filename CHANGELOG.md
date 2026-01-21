@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.50
+
+### Patch Changes
+
+- [`1616e01`](https://github.com/tim-smart/lalph/commit/1616e0126f0fca8c30145325ac66a8d6860c2c97) Thanks [@tim-smart](https://github.com/tim-smart)! - remove console.log
+
 ## 0.1.49
 
 ### Patch Changes
