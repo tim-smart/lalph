@@ -3,6 +3,7 @@
 import { Command, Flag } from "effect/unstable/cli"
 import {
   Cause,
+  Config,
   Deferred,
   Duration,
   Effect,
@@ -42,28 +43,36 @@ const autoMerge = Flag.boolean("auto-merge").pipe(
 )
 
 const targetBranch = Flag.string("target-branch").pipe(
-  Flag.withDescription("Target branch for PRs"),
+  Flag.withDescription(
+    "Target branch for PRs. Env variable: LALPH_TARGET_BRANCH",
+  ),
   Flag.withAlias("b"),
+  Flag.withFallbackConfig(Config.string("LALPH_TARGET_BRANCH")),
   Flag.optional,
 )
 
 const maxIterationMinutes = Flag.integer("max-minutes").pipe(
   Flag.withDescription(
-    "Maximum number of minutes to allow an iteration to run. Defaults to 90 minutes",
+    "Maximum number of minutes to allow an iteration to run. Defaults to 90 minutes. Env variable: LALPH_MAX_MINUTES",
   ),
+  Flag.withFallbackConfig(Config.int("LALPH_MAX_MINUTES")),
   Flag.withDefault(90),
 )
 
 const stallMinutes = Flag.integer("stall-minutes").pipe(
   Flag.withDescription(
-    "If no activity occurs for this many minutes, the iteration will be stopped. Defaults to 5 minutes",
+    "If no activity occurs for this many minutes, the iteration will be stopped. Defaults to 5 minutes. Env variable: LALPH_STALL_MINUTES",
   ),
+  Flag.withFallbackConfig(Config.int("LALPH_STALL_MINUTES")),
   Flag.withDefault(5),
 )
 
 const specsDirectory = Flag.directory("specs").pipe(
-  Flag.withDescription("Directory to store plan specifications"),
+  Flag.withDescription(
+    "Directory to store plan specifications. Env variable: LALPH_SPECS",
+  ),
   Flag.withAlias("s"),
+  Flag.withFallbackConfig(Config.string("LALPH_SPECS")),
   Flag.withDefault(".specs"),
 )
 
@@ -193,6 +202,7 @@ const planMode = Command.make("plan").pipe(
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const { reset, specsDirectory, targetBranch } = yield* root
+      console.log({ reset, specsDirectory, targetBranch })
       if (reset) {
         yield* resetCurrentIssueSource
       }
