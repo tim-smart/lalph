@@ -38,6 +38,14 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   }),
 }) {
   static layer = Layer.effect(this, this.make)
+  static layerLocal = Layer.effect(
+    this,
+    Effect.gen(function* () {
+      const pathService = yield* Path.Path
+      const directory = pathService.resolve(".")
+      return { directory } as const
+    }),
+  )
 }
 
 const execIgnore = (command: ChildProcess.Command) =>

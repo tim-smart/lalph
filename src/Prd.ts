@@ -202,7 +202,9 @@ export class Prd extends ServiceMap.Service<Prd>()("lalph/Prd", {
     } as const
   }),
 }) {
-  static layer = Layer.effect(this, this.make).pipe(
-    Layer.provide(Worktree.layer),
+  static layerNoWorktree = Layer.effect(this, this.make)
+  static layer = this.layerNoWorktree.pipe(Layer.provide(Worktree.layer))
+  static layerLocal = this.layerNoWorktree.pipe(
+    Layer.provide(Worktree.layerLocal),
   )
 }

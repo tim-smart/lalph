@@ -22,7 +22,9 @@ export const editPrd = Command.make("edit").pipe(
         }).pipe(ChildProcess.exitCode)
       },
       Effect.scoped,
-      Effect.provide(Prd.layer.pipe(Layer.provide(CurrentIssueSource.layer))),
+      Effect.provide(
+        Prd.layerLocal.pipe(Layer.provide(CurrentIssueSource.layer)),
+      ),
     ),
   ),
 )
