@@ -49,8 +49,12 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     this,
     Effect.gen(function* () {
       const pathService = yield* Path.Path
+      const fs = yield* FileSystem.FileSystem
       const directory = pathService.resolve(".")
-      return { directory, inExisting: false } as const
+      return {
+        directory,
+        inExisting: yield* fs.exists(pathService.join(".lalph", "prd.yml")),
+      } as const
     }),
   )
 }
