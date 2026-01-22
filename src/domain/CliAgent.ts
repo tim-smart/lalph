@@ -33,8 +33,9 @@ export const opencode = new CliAgent({
       stderr: outputMode,
       stdin: "inherit",
     })`opencode run ${prompt} -f ${prdFilePath}`,
-  commandPlan: ({ outputMode, prompt, prdFilePath }) =>
+  commandPlan: ({ outputMode, prompt, prdFilePath, worktree }) =>
     ChildProcess.make({
+      cwd: worktree.directory,
       extendEnv: true,
       env: {
         OPENCODE_PERMISSION: '{"*":"allow"}',
@@ -82,8 +83,9 @@ export const codex = new CliAgent({
     })`codex exec --dangerously-bypass-approvals-and-sandbox ${`@${prdFilePath}
 
 ${prompt}`}`,
-  commandPlan: ({ outputMode, prompt, prdFilePath }) =>
+  commandPlan: ({ outputMode, prompt, prdFilePath, worktree }) =>
     ChildProcess.make({
+      cwd: worktree.directory,
       stdout: outputMode,
       stderr: outputMode,
       stdin: "inherit",
