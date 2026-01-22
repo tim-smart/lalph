@@ -44,22 +44,14 @@ const plan = Effect.fnUntraced(
       yield* exec`git checkout ${`origin/${options.targetBranch.value}`}`
     }
 
-    const cliCommand = cliAgent.commandPlan({
-      prompt: promptGen.planPrompt(options),
-      prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
-    })
-    const exitCode = yield* ChildProcess.make(
-      cliCommand[0]!,
-      cliCommand.slice(1),
-      {
-        cwd: worktree.directory,
-        extendEnv: true,
-        env: cliAgent.env,
-        stdout: "inherit",
-        stderr: "inherit",
-        stdin: "inherit",
-      },
-    ).pipe(ChildProcess.exitCode)
+    const exitCode = yield* cliAgent
+      .commandPlan({
+        worktree,
+        outputMode: "inherit",
+        prompt: promptGen.planPrompt(options),
+        prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
+      })
+      .pipe(ChildProcess.exitCode)
 
     yield* Effect.log(`Agent exited with code: ${exitCode}`)
 

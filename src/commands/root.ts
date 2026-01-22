@@ -215,7 +215,7 @@ const run = Effect.fnUntraced(
       })(template, ...args).pipe(ChildProcess.exitCode)
 
     const execWithStallTimeout = Effect.fnUntraced(function* (
-      command: ReadonlyArray<string>,
+      command: ChildProcess.Command,
     ) {
       let lastOutputAt = yield* DateTime.now
 
@@ -235,14 +235,7 @@ const run = Effect.fnUntraced(
         return Effect.flatMap(Effect.sleep(timeUntilDeadline), loop)
       })
 
-      const handle = yield* ChildProcess.make(command[0]!, command.slice(1), {
-        cwd: worktree.directory,
-        extendEnv: true,
-        env: cliAgent.env,
-        stdout: "pipe",
-        stderr: "pipe",
-        stdin: "inherit",
-      })
+      const handle = yield* command
 
       yield* handle.all.pipe(
         Stream.runForEachArray((output) => {
@@ -275,25 +268,20 @@ const run = Effect.fnUntraced(
     }
 
     yield* Effect.gen(function* () {
-      const chooseCommand = cliAgent.command({
-        prompt: promptGen.promptChoose,
-        prdFilePath: pathService.join(".lalph", "prd.yml"),
-      })
-
-      yield* ChildProcess.make(chooseCommand[0]!, chooseCommand.slice(1), {
-        cwd: worktree.directory,
-        extendEnv: true,
-        env: cliAgent.env,
-        stdout: "inherit",
-        stderr: "inherit",
-        stdin: "inherit",
-      }).pipe(
-        ChildProcess.exitCode,
-        Effect.timeoutOrElse({
-          duration: options.stallTimeout,
-          onTimeout: () => Effect.fail(new RunnerStalled()),
-        }),
-      )
+      yield* cliAgent
+        .command({
+          worktree,
+          prompt: promptGen.promptChoose,
+          prdFilePath: pathService.join(".lalph", "prd.yml"),
+          outputMode: "inherit",
+        })
+        .pipe(
+          ChildProcess.exitCode,
+          Effect.timeoutOrElse({
+            duration: options.stallTimeout,
+            onTimeout: () => Effect.fail(new RunnerStalled()),
+          }),
+        )
 
       const taskJson = yield* fs.readFileString(
         pathService.join(worktree.directory, ".lalph", "task.json"),
@@ -314,6 +302,8 @@ const run = Effect.fnUntraced(
       yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 
       const cliCommand = cliAgent.command({
+        worktree,
+        outputMode: "pipe",
         prompt: promptGen.prompt({
           taskId,
           targetBranch: Option.getOrUndefined(options.targetBranch),
@@ -328,6 +318,8 @@ const run = Effect.fnUntraced(
           "TimeoutError",
           Effect.fnUntraced(function* (error) {
             const timeoutCommand = cliAgent.command({
+              worktree,
+              outputMode: "pipe",
               prompt: promptGen.promptTimeout({
                 taskId,
               }),

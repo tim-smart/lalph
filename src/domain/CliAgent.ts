@@ -1,59 +1,73 @@
 import { Data } from "effect"
+import type { Worktree } from "../Worktree.ts"
+import { ChildProcess } from "effect/unstable/process"
 
 export class CliAgent extends Data.Class<{
   id: string
   name: string
   command: (options: {
+    readonly worktree: Worktree["Service"]
+    readonly outputMode: "pipe" | "inherit"
     readonly prompt: string
     readonly prdFilePath: string
-  }) => ReadonlyArray<string>
+  }) => ChildProcess.Command
   commandPlan: (options: {
+    readonly worktree: Worktree["Service"]
+    readonly outputMode: "pipe" | "inherit"
     readonly prompt: string
     readonly prdFilePath: string
-  }) => ReadonlyArray<string>
-  env: Record<string, string>
+  }) => ChildProcess.Command
 }> {}
 
 export const opencode = new CliAgent({
   id: "opencode",
   name: "opencode",
-  env: {
-    OPENCODE_PERMISSION: '{"*":"allow"}',
-  },
-  command: ({ prompt, prdFilePath }) => [
-    "opencode",
-    "run",
-    prompt,
-    "-f",
-    prdFilePath,
-  ],
-  commandPlan: ({ prompt, prdFilePath }) => [
-    "opencode",
-    "--prompt",
-    `@${prdFilePath}
+  command: ({ outputMode, prompt, prdFilePath, worktree }) =>
+    ChildProcess.make({
+      cwd: worktree.directory,
+      extendEnv: true,
+      env: {
+        OPENCODE_PERMISSION: '{"*":"allow"}',
+      },
+      stdout: outputMode,
+      stderr: outputMode,
+      stdin: "inherit",
+    })`opencode run ${prompt} -f ${prdFilePath}`,
+  commandPlan: ({ outputMode, prompt, prdFilePath }) =>
+    ChildProcess.make({
+      extendEnv: true,
+      env: {
+        OPENCODE_PERMISSION: '{"*":"allow"}',
+      },
+      stdout: outputMode,
+      stderr: outputMode,
+      stdin: "inherit",
+    })`opencode --prompt ${`@${prdFilePath}
 
-${prompt}`,
-  ],
+${prompt}`}`,
 })
 
 export const claude = new CliAgent({
   id: "claude",
   name: "Claude Code",
-  env: {},
-  command: ({ prompt, prdFilePath }) => [
-    "claude",
-    "--dangerously-skip-permissions",
-    "-p",
-    `@${prdFilePath}
+  command: ({ outputMode, prompt, prdFilePath, worktree }) =>
+    ChildProcess.make({
+      cwd: worktree.directory,
+      stdout: outputMode,
+      stderr: outputMode,
+      stdin: "inherit",
+    })`claude --dangerously-skip-permissions -p ${`@${prdFilePath}
 
-${prompt}`,
-  ],
-  commandPlan: ({ prompt, prdFilePath }) => [
-    "claude",
-    `@${prdFilePath}
+${prompt}`}`,
+  commandPlan: ({ outputMode, prompt, prdFilePath, worktree }) =>
+    ChildProcess.make({
+      cwd: worktree.directory,
+      stdout: outputMode,
+      stderr: outputMode,
+      stdin: "inherit",
+    })`claude ${`@${prdFilePath}
 
-${prompt}`,
-  ],
+${prompt}`}`,
 })
 
 export const allCliAgents = [opencode, claude]
