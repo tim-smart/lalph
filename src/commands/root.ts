@@ -268,6 +268,21 @@ const run = Effect.fnUntraced(
     }
 
     yield* Effect.gen(function* () {
+      let taskId: string | undefined = undefined
+      yield* Effect.addFinalizer(
+        Effect.fnUntraced(function* (exit) {
+          if (exit._tag === "Success") return
+          const prd = yield* Prd
+          if (taskId) {
+            yield* prd.maybeRevertIssue({
+              issueId: taskId,
+            })
+          } else {
+            yield* prd.revertUpdatedIssues
+          }
+        }, Effect.ignore),
+      )
+
       yield* cliAgent
         .command({
           worktree,
@@ -286,18 +301,7 @@ const run = Effect.fnUntraced(
       const taskJson = yield* fs.readFileString(
         pathService.join(worktree.directory, ".lalph", "task.json"),
       )
-      const taskId = (yield* Schema.decodeEffect(ChosenTask)(taskJson)).id
-      yield* Effect.addFinalizer(
-        Effect.fnUntraced(function* (exit) {
-          if (exit._tag === "Success") return
-          const prd = yield* Prd
-          yield* Effect.ignore(
-            prd.maybeRevertIssue({
-              issueId: taskId,
-            }),
-          )
-        }),
-      )
+      taskId = (yield* Schema.decodeEffect(ChosenTask)(taskJson)).id
 
       yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 

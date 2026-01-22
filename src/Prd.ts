@@ -28,6 +28,10 @@ export class Prd extends ServiceMap.Service<
     readonly maybeRevertIssue: (options: {
       readonly issueId: string
     }) => Effect.Effect<void, PlatformError.PlatformError | IssueSourceError>
+    readonly revertUpdatedIssues: Effect.Effect<
+      void,
+      PlatformError.PlatformError | IssueSourceError
+    >
     readonly flagUnmergable: (options: {
       readonly issueId: string
     }) => Effect.Effect<void, IssueSourceError>
@@ -98,10 +102,23 @@ export class Prd extends ServiceMap.Service<
     })
 
     if (worktree.inExisting) {
+      const initialPrdIssues = yield* readPrd
       return {
         path: prdFile,
         mergableGithubPrs,
         maybeRevertIssue,
+        revertUpdatedIssues: Effect.gen(function* () {
+          const updated = yield* readPrd
+          for (const issue of updated) {
+            if (issue.state !== "in-progress") continue
+            const prevIssue = initialPrdIssues.find((i) => i.id === issue.id)
+            if (!prevIssue || prevIssue.state === "in-progress") continue
+            yield* source.updateIssue({
+              issueId: issue.id!,
+              state: prevIssue.state,
+            })
+          }
+        }),
         flagUnmergable,
         findById: Effect.fnUntraced(function* (issueId: string) {
           const prdIssues = yield* readPrd
@@ -222,6 +239,15 @@ export class Prd extends ServiceMap.Service<
       path: prdFile,
       mergableGithubPrs,
       maybeRevertIssue,
+      revertUpdatedIssues: Effect.gen(function* () {
+        for (const issue of updatedIssues.values()) {
+          if (issue.state !== "done") continue
+          yield* source.updateIssue({
+            issueId: issue.id!,
+            state: "todo",
+          })
+        }
+      }),
       flagUnmergable,
       findById,
     }
