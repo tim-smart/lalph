@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.56
+
+### Patch Changes
+
+- [`186db6f`](https://github.com/tim-smart/lalph/commit/186db6f3ec886510710f393d789345309b99c6d5) Thanks [@tim-smart](https://github.com/tim-smart)! - remove complete field
+
+- [`b2b756e`](https://github.com/tim-smart/lalph/commit/b2b756ea8ad3b9a1ec680d74d795724d73fecb61) Thanks [@tim-smart](https://github.com/tim-smart)! - fix cwd for some clis
+
 ## 0.1.55
 
 ### Patch Changes
