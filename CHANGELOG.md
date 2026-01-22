@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.57
+
+### Patch Changes
+
+- [`c7111ed`](https://github.com/tim-smart/lalph/commit/c7111eddf627af082c787fe5d6e4cdfef0b8f517) Thanks [@tim-smart](https://github.com/tim-smart)! - use the new linear client for listing issues
+
 ## 0.1.56
 
 ### Patch Changes
