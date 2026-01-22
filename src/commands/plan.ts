@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Option, Path } from "effect"
+import { Effect, FileSystem, Option, Path, pipe } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
@@ -12,8 +12,8 @@ export const commandPlan = Command.make("plan").pipe(
   Command.withDescription("Iterate on an issue plan and create PRD tasks"),
   Command.withHandler(
     Effect.fnUntraced(function* () {
-      const { specsDirectory, targetBranch } = yield* commandRoot
-      yield* plan({ specsDirectory, targetBranch }).pipe(
+      const { specsDirectory, targetBranch, commandPrefix } = yield* commandRoot
+      yield* plan({ specsDirectory, targetBranch, commandPrefix }).pipe(
         Effect.provide(CurrentIssueSource.layer),
       )
     }),
@@ -24,6 +24,9 @@ const plan = Effect.fnUntraced(
   function* (options: {
     readonly specsDirectory: string
     readonly targetBranch: Option.Option<string>
+    readonly commandPrefix: (
+      command: ChildProcess.Command,
+    ) => ChildProcess.Command
   }) {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
@@ -35,36 +38,39 @@ const plan = Effect.fnUntraced(
       template: TemplateStringsArray,
       ...args: Array<string | number | boolean>
     ) =>
-      ChildProcess.make({
-        cwd: worktree.directory,
-        extendEnv: true,
-      })(template, ...args).pipe(ChildProcess.exitCode)
+      ChildProcess.exitCode(
+        ChildProcess.make({
+          cwd: worktree.directory,
+          extendEnv: true,
+        })(template, ...args),
+      )
 
     if (Option.isSome(options.targetBranch)) {
       yield* exec`git checkout ${`origin/${options.targetBranch.value}`}`
     }
 
-    const exitCode = yield* cliAgent
-      .commandPlan({
-        worktree,
+    const exitCode = yield* pipe(
+      cliAgent.commandPlan({
         outputMode: "inherit",
         prompt: promptGen.planPrompt(options),
         prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
-      })
-      .pipe(ChildProcess.exitCode)
+      }),
+      ChildProcess.setCwd(worktree.directory),
+      options.commandPrefix,
+      ChildProcess.exitCode,
+    )
 
     yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
     if (!worktree.inExisting) {
-      yield* fs
-        .copy(
+      yield* pipe(
+        fs.copy(
           pathService.join(worktree.directory, options.specsDirectory),
           options.specsDirectory,
-          {
-            overwrite: true,
-          },
-        )
-        .pipe(Effect.ignore)
+          { overwrite: true },
+        ),
+        Effect.ignore,
+      )
     }
   },
   Effect.scoped,

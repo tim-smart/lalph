@@ -1,4 +1,5 @@
 import {
+  Array,
   Cause,
   Config,
   Data,
@@ -9,10 +10,12 @@ import {
   FiberSet,
   FileSystem,
   Filter,
+  identity,
   Iterable,
   Layer,
   Option,
   Path,
+  pipe,
   Schema,
   Stream,
 } from "effect"
@@ -87,6 +90,24 @@ const specsDirectory = Flag.directory("specs").pipe(
   Flag.withDefault(".specs"),
 )
 
+const commandPrefix = Flag.directory("command-prefix").pipe(
+  Flag.withDescription(
+    `Prefix to add before the agent command (i.e. "docker sandbox run"). Env variable: LALPH_COMMAND_PREFIX`,
+  ),
+  Flag.withAlias("p"),
+  Flag.withFallbackConfig(Config.string("LALPH_COMMAND_PREFIX")),
+  Flag.map((s) => {
+    const parts = s
+      .trim()
+      .split(/\s+/)
+      .filter((part) => part.length > 0)
+    return Array.isArrayNonEmpty(parts)
+      ? ChildProcess.prefix(parts[0], parts.slice(1))
+      : identity
+  }),
+  Flag.withDefault(identity<ChildProcess.Command>),
+)
+
 // handled in cli.ts
 const reset = Flag.boolean("reset").pipe(
   Flag.withDescription("Reset the current issue source before running"),
@@ -101,6 +122,7 @@ export const commandRoot = Command.make("lalph", {
   stallMinutes,
   reset,
   specsDirectory,
+  commandPrefix,
 }).pipe(
   Command.withHandler(
     Effect.fnUntraced(function* ({
@@ -110,6 +132,7 @@ export const commandRoot = Command.make("lalph", {
       maxIterationMinutes,
       stallMinutes,
       specsDirectory,
+      commandPrefix,
     }) {
       const source = yield* Layer.build(CurrentIssueSource.layer)
       yield* getOrSelectCliAgent
@@ -145,6 +168,7 @@ export const commandRoot = Command.make("lalph", {
               specsDirectory,
               stallTimeout: Duration.minutes(stallMinutes),
               runTimeout: Duration.minutes(maxIterationMinutes),
+              commandPrefix,
             }),
           ),
           Effect.catchFilter(
@@ -200,6 +224,9 @@ const run = Effect.fnUntraced(
     readonly specsDirectory: string
     readonly stallTimeout: Duration.Duration
     readonly runTimeout: Duration.Duration
+    readonly commandPrefix: (
+      command: ChildProcess.Command,
+    ) => ChildProcess.Command
   }) {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
@@ -285,20 +312,20 @@ const run = Effect.fnUntraced(
         }, Effect.ignore),
       )
 
-      yield* cliAgent
-        .command({
-          worktree,
+      yield* pipe(
+        cliAgent.command({
           prompt: promptGen.promptChoose,
           prdFilePath: pathService.join(".lalph", "prd.yml"),
           outputMode: "inherit",
-        })
-        .pipe(
-          ChildProcess.exitCode,
-          Effect.timeoutOrElse({
-            duration: options.stallTimeout,
-            onTimeout: () => Effect.fail(new RunnerStalled()),
-          }),
-        )
+        }),
+        ChildProcess.setCwd(worktree.directory),
+        options.commandPrefix,
+        ChildProcess.exitCode,
+        Effect.timeoutOrElse({
+          duration: options.stallTimeout,
+          onTimeout: () => Effect.fail(new RunnerStalled()),
+        }),
+      )
 
       const taskJson = yield* fs.readFileString(
         pathService.join(worktree.directory, ".lalph", "task.json"),
@@ -307,30 +334,36 @@ const run = Effect.fnUntraced(
 
       yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 
-      const cliCommand = cliAgent.command({
-        worktree,
-        outputMode: "pipe",
-        prompt: promptGen.prompt({
-          taskId,
-          targetBranch: Option.getOrUndefined(options.targetBranch),
-          specsDirectory: options.specsDirectory,
+      const cliCommand = pipe(
+        cliAgent.command({
+          outputMode: "pipe",
+          prompt: promptGen.prompt({
+            taskId,
+            targetBranch: Option.getOrUndefined(options.targetBranch),
+            specsDirectory: options.specsDirectory,
+          }),
+          prdFilePath: pathService.join(".lalph", "prd.yml"),
         }),
-        prdFilePath: pathService.join(".lalph", "prd.yml"),
-      })
+        ChildProcess.setCwd(worktree.directory),
+        options.commandPrefix,
+      )
 
       const exitCode = yield* execWithStallTimeout(cliCommand).pipe(
         Effect.timeout(options.runTimeout),
         Effect.catchTag(
           "TimeoutError",
           Effect.fnUntraced(function* (error) {
-            const timeoutCommand = cliAgent.command({
-              worktree,
-              outputMode: "pipe",
-              prompt: promptGen.promptTimeout({
-                taskId,
+            const timeoutCommand = pipe(
+              cliAgent.command({
+                outputMode: "pipe",
+                prompt: promptGen.promptTimeout({
+                  taskId,
+                }),
+                prdFilePath: pathService.join(".lalph", "prd.yml"),
               }),
-              prdFilePath: pathService.join(".lalph", "prd.yml"),
-            })
+              ChildProcess.setCwd(worktree.directory),
+              options.commandPrefix,
+            )
             yield* execWithStallTimeout(timeoutCommand)
             return yield* error
           }),
