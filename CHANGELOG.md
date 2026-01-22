@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.53
+
+### Patch Changes
+
+- [`cba473b`](https://github.com/tim-smart/lalph/commit/cba473b1535919ea1a36bbd49400e2badf1cf2b2) Thanks [@tim-smart](https://github.com/tim-smart)! - --dangerously-skip-permissions
+
 ## 0.1.52
 
 ### Patch Changes
