@@ -72,7 +72,7 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
       client.projects({
         filter: {
           status: {
-            type: { neq: "completed" },
+            type: { nin: ["canceled", "completed"] },
           },
         },
       }),
