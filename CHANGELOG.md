@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.55
+
+### Patch Changes
+
+- [`7e5dade`](https://github.com/tim-smart/lalph/commit/7e5dade61586d44b8a5f3f7e96542ce567a5a165) Thanks [@tim-smart](https://github.com/tim-smart)! - update CliAgent command model
+
+- [`c5f950e`](https://github.com/tim-smart/lalph/commit/c5f950e1dc5fc6c536b3e6adb968fa5dc37a3ecb) Thanks [@tim-smart](https://github.com/tim-smart)! - add codex
+
 ## 0.1.54
 
 ### Patch Changes
