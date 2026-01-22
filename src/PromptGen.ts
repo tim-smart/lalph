@@ -56,11 +56,8 @@ The following instructions should be done without interaction or asking for perm
 2. **Before doing anything else**, mark the task as "in-progress" by updating its
    \`state\` in the prd.yml file.
    This prevents other people or agents from working on the same task simultaneously.
-3. Research the task. If it seems like too many steps are needed to complete the task,
-   break it down into smaller tasks and add them to the prd.yml file, marking the
-   original task as "done" by updating its \`state\`.
-4. Once you have chosen a task of reasonable size, save its information in a
-   "task.json" file alongside the prd.yml file. Use the following format:
+3. Once you have chosen a task, save its information in a "task.json" file alongside
+   the prd.yml file. Use the following format:
 
 \`\`\`json
 {
@@ -85,11 +82,11 @@ ${prdNotes}`
    - If there is an existing PR, checkout the branch for that PR.
    - If there is an existing PR, check if there are any new comments or requested
      changes, and address them as part of the task.
+   - When checking for PR reviews, make sure to check the "reviews" field and read ALL unresolved comments.
+     Also read the normal comments to see if there are any additional requests.
    - If creating a new branch, don't checkout any main branches first, use the current
      HEAD as the base.
    - New branches should be named using the format \`{task id}/description\`.
-   - When checking for PR reviews, make sure to check the "reviews" field and read ALL unresolved comments.
-     Also read the normal comments to see if there are any additional requests.
 3. Implement the task.
    - **If at any point** you discover something that needs fixing, or another task
      that needs doing, immediately add it to the prd.yml file as a new task.
@@ -169,7 +166,7 @@ ${prdNotes}`
 2. Once you have saved the specification, your next job is to create an implementation
    plan by breaking down the specification into smaller, manageable tasks and add
    them to the prd.yml file.
-   Each task include in the description where to find the plan specification.
+   For each task include in the description where to find the plan specification.
    - Each task should be an atomic, committable piece of work.
      Instead of creating tasks like "Refactor the authentication system", create
      smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.
@@ -186,8 +183,8 @@ ${prdNotes}`
 
 - Should go into a \`${options.specsDirectory}\` directory, with a filename that reflects the
   project name.
-- When adding a new specification, add a link to in the README.md file in the
-  \`${options.specsDirectory}\` directory along with a brief overview of the specification.
+- When adding a new specification, add a link to it in the README.md file in the
+  \`${options.specsDirectory}\` directory, along with a brief overview of the specification.
   If the README.md file does not exist, create it.
  
 ${prdNotes}`
