@@ -5,17 +5,14 @@ import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import { getOrSelectCliAgent } from "../CliAgent.ts"
 import { Command } from "effect/unstable/cli"
-import { resetCurrentIssueSource, CurrentIssueSource } from "../IssueSources.ts"
+import { CurrentIssueSource } from "../IssueSources.ts"
 import { commandRoot } from "./root.ts"
 
 export const commandPlan = Command.make("plan").pipe(
   Command.withDescription("Iterate on an issue plan and create PRD tasks"),
   Command.withHandler(
     Effect.fnUntraced(function* () {
-      const { reset, specsDirectory, targetBranch } = yield* commandRoot
-      if (reset) {
-        yield* resetCurrentIssueSource
-      }
+      const { specsDirectory, targetBranch } = yield* commandRoot
       yield* plan({ specsDirectory, targetBranch }).pipe(
         Effect.provide(CurrentIssueSource.layer),
       )
