@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.60
+
+### Patch Changes
+
+- [`cae5f8e`](https://github.com/tim-smart/lalph/commit/cae5f8e243c191925dad0be86272a6c3a80ff669) Thanks [@tim-smart](https://github.com/tim-smart)! - log no work if only 1 fiber (the current one)
+
 ## 0.1.59
 
 ### Patch Changes
