@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.59
+
+### Patch Changes
+
+- [`38322be`](https://github.com/tim-smart/lalph/commit/38322be381e750c7fc588598fb6ffb06dd038e14) Thanks [@tim-smart](https://github.com/tim-smart)! - add cli command prefixing to support docker sandbox
+
+- [`9bb4822`](https://github.com/tim-smart/lalph/commit/9bb4822ea3c25cc8a51d40095d5aaa4028fb4871) Thanks [@tim-smart](https://github.com/tim-smart)! - use string for command prefix
+
 ## 0.1.58
 
 ### Patch Changes
