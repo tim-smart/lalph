@@ -189,9 +189,10 @@ export const LinearIssueSource = Layer.effect(
     }
 
     const issues = linear
-      .stream(() =>
-        project.issues({
+      .stream((c) =>
+        c.issues({
           filter: {
+            project: { id: { eq: project.id } },
             assignee: { isMe: { eq: true } },
             labels: {
               id: labelId.pipe(
