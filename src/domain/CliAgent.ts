@@ -70,4 +70,26 @@ ${prompt}`}`,
 ${prompt}`}`,
 })
 
-export const allCliAgents = [opencode, claude]
+export const codex = new CliAgent({
+  id: "codex",
+  name: "codex cli",
+  command: ({ outputMode, prompt, prdFilePath, worktree }) =>
+    ChildProcess.make({
+      cwd: worktree.directory,
+      stdout: outputMode,
+      stderr: outputMode,
+      stdin: "inherit",
+    })`codex exec --dangerously-bypass-approvals-and-sandbox ${`@${prdFilePath}
+
+${prompt}`}`,
+  commandPlan: ({ outputMode, prompt, prdFilePath }) =>
+    ChildProcess.make({
+      stdout: outputMode,
+      stderr: outputMode,
+      stdin: "inherit",
+    })`codex ${`@${prdFilePath}
+
+${prompt}`}`,
+})
+
+export const allCliAgents = [opencode, claude, codex]
