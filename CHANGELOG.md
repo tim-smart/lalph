@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.54
+
+### Patch Changes
+
+- [`74af0ec`](https://github.com/tim-smart/lalph/commit/74af0ecaba48b96676020220d24e812bc6a1b8e9) Thanks [@tim-smart](https://github.com/tim-smart)! - existing worktree handling for edit command
+
 ## 0.1.53
 
 ### Patch Changes
