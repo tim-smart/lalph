@@ -5,6 +5,13 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   make: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
+
+    const inExisting = yield* fs.exists(pathService.join(".lalph", "prd.yml"))
+    if (inExisting) {
+      const directory = pathService.resolve(".")
+      return { directory, inExisting } as const
+    }
+
     const directory = yield* fs.makeTempDirectory()
 
     yield* Effect.addFinalizer(
@@ -34,7 +41,7 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
       })`${setupPath}`.pipe(ChildProcess.exitCode)
     }
 
-    return { directory } as const
+    return { directory, inExisting } as const
   }),
 }) {
   static layer = Layer.effect(this, this.make)
@@ -43,7 +50,7 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     Effect.gen(function* () {
       const pathService = yield* Path.Path
       const directory = pathService.resolve(".")
-      return { directory } as const
+      return { directory, inExisting: false } as const
     }),
   )
 }
