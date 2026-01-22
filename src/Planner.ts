@@ -48,15 +48,17 @@ export const plan = Effect.fnUntraced(
 
     yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
-    yield* fs
-      .copy(
-        pathService.join(worktree.directory, options.specsDirectory),
-        options.specsDirectory,
-        {
-          overwrite: true,
-        },
-      )
-      .pipe(Effect.ignore)
+    if (!worktree.inExisting) {
+      yield* fs
+        .copy(
+          pathService.join(worktree.directory, options.specsDirectory),
+          options.specsDirectory,
+          {
+            overwrite: true,
+          },
+        )
+        .pipe(Effect.ignore)
+    }
   },
   Effect.scoped,
   Effect.provide([PromptGen.layer, Prd.layer, Worktree.layer]),

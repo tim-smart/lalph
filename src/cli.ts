@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { Command, Flag } from "effect/unstable/cli"
+import { CliError, Command, Flag } from "effect/unstable/cli"
 import {
   Cause,
   Config,
@@ -24,6 +24,8 @@ import {
 import { checkForWork } from "./IssueSource.ts"
 import { editPrd } from "./Edit.ts"
 import { createIssue } from "./CreateIssue.ts"
+import { enterShell } from "./Shell.ts"
+import { ChildProcess } from "effect/unstable/process"
 
 const iterations = Flag.integer("iterations").pipe(
   Flag.withDescription("Number of iterations to run, defaults to unlimited"),
@@ -43,6 +45,22 @@ const targetBranch = Flag.string("target-branch").pipe(
   ),
   Flag.withAlias("b"),
   Flag.withFallbackConfig(Config.string("LALPH_TARGET_BRANCH")),
+  Flag.withDefault(
+    ChildProcess.make`git branch --show-current`.pipe(
+      ChildProcess.string,
+      Effect.orDie,
+      Effect.flatMap((output) => {
+        const branch = output.trim()
+        return branch === ""
+          ? Effect.fail(
+              new CliError.MissingOption({
+                option: "--target-branch",
+              }),
+            )
+          : Effect.succeed(branch)
+      }),
+    ),
+  ),
   Flag.optional,
 )
 
@@ -204,26 +222,12 @@ const planMode = Command.make("plan").pipe(
   ),
 )
 
-const shell = Command.make("shell").pipe(
-  Command.withDescription("Open an interactive shell in a worktree"),
-  Command.withHandler(
-    Effect.fnUntraced(function* () {
-      const { reset, targetBranch } = yield* root
-      if (reset) {
-        yield* resetCurrentIssueSource
-      }
-      // yield* plan({ targetBranch }).pipe(
-      //   Effect.provide(CurrentIssueSource.layer),
-      // )
-    }),
-  ),
-)
-
 root.pipe(
   Command.withSubcommands([
     planMode,
     createIssue,
     editPrd,
+    enterShell,
     selectSource,
     selectAgent,
   ]),

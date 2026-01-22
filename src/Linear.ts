@@ -393,7 +393,7 @@ const selectProject = Effect.gen(function* () {
 
   const projects = yield* Stream.runCollect(linear.projects)
 
-  const project = yield* Prompt.select({
+  const project = yield* Prompt.autoComplete({
     message: "Select a Linear project",
     choices: projects.map((project) => ({
       title: project.name,
@@ -420,7 +420,7 @@ const selectedTeamId = new Setting("linear.selectedTeamId", Schema.String)
 const teamSelect = Effect.fnUntraced(function* (project: Project) {
   const linear = yield* Linear
   const teams = yield* Stream.runCollect(linear.stream(() => project.teams()))
-  const teamId = yield* Prompt.select({
+  const teamId = yield* Prompt.autoComplete({
     message: "Select a team for new issues",
     choices: teams.map((team) => ({
       title: team.name,
@@ -447,7 +447,7 @@ const selectedLabelId = new Setting(
 const labelIdSelect = Effect.gen(function* () {
   const linear = yield* Linear
   const labels = yield* Stream.runCollect(linear.labels)
-  const labelId = yield* Prompt.select({
+  const labelId = yield* Prompt.autoComplete({
     message: "Select a label to filter issues by",
     choices: [
       {
@@ -481,7 +481,7 @@ const selectedAutoMergeLabelId = new Setting(
 const autoMergeLabelIdSelect = Effect.gen(function* () {
   const linear = yield* Linear
   const labels = yield* Stream.runCollect(linear.labels)
-  const labelId = yield* Prompt.select({
+  const labelId = yield* Prompt.autoComplete({
     message: "Select a label to mark issues for auto merge",
     choices: [
       {

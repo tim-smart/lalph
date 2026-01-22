@@ -39,17 +39,6 @@ export const run = Effect.fnUntraced(
         cwd: worktree.directory,
       })(template, ...args).pipe(ChildProcess.exitCode)
 
-    const execOutput = (
-      template: TemplateStringsArray,
-      ...args: Array<string | number | boolean>
-    ) =>
-      ChildProcess.make({
-        cwd: worktree.directory,
-      })(template, ...args).pipe(
-        ChildProcess.string,
-        Effect.map((output) => output.trim()),
-      )
-
     const execWithStallTimeout = Effect.fnUntraced(function* (
       command: ReadonlyArray<string>,
     ) {
@@ -93,16 +82,22 @@ export const run = Effect.fnUntraced(
       return yield* handle.exitCode
     }, Effect.scoped)
 
+    const currentBranch = (dir: string) =>
+      ChildProcess.make({
+        cwd: dir,
+      })`git branch --show-current`.pipe(
+        ChildProcess.string,
+        Effect.flatMap((output) =>
+          Option.some(output.trim()).pipe(
+            Option.filter((b) => b.length > 0),
+            Effect.fromOption,
+          ),
+        ),
+      )
+
     if (Option.isSome(options.targetBranch)) {
       yield* exec`git checkout ${`origin/${options.targetBranch.value}`}`
     }
-
-    const currentBranch = execOutput`git branch --show-current`.pipe(
-      Effect.map((branch) => {
-        branch = branch.trim()
-        return branch === "" ? null : branch
-      }),
-    )
 
     yield* Effect.gen(function* () {
       const chooseCommand = cliAgent.command({
@@ -129,8 +124,17 @@ export const run = Effect.fnUntraced(
         pathService.join(worktree.directory, ".lalph", "task.json"),
       )
       const taskId = (yield* Schema.decodeEffect(ChosenTask)(taskJson)).id
-      const task = yield* prd.findById(taskId)
-      if (!task) return
+      yield* Effect.addFinalizer(
+        Effect.fnUntraced(function* (exit) {
+          if (exit._tag === "Success") return
+          const prd = yield* Prd
+          yield* Effect.ignore(
+            prd.maybeRevertIssue({
+              issueId: taskId,
+            }),
+          )
+        }),
+      )
 
       yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 
@@ -162,9 +166,10 @@ export const run = Effect.fnUntraced(
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
       const prs = yield* prd.mergableGithubPrs
+      const task = yield* prd.findById(taskId)
       if (prs.length === 0) {
         yield* prd.maybeRevertIssue({ issueId: taskId })
-      } else if (task.autoMerge) {
+      } else if (task?.autoMerge) {
         for (const pr of prs) {
           if (Option.isSome(options.targetBranch)) {
             yield* exec`gh pr edit ${pr.prNumber} --base ${options.targetBranch.value}`
@@ -179,8 +184,11 @@ export const run = Effect.fnUntraced(
     }).pipe(
       Effect.ensuring(
         Effect.gen(function* () {
-          const currentBranchName = yield* currentBranch
+          const currentBranchName = yield* currentBranch(
+            worktree.directory,
+          ).pipe(Effect.option, Effect.map(Option.getOrUndefined))
           if (!currentBranchName) return
+
           // enter detached state
           yield* exec`git checkout --detach ${currentBranchName}`
           // delete the branch
@@ -189,14 +197,9 @@ export const run = Effect.fnUntraced(
       ),
     )
   },
+  Effect.scoped,
   // on interrupt or error, revert any state changes made in the PRD
-  Effect.onError(
-    Effect.fnUntraced(function* () {
-      const prd = yield* Prd
-      yield* Effect.ignore(prd.revertStateIds)
-    }),
-  ),
-  Effect.provide([PromptGen.layer, Prd.layer, Worktree.layer]),
+  Effect.provide([PromptGen.layer, Prd.layer]),
 )
 
 export class RunnerStalled extends Data.TaggedError("RunnerStalled") {
