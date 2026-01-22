@@ -1,5 +1,15 @@
 # lalph
 
+## 0.1.58
+
+### Patch Changes
+
+- [`f5c4e2f`](https://github.com/tim-smart/lalph/commit/f5c4e2f8ee839492a0373b7c47dba35a18e597a9) Thanks [@tim-smart](https://github.com/tim-smart)! - only log no work when nothing is running
+
+- [`c5b1349`](https://github.com/tim-smart/lalph/commit/c5b134995d395fd3162a8e7088e1eadb8af242c1) Thanks [@tim-smart](https://github.com/tim-smart)! - hide completed projects
+
+- [`f9f35a6`](https://github.com/tim-smart/lalph/commit/f9f35a6dcd473dc137ad6f03bac18e6dc2213fa4) Thanks [@tim-smart](https://github.com/tim-smart)! - improve task reversion
+
 ## 0.1.57
 
 ### Patch Changes
