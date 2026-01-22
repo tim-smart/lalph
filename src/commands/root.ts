@@ -90,7 +90,7 @@ const specsDirectory = Flag.directory("specs").pipe(
   Flag.withDefault(".specs"),
 )
 
-const commandPrefix = Flag.directory("command-prefix").pipe(
+const commandPrefix = Flag.string("command-prefix").pipe(
   Flag.withDescription(
     `Prefix to add before the agent command (i.e. "docker sandbox run"). Env variable: LALPH_COMMAND_PREFIX`,
   ),
