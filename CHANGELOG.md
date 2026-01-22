@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.52
+
+### Patch Changes
+
+- [#103](https://github.com/tim-smart/lalph/pull/103) [`8cd77be`](https://github.com/tim-smart/lalph/commit/8cd77be1933e2ef5fe1bbf73fb2a1f8e50c00b1e) Thanks [@tim-smart](https://github.com/tim-smart)! - add shell command
+
 ## 0.1.51
 
 ### Patch Changes
