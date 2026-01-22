@@ -9,6 +9,7 @@ import {
   FiberSet,
   FileSystem,
   Filter,
+  Iterable,
   Layer,
   Option,
   Path,
@@ -163,9 +164,10 @@ export const commandRoot = Command.make("lalph", {
                   `No more work to process, ending after ${currentIteration} iteration(s).`,
                 )
               }
-              return Effect.log(
-                "No more work to process, waiting 30 seconds...",
-              ).pipe(Effect.andThen(Effect.sleep("30 seconds")))
+              const log = Iterable.isEmpty(fibers)
+                ? Effect.log("No more work to process, waiting 30 seconds...")
+                : Effect.void
+              return Effect.andThen(log, Effect.sleep(Duration.seconds(30)))
             },
             QuitError(_) {
               quit = true
