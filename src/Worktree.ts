@@ -105,6 +105,7 @@ const discoverBaseBranch = Effect.fnUntraced(function* () {
 const setupScriptTemplate = (baseBranch: string) => `#!/usr/bin/env bash
 set -euo pipefail
 
+git fetch origin
 git checkout origin/${baseBranch}
 
 # Seeded by lalph. Customize this to prepare new worktrees.
