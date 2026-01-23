@@ -31,7 +31,7 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     })
 
     const setupPath = pathService.resolve("scripts", "worktree-setup.sh")
-    yield* seedSetupScript(fs, pathService, setupPath)
+    yield* seedSetupScript(setupPath)
     if (yield* fs.exists(setupPath)) {
       yield* ChildProcess.make({
         cwd: directory,
@@ -61,25 +61,51 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
 const execIgnore = (command: ChildProcess.Command) =>
   command.pipe(ChildProcess.exitCode, Effect.catchCause(Effect.logWarning))
 
-const seedSetupScript = (
-  fs: FileSystem.FileSystem,
-  pathService: Path.Path,
-  setupPath: string,
-) =>
-  Effect.gen(function* () {
-    if (yield* fs.exists(setupPath)) {
-      return
-    }
+const seedSetupScript = Effect.fnUntraced(function* (setupPath: string) {
+  const fs = yield* FileSystem.FileSystem
+  const pathService = yield* Path.Path
 
-    yield* fs.makeDirectory(pathService.dirname(setupPath), {
-      recursive: true,
-    })
-    yield* fs.writeFileString(setupPath, setupScriptTemplate)
-    yield* fs.chmod(setupPath, 0o755)
+  if (yield* fs.exists(setupPath)) {
+    return
+  }
+
+  const baseBranch = yield* discoverBaseBranch()
+
+  yield* fs.makeDirectory(pathService.dirname(setupPath), {
+    recursive: true,
   })
+  yield* fs.writeFileString(setupPath, setupScriptTemplate(baseBranch))
+  yield* fs.chmod(setupPath, 0o755)
+})
 
-const setupScriptTemplate = `#!/usr/bin/env bash
+const discoverBaseBranch = Effect.fnUntraced(function* () {
+  const originHead =
+    yield* ChildProcess.make`git symbolic-ref --short refs/remotes/origin/HEAD`.pipe(
+      ChildProcess.string,
+      Effect.catch((_) => Effect.succeed("")),
+      Effect.map((output) => String(output).trim()),
+    )
+
+  if (originHead !== "") {
+    return originHead.startsWith("origin/")
+      ? originHead.slice("origin/".length)
+      : originHead
+  }
+
+  const currentBranch =
+    yield* ChildProcess.make`git branch --show-current`.pipe(
+      ChildProcess.string,
+      Effect.catch((_) => Effect.succeed("")),
+      Effect.map((output) => String(output).trim()),
+    )
+
+  return currentBranch === "" ? "master" : currentBranch
+})
+
+const setupScriptTemplate = (baseBranch: string) => `#!/usr/bin/env bash
 set -euo pipefail
+
+git checkout origin/${baseBranch}
 
 # Seeded by lalph. Customize this to prepare new worktrees.
 `
