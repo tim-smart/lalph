@@ -30,9 +30,8 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
       recursive: true,
     })
 
-    const setupPath = pathService.resolve(
-      pathService.join("scripts", "worktree-setup.sh"),
-    )
+    const setupPath = pathService.resolve("scripts", "worktree-setup.sh")
+    yield* seedSetupScript(fs, pathService, setupPath)
     if (yield* fs.exists(setupPath)) {
       yield* ChildProcess.make({
         cwd: directory,
@@ -61,3 +60,26 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
 
 const execIgnore = (command: ChildProcess.Command) =>
   command.pipe(ChildProcess.exitCode, Effect.catchCause(Effect.logWarning))
+
+const seedSetupScript = (
+  fs: FileSystem.FileSystem,
+  pathService: Path.Path,
+  setupPath: string,
+) =>
+  Effect.gen(function* () {
+    if (yield* fs.exists(setupPath)) {
+      return
+    }
+
+    yield* fs.makeDirectory(pathService.dirname(setupPath), {
+      recursive: true,
+    })
+    yield* fs.writeFileString(setupPath, setupScriptTemplate)
+    yield* fs.chmod(setupPath, 0o755)
+  })
+
+const setupScriptTemplate = `#!/usr/bin/env bash
+set -euo pipefail
+
+# Seeded by lalph. Customize this to prepare new worktrees.
+`
