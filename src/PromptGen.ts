@@ -30,9 +30,7 @@ To add a new task, append a new item to the prd.yml file with the id set to
 a short summary of the task and a brief list of steps to complete it.
 When creating tasks, make sure each task is independently shippable without
 failing validation checks (typechecks, linting, tests). If a task would only
-pass validations when combined with another, combine the work into one task or
-use \`blockedBy\` to enforce ordering and mention the validation dependency in the
-description.
+pass validations when combined with another, combine the work into one task.
 
 When adding a new task, it will take about 5 seconds for the system to update the
 prd.yml file with a new id for the task.
