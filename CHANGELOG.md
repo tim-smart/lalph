@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.63
+
+### Patch Changes
+
+- [#117](https://github.com/tim-smart/lalph/pull/117) [`b58fee2`](https://github.com/tim-smart/lalph/commit/b58fee263247146987ca6c35ca7f75847a626734) Thanks [@tim-smart](https://github.com/tim-smart)! - Seed `scripts/worktree-setup.sh` when a worktree is created without one.
+
 ## 0.1.62
 
 ### Patch Changes
