@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.61
+
+### Patch Changes
+
+- [`9c3e061`](https://github.com/tim-smart/lalph/commit/9c3e061cf8cab2c6c4d30cbf6e4ecad467765f0d) Thanks [@tim-smart](https://github.com/tim-smart)! - emphasis on empty blockedBy
+
 ## 0.1.60
 
 ### Patch Changes
