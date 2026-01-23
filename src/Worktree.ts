@@ -69,7 +69,7 @@ const seedSetupScript = Effect.fnUntraced(function* (setupPath: string) {
     return
   }
 
-  const baseBranch = yield* discoverBaseBranch()
+  const baseBranch = yield* discoverBaseBranch
 
   yield* fs.makeDirectory(pathService.dirname(setupPath), {
     recursive: true,
@@ -78,12 +78,12 @@ const seedSetupScript = Effect.fnUntraced(function* (setupPath: string) {
   yield* fs.chmod(setupPath, 0o755)
 })
 
-const discoverBaseBranch = Effect.fnUntraced(function* () {
+const discoverBaseBranch = Effect.gen(function* () {
   const originHead =
     yield* ChildProcess.make`git symbolic-ref --short refs/remotes/origin/HEAD`.pipe(
       ChildProcess.string,
       Effect.catch((_) => Effect.succeed("")),
-      Effect.map((output) => String(output).trim()),
+      Effect.map((output) => output.trim()),
     )
 
   if (originHead !== "") {
@@ -96,10 +96,10 @@ const discoverBaseBranch = Effect.fnUntraced(function* () {
     yield* ChildProcess.make`git branch --show-current`.pipe(
       ChildProcess.string,
       Effect.catch((_) => Effect.succeed("")),
-      Effect.map((output) => String(output).trim()),
+      Effect.map((output) => output.trim()),
     )
 
-  return currentBranch === "" ? "master" : currentBranch
+  return currentBranch === "" ? "main" : currentBranch
 })
 
 const setupScriptTemplate = (baseBranch: string) => `#!/usr/bin/env bash
