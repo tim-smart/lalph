@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.62
+
+### Patch Changes
+
+- [`9b52b70`](https://github.com/tim-smart/lalph/commit/9b52b7052790457d2f4489fe9b145ed274401bd0) Thanks [@tim-smart](https://github.com/tim-smart)! - Update task creation guidance to account for validation checks.
+
 ## 0.1.61
 
 ### Patch Changes
