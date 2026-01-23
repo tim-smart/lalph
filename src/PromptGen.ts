@@ -52,7 +52,7 @@ The following instructions should be done without interaction or asking for perm
    be the task YOU decide as the most important to work on next, not just the
    first task in the list.
    - Only start tasks that are in a "todo" state.
-   - Only start tasks with an empty \`blockedBy\` field.
+   - You **cannot** start tasks unless they have an empty \`blockedBy\` field.
 2. **Before doing anything else**, mark the task as "in-progress" by updating its
    \`state\` in the prd.yml file.
    This prevents other people or agents from working on the same task simultaneously.
