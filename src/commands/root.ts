@@ -1,5 +1,4 @@
 import {
-  Array,
   Cause,
   Config,
   Data,
@@ -10,7 +9,6 @@ import {
   FiberSet,
   FileSystem,
   Filter,
-  identity,
   Iterable,
   Layer,
   Option,
@@ -28,6 +26,7 @@ import { Flag, CliError, Command } from "effect/unstable/cli"
 import { checkForWork } from "../IssueSource.ts"
 import { CurrentIssueSource } from "../IssueSources.ts"
 import { GithubCli } from "../Github/Cli.ts"
+import { getCommandPrefix } from "../CommandPrefix.ts"
 
 const iterations = Flag.integer("iterations").pipe(
   Flag.withDescription("Number of iterations to run, defaults to unlimited"),
@@ -91,24 +90,6 @@ const specsDirectory = Flag.directory("specs").pipe(
   Flag.withDefault(".specs"),
 )
 
-const commandPrefix = Flag.string("command-prefix").pipe(
-  Flag.withDescription(
-    `Prefix to add before the agent command (i.e. "docker sandbox run"). Env variable: LALPH_COMMAND_PREFIX`,
-  ),
-  Flag.withAlias("p"),
-  Flag.withFallbackConfig(Config.string("LALPH_COMMAND_PREFIX")),
-  Flag.map((s) => {
-    const parts = s
-      .trim()
-      .split(/\s+/)
-      .filter((part) => part.length > 0)
-    return Array.isArrayNonEmpty(parts)
-      ? ChildProcess.prefix(parts[0], parts.slice(1))
-      : identity
-  }),
-  Flag.withDefault(identity<ChildProcess.Command>),
-)
-
 // handled in cli.ts
 const reset = Flag.boolean("reset").pipe(
   Flag.withDescription("Reset the current issue source before running"),
@@ -123,7 +104,6 @@ export const commandRoot = Command.make("lalph", {
   stallMinutes,
   reset,
   specsDirectory,
-  commandPrefix,
 }).pipe(
   Command.withHandler(
     Effect.fnUntraced(function* ({
@@ -133,9 +113,9 @@ export const commandRoot = Command.make("lalph", {
       maxIterationMinutes,
       stallMinutes,
       specsDirectory,
-      commandPrefix,
     }) {
       const source = yield* Layer.build(CurrentIssueSource.layer)
+      const commandPrefix = yield* getCommandPrefix
       yield* getOrSelectCliAgent
 
       const isFinite = Number.isFinite(iterations)

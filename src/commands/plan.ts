@@ -7,12 +7,14 @@ import { getOrSelectCliAgent } from "../CliAgent.ts"
 import { Command } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../IssueSources.ts"
 import { commandRoot } from "./root.ts"
+import { getCommandPrefix } from "../CommandPrefix.ts"
 
 export const commandPlan = Command.make("plan").pipe(
   Command.withDescription("Iterate on an issue plan and create PRD tasks"),
   Command.withHandler(
     Effect.fnUntraced(function* () {
-      const { specsDirectory, targetBranch, commandPrefix } = yield* commandRoot
+      const { specsDirectory, targetBranch } = yield* commandRoot
+      const commandPrefix = yield* getCommandPrefix
       yield* plan({ specsDirectory, targetBranch, commandPrefix }).pipe(
         Effect.provide(CurrentIssueSource.layer),
       )
