@@ -1,8 +1,8 @@
-# lalph
+# lalph ✨
 
 A LLM agent orchestrator driven by your chosen source of issues.
 
-## Features
+## Features ✅
 
 - Integrate with various issue sources (GitHub Issues, Linear, etc.)
 - Plan mode to generate issues from high-level goals
@@ -10,7 +10,7 @@ A LLM agent orchestrator driven by your chosen source of issues.
 - Creates pull requests for each task, with optional auto-merge for vibe coding
 - Support issue dependencies to ensure correct task order
 
-## Installation
+## Installation 📦
 
 ```bash
 npm install -g lalph
@@ -22,7 +22,7 @@ or run with npx:
 npx -y lalph@latest
 ```
 
-## CLI usage
+## CLI usage 🧰
 
 - Run the main loop: `lalph`
 - Run multiple iterations with concurrency: `lalph --iterations 4 --concurrency 2`
@@ -32,7 +32,7 @@ npx -y lalph@latest
 It is recommended to add `.lalph/` to your `.gitignore` to avoid committing your
 credentials.
 
-## Development
+## Development 🛠️
 
 - Install dependencies: `pnpm install`
 - Build the CLI: `pnpm build`
