@@ -93,6 +93,8 @@ ${prdNotes}`
 3. Implement the task.
    - **If at any point** you discover something that needs fixing, or another task
      that needs doing, immediately add it to the prd.yml file as a new task.
+   - If this task is a research task and you add follow-up tasks, include this task's
+     id in each new task's \`blockedBy\` field.
    - Add important discoveries about the codebase, or challenges faced to the task's
      \`description\`. More details below.
 4. Run any checks / feedback loops, such as type checks, unit tests, or linting.
@@ -177,6 +179,7 @@ ${prdNotes}`
      - add a specification file in the \`${options.specsDirectory}\` directory.
      - add follow up tasks in the prd.yml file based on the new specification. The tasks
        should reference the specification file in their description.
+     - make sure the follow up tasks include a dependency on the research task.
 3. Wait until the tasks are saved, then setup task dependencies using the \`blockedBy\` field.
 4. Start a subagent with a copy of this prompt, to review the plan and provide feedback or improvements.
 
