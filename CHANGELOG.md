@@ -1,5 +1,15 @@
 # lalph
 
+## 0.1.64
+
+### Patch Changes
+
+- [#121](https://github.com/tim-smart/lalph/pull/121) [`e3deed0`](https://github.com/tim-smart/lalph/commit/e3deed07453a7b6ec8072c1ef5db512a897689a7) Thanks [@tim-smart](https://github.com/tim-smart)! - Move PR detection details into the task selection flow and pass existing PR numbers into execution prompts.
+
+- [#121](https://github.com/tim-smart/lalph/pull/121) [`e3deed0`](https://github.com/tim-smart/lalph/commit/e3deed07453a7b6ec8072c1ef5db512a897689a7) Thanks [@tim-smart](https://github.com/tim-smart)! - Clarify PR lookup instructions and use real newlines in task prompts.
+
+- [#119](https://github.com/tim-smart/lalph/pull/119) [`9139265`](https://github.com/tim-smart/lalph/commit/9139265107e3ee75b895591247e0ced741d9c8b0) Thanks [@tim-smart](https://github.com/tim-smart)! - Clarify that follow-up tasks from research work should depend on the research task.
+
 ## 0.1.63
 
 ### Patch Changes
