@@ -59,14 +59,18 @@ The following instructions should be done without interaction or asking for perm
 2. **Before doing anything else**, mark the task as "in-progress" by updating its
    \`state\` in the prd.yml file.
    This prevents other people or agents from working on the same task simultaneously.
-3. Once you have chosen a task, save its information in a "task.json" file alongside
+3. Check if there is an existing Github PR for the chosen task. If there is, note the
+   PR number for inclusion in the chosen task file.
+4. Once you have chosen a task, save its information in a "task.json" file alongside
    the prd.yml file. Use the following format:
 
 \`\`\`json
 {
   "id": "task id",
+  "githubPrNumber": null
 }
 \`\`\`
+Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.
 
 ${prdNotes}`
 
@@ -74,19 +78,15 @@ ${prdNotes}`
         readonly taskId: string
         readonly targetBranch: string | undefined
         readonly specsDirectory: string
+        readonly githubPrNumber: number | undefined
       }) => `The following instructions should be done without interaction or asking for permission.
 
 1. Study the ${options.specsDirectory}/README.md file (if available).
    Then your job is to complete the task with id \`${options.taskId}\` from the prd.yml file.
    Read the entire prd.yml file to understand the context of the task and any
    key learnings from previous work.
-2. Check if there is an existing Github PR for the task, otherwise create a new
-   branch for the task.${options.targetBranch ? ` The target branch for the PR should be \`${options.targetBranch}\`. If the target branch does not exist, create it first.` : ""}
-   - If there is an existing PR, checkout the branch for that PR.
-   - If there is an existing PR, check if there are any new comments or requested
-     changes, and address them as part of the task.
-   - When checking for PR reviews, make sure to check the "reviews" field and read ALL unresolved comments.
-     Also read the normal comments to see if there are any additional requests.
+2. Prepare the working branch for the task.${options.targetBranch ? ` The target branch for the PR should be \`${options.targetBranch}\`. If the target branch does not exist, create it first.` : ""}
+   ${options.githubPrNumber ? `- Existing PR detected: #${options.githubPrNumber}. Check out the PR branch (for example: \`gh pr checkout ${options.githubPrNumber}\`).\n   - Check if there are any new comments or requested changes, and address them as part of the task.\n   - When checking for PR reviews, make sure to check the "reviews" field and read ALL unresolved comments.\n     Also read the normal comments to see if there are any additional requests.` : `- No PR detected. Create a new branch for the task.`}
    - If creating a new branch, don't checkout any main branches first, use the current
      HEAD as the base.
    - New branches should be named using the format \`{task id}/description\`.

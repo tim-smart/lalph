@@ -299,6 +299,7 @@ const run = Effect.fnUntraced(
 
     yield* Effect.gen(function* () {
       let taskId: string | undefined = undefined
+      let taskGithubPrNumber: number | undefined = undefined
       yield* Effect.addFinalizer(
         Effect.fnUntraced(function* (exit) {
           if (exit._tag === "Success") return
@@ -331,7 +332,9 @@ const run = Effect.fnUntraced(
       const taskJson = yield* fs.readFileString(
         pathService.join(worktree.directory, ".lalph", "task.json"),
       )
-      taskId = (yield* Schema.decodeEffect(ChosenTask)(taskJson)).id
+      const chosenTask = yield* Schema.decodeEffect(ChosenTask)(taskJson)
+      taskId = chosenTask.id
+      taskGithubPrNumber = chosenTask.githubPrNumber ?? undefined
 
       yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 
@@ -342,6 +345,7 @@ const run = Effect.fnUntraced(
             taskId,
             targetBranch: Option.getOrUndefined(options.targetBranch),
             specsDirectory: options.specsDirectory,
+            githubPrNumber: taskGithubPrNumber,
           }),
           prdFilePath: pathService.join(".lalph", "prd.yml"),
         }),
@@ -415,5 +419,6 @@ class RunnerStalled extends Data.TaggedError("RunnerStalled") {
 const ChosenTask = Schema.fromJsonString(
   Schema.Struct({
     id: Schema.String,
+    githubPrNumber: Schema.optional(Schema.NullOr(Schema.Finite)),
   }),
 )
