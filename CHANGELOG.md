@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.66
+
+### Patch Changes
+
+- [#124](https://github.com/tim-smart/lalph/pull/124) [`9be00f5`](https://github.com/tim-smart/lalph/commit/9be00f5efd85a3114514c9ba3bfc2932d05b60e1) Thanks [@tim-smart](https://github.com/tim-smart)! - Move command prefix configuration to a stored setting prompted by the agent selector.
+
 ## 0.1.65
 
 ### Patch Changes
