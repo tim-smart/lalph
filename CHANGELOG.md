@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.67
+
+### Patch Changes
+
+- [#127](https://github.com/tim-smart/lalph/pull/127) [`483f141`](https://github.com/tim-smart/lalph/commit/483f141799d0a7c9f2f5aa1ec3be5f1ab7963615) Thanks [@tim-smart](https://github.com/tim-smart)! - Improve the GitHub CLI repo discovery error message when a repository cannot be resolved.
+
 ## 0.1.66
 
 ### Patch Changes
