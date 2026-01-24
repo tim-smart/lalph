@@ -86,7 +86,14 @@ ${prdNotes}`
    Read the entire prd.yml file to understand the context of the task and any
    key learnings from previous work.
 2. Prepare the working branch for the task.${options.targetBranch ? ` The target branch for the PR should be \`${options.targetBranch}\`. If the target branch does not exist, create it first.` : ""}
-   ${options.githubPrNumber ? `- Existing PR detected: #${options.githubPrNumber}. Check out the PR branch (for example: \`gh pr checkout ${options.githubPrNumber}\`).\n   - Check if there are any new comments or requested changes, and address them as part of the task.\n   - When checking for PR reviews, make sure to check the "reviews" field and read ALL unresolved comments.\n     Also read the normal comments to see if there are any additional requests.` : `- No PR detected. Create a new branch for the task.`}
+   ${
+     options.githubPrNumber
+       ? `- Existing PR detected: #${options.githubPrNumber}. Check out the PR branch (for example: \`gh pr checkout ${options.githubPrNumber}\`).
+   - Check if there are any new comments or requested changes, and address them as part of the task.
+   - When checking for PR reviews, make sure to check the "reviews" field and read ALL unresolved comments.
+     Also read the normal comments to see if there are any additional requests.`
+       : `- No PR detected. Create a new branch for the task.`
+   }
    - If creating a new branch, don't checkout any main branches first, use the current
      HEAD as the base.
    - New branches should be named using the format \`{task id}/description\`.
