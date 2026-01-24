@@ -419,6 +419,6 @@ class RunnerStalled extends Data.TaggedError("RunnerStalled") {
 const ChosenTask = Schema.fromJsonString(
   Schema.Struct({
     id: Schema.String,
-    githubPrNumber: Schema.optional(Schema.NullOr(Schema.Finite)),
+    githubPrNumber: Schema.NullOr(Schema.Finite),
   }),
 )
