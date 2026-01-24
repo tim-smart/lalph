@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.65
+
+### Patch Changes
+
+- [`50d0b00`](https://github.com/tim-smart/lalph/commit/50d0b0068ccc956bf3de4fc4c7e7790d79f4af41) Thanks [@tim-smart](https://github.com/tim-smart)! - use latest state for Prd updatedIssies
+
 ## 0.1.64
 
 ### Patch Changes
