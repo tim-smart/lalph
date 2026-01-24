@@ -171,9 +171,7 @@ export class Prd extends ServiceMap.Service<
           blockedBy: issue.blockedBy,
         })
 
-        if (!updatedIssues.has(issue.id!)) {
-          updatedIssues.set(issue.id, issue)
-        }
+        updatedIssues.set(issue.id, issue)
       }
 
       yield* Effect.forEach(
