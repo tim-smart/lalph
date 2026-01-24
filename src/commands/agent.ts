@@ -48,6 +48,7 @@ export const selectCliAgent = Effect.gen(function* () {
     })),
   })
   yield* selectedCliAgentId.set(Option.some(agent.id))
+  yield* promptForCommandPrefix
   return agent
 })
 
@@ -67,9 +68,7 @@ export const commandAgent = Command.make("agent").pipe(
   Command.withDescription("Select the CLI agent to use"),
   Command.withHandler(
     Effect.fnUntraced(function* () {
-      const agent = yield* selectCliAgent
-      yield* promptForCommandPrefix
-      return agent
+      return yield* selectCliAgent
     }),
   ),
 )
