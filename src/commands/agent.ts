@@ -66,9 +66,5 @@ export const getOrSelectCliAgent = Effect.gen(function* () {
 
 export const commandAgent = Command.make("agent").pipe(
   Command.withDescription("Select the CLI agent to use"),
-  Command.withHandler(
-    Effect.fnUntraced(function* () {
-      return yield* selectCliAgent
-    }),
-  ),
+  Command.withHandler(() => selectCliAgent),
 )
