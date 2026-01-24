@@ -1,4 +1,4 @@
-import { Effect, Layer, Option, Schema, ServiceMap, String } from "effect"
+import { Data, Effect, Layer, Option, Schema, ServiceMap, String } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import {
   CommentsData,
@@ -16,13 +16,15 @@ export class GithubCli extends ServiceMap.Service<GithubCli>()(
         yield* ChildProcess.make`gh repo view --json nameWithOwner -q ${".nameWithOwner"}`.pipe(
           ChildProcess.string,
           Effect.option,
-          Effect.flatMap((o) =>
-            o.pipe(
+          Effect.flatMap((o) => {
+            const candidate = o.pipe(
               Option.map(String.trim),
               Option.filter(String.isNonEmpty),
-              Effect.fromOption,
-            ),
-          ),
+            )
+            return Option.isSome(candidate)
+              ? Effect.succeed(candidate.value)
+              : Effect.fail(new GithubCliRepoNotFound())
+          }),
         )
       const [owner, repo] = nameWithOwner.split("/") as [string, string]
 
@@ -100,6 +102,13 @@ ${generalCommentsXml}
   },
 ) {
   static layer = Layer.effect(this, this.make)
+}
+
+export class GithubCliRepoNotFound extends Data.TaggedError(
+  "GithubCliRepoNotFound",
+) {
+  readonly message =
+    "GitHub repository not found. Ensure the current directory is inside a git repo with a GitHub remote."
 }
 
 // markdown helper functions
