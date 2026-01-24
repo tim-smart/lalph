@@ -15,11 +15,11 @@ import {
 } from "effect"
 import { Octokit } from "octokit"
 import { IssueSource, IssueSourceError } from "./IssueSource.ts"
-import { ChildProcess } from "effect/unstable/process"
 import { PrdIssue } from "./domain/PrdIssue.ts"
 import { Setting } from "./Settings.ts"
 import { Prompt } from "effect/unstable/cli"
 import { TokenManager } from "./Github/TokenManager.ts"
+import { GithubCli } from "./Github/Cli.ts"
 
 export class GithubError extends Data.TaggedError("GithubError")<{
   readonly cause: unknown
@@ -97,20 +97,7 @@ export const GithubIssueSource = Layer.effect(
   IssueSource,
   Effect.gen(function* () {
     const github = yield* Github
-    const nameWithOwner =
-      yield* ChildProcess.make`gh repo view --json nameWithOwner -q ${".nameWithOwner"}`.pipe(
-        ChildProcess.string,
-        Effect.option,
-        Effect.flatMap((o) =>
-          o.pipe(
-            Option.map(String.trim),
-            Option.filter(String.isNonEmpty),
-            Effect.fromOption,
-          ),
-        ),
-        Effect.mapError((_) => new GithubRepoNotFound()),
-      )
-    const [owner, repo] = nameWithOwner.split("/") as [string, string]
+    const cli = yield* GithubCli
     const labelFilter = yield* getOrSelectLabel
     const autoMergeLabelName = yield* getOrSelectAutoMergeLabel
 
@@ -129,8 +116,8 @@ export const GithubIssueSource = Layer.effect(
       github
         .stream((rest, page) =>
           rest.issues.listDependenciesBlockedBy({
-            owner,
-            repo,
+            owner: cli.owner,
+            repo: cli.repo,
             issue_number: issueId,
             per_page: 100,
             page,
@@ -141,8 +128,8 @@ export const GithubIssueSource = Layer.effect(
     const recentlyClosed = github
       .stream((rest, page) =>
         rest.issues.listForRepo({
-          owner,
-          repo,
+          owner: cli.owner,
+          repo: cli.repo,
           state: "closed",
           per_page: 100,
           page,
@@ -158,8 +145,8 @@ export const GithubIssueSource = Layer.effect(
     const issues = github
       .stream((rest, page) =>
         rest.issues.listForRepo({
-          owner,
-          repo,
+          owner: cli.owner,
+          repo: cli.repo,
           state: "open",
           per_page: 100,
           page,
@@ -212,15 +199,15 @@ export const GithubIssueSource = Layer.effect(
     }) {
       const blockedBy = yield* github.request((rest) =>
         rest.issues.get({
-          owner,
-          repo,
+          owner: cli.owner,
+          repo: cli.repo,
           issue_number: options.blockedByNumber,
         }),
       )
       yield* github.request((rest) =>
         rest.issues.addBlockedByDependency({
-          owner,
-          repo,
+          owner: cli.owner,
+          repo: cli.repo,
           issue_number: options.issueNumber,
           issue_id: blockedBy.data.id,
         }),
@@ -233,15 +220,15 @@ export const GithubIssueSource = Layer.effect(
     }) {
       const blockedBy = yield* github.request((rest) =>
         rest.issues.get({
-          owner,
-          repo,
+          owner: cli.owner,
+          repo: cli.repo,
           issue_number: options.blockedByNumber,
         }),
       )
       yield* github.request((rest) =>
         rest.issues.removeDependencyBlockedBy({
-          owner,
-          repo,
+          owner: cli.owner,
+          repo: cli.repo,
           issue_number: options.issueNumber,
           issue_id: blockedBy.data.id,
         }),
@@ -253,8 +240,8 @@ export const GithubIssueSource = Layer.effect(
       createIssue: Effect.fnUntraced(
         function* (issue: PrdIssue) {
           const created = yield* createIssue({
-            owner,
-            repo,
+            owner: cli.owner,
+            repo: cli.repo,
             title: issue.title,
             body: issue.description,
           })
@@ -297,8 +284,8 @@ export const GithubIssueSource = Layer.effect(
             labels: string[]
             state?: "open" | "closed"
           } = {
-            owner,
-            repo,
+            owner: cli.owner,
+            repo: cli.repo,
             issue_number: issueNumber,
             labels: Option.toArray(labelFilter),
           }
@@ -374,8 +361,8 @@ export const GithubIssueSource = Layer.effect(
       cancelIssue: Effect.fnUntraced(
         function* (issueId: string) {
           yield* updateIssue({
-            owner,
-            repo,
+            owner: cli.owner,
+            repo: cli.repo,
             issue_number: Number(issueId.slice(1)),
             state: "closed",
           })
@@ -384,7 +371,7 @@ export const GithubIssueSource = Layer.effect(
       ),
     })
   }),
-).pipe(Layer.provide(Github.layer))
+).pipe(Layer.provide([Github.layer, GithubCli.layer]))
 
 export class GithubRepoNotFound extends Data.TaggedError("GithubRepoNotFound") {
   readonly message = "GitHub repository not found"

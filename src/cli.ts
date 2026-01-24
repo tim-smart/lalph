@@ -13,6 +13,7 @@ import { commandSource } from "./commands/source.ts"
 import { commandAgent } from "./commands/agent.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { resetCurrentIssueSource } from "./IssueSources.ts"
+import { GithubCli } from "./Github/Cli.ts"
 
 commandRoot.pipe(
   Command.withSubcommands([
@@ -35,6 +36,10 @@ commandRoot.pipe(
     Command.run(_, {
       version: PackageJson.version,
     }),
-  Effect.provide(Settings.layer.pipe(Layer.provideMerge(NodeServices.layer))),
+  Effect.provide(
+    Layer.mergeAll(Settings.layer, GithubCli.layer).pipe(
+      Layer.provideMerge(NodeServices.layer),
+    ),
+  ),
   NodeRuntime.runMain,
 )

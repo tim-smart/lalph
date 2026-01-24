@@ -27,6 +27,7 @@ import { getOrSelectCliAgent } from "../CliAgent.ts"
 import { Flag, CliError, Command } from "effect/unstable/cli"
 import { checkForWork } from "../IssueSource.ts"
 import { CurrentIssueSource } from "../IssueSources.ts"
+import { GithubCli } from "../Github/Cli.ts"
 
 const iterations = Flag.integer("iterations").pipe(
   Flag.withDescription("Number of iterations to run, defaults to unlimited"),
@@ -233,6 +234,7 @@ const run = Effect.fnUntraced(
     const pathService = yield* Path.Path
     const worktree = yield* Worktree
     const promptGen = yield* PromptGen
+    const gh = yield* GithubCli
     const cliAgent = yield* getOrSelectCliAgent
     const prd = yield* Prd
 
@@ -338,6 +340,11 @@ const run = Effect.fnUntraced(
 
       if (chosenTask.githubPrNumber) {
         yield* exec`gh pr checkout ${chosenTask.githubPrNumber}`
+        const feedback = yield* gh.prFeedbackMd(chosenTask.githubPrNumber)
+        yield* fs.writeFileString(
+          pathService.join(worktree.directory, ".lalph", "feedback.md"),
+          feedback,
+        )
       }
 
       const cliCommand = pipe(
@@ -365,6 +372,7 @@ const run = Effect.fnUntraced(
                 outputMode: "pipe",
                 prompt: promptGen.promptTimeout({
                   taskId,
+                  specsDirectory: options.specsDirectory,
                 }),
                 prdFilePath: pathService.join(".lalph", "prd.yml"),
               }),
