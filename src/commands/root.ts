@@ -21,12 +21,11 @@ import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
-import { getOrSelectCliAgent } from "../CliAgent.ts"
+import { getCommandPrefix, getOrSelectCliAgent } from "./agent.ts"
 import { Flag, CliError, Command } from "effect/unstable/cli"
 import { checkForWork } from "../IssueSource.ts"
 import { CurrentIssueSource } from "../IssueSources.ts"
 import { GithubCli } from "../Github/Cli.ts"
-import { getCommandPrefix } from "../CommandPrefix.ts"
 
 const iterations = Flag.integer("iterations").pipe(
   Flag.withDescription("Number of iterations to run, defaults to unlimited"),

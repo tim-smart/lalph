@@ -3,11 +3,10 @@ import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
-import { getOrSelectCliAgent } from "../CliAgent.ts"
+import { getCommandPrefix, getOrSelectCliAgent } from "./agent.ts"
 import { Command } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../IssueSources.ts"
 import { commandRoot } from "./root.ts"
-import { getCommandPrefix } from "../CommandPrefix.ts"
 
 export const commandPlan = Command.make("plan").pipe(
   Command.withDescription("Iterate on an issue plan and create PRD tasks"),
