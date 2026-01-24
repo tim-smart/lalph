@@ -60,7 +60,7 @@ The following instructions should be done without interaction or asking for perm
    \`state\` in the prd.yml file.
    This prevents other people or agents from working on the same task simultaneously.
 3. Check if there is an existing Github PR for the chosen task. If there is, note the
-   PR number for inclusion in the chosen task file.
+   PR number for inclusion in the task.json file.
 4. Once you have chosen a task, save its information in a "task.json" file alongside
    the prd.yml file. Use the following format:
 
