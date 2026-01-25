@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.68
+
+### Patch Changes
+
+- [#130](https://github.com/tim-smart/lalph/pull/130) [`43106c5`](https://github.com/tim-smart/lalph/commit/43106c56e6764b42d13c3b5a6ddbb3c43da4cddf) Thanks [@tim-smart](https://github.com/tim-smart)! - Fix PR feedback output when only hidden review threads exist.
+
 ## 0.1.67
 
 ### Patch Changes
