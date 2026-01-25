@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.72
+
+### Patch Changes
+
+- [`83b7926`](https://github.com/tim-smart/lalph/commit/83b7926df1368726c530c173136c184d76a597ec) Thanks [@tim-smart](https://github.com/tim-smart)! - switch to oauth github app
+
 ## 0.1.71
 
 ### Patch Changes
