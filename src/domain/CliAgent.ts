@@ -82,4 +82,23 @@ ${prompt}`}`,
 ${prompt}`}`,
 })
 
-export const allCliAgents = [claude, codex, opencode]
+const amp = new CliAgent({
+  id: "amp",
+  name: "amp",
+  command: ({ outputMode, prompt, prdFilePath }) =>
+    ChildProcess.make({
+      stdout: outputMode,
+      stderr: outputMode,
+      stdin: "inherit",
+    })`amp --dangerously-allow-all --stream-json-thinking -x ${`@${prdFilePath}
+
+${prompt}`}`,
+  commandPlan: ({ outputMode }) =>
+    ChildProcess.make({
+      stdout: outputMode,
+      stderr: outputMode,
+      stdin: "inherit",
+    })`echo ${"Plan mode is not supported for amp."}`,
+})
+
+export const allCliAgents = [opencode, claude, codex, amp]
