@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.74
+
+### Patch Changes
+
+- [#149](https://github.com/tim-smart/lalph/pull/149) [`315c8ed`](https://github.com/tim-smart/lalph/commit/315c8edce1466d56eecac528345a8b7dadce4e7d) Thanks [@tim-smart](https://github.com/tim-smart)! - Enable stream-json output for Claude work runs to avoid false stall detection.
+
 ## 0.1.73
 
 ### Patch Changes
