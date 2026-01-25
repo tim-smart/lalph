@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.76
+
+### Patch Changes
+
+- [#154](https://github.com/tim-smart/lalph/pull/154) [`1f74937`](https://github.com/tim-smart/lalph/commit/1f749375c74eef349781fc4aeb72c5f395734b96) Thanks [@sledorze](https://github.com/sledorze)! - add -d alias for --dangerous
+
+- [#154](https://github.com/tim-smart/lalph/pull/154) [`1f74937`](https://github.com/tim-smart/lalph/commit/1f749375c74eef349781fc4aeb72c5f395734b96) Thanks [@sledorze](https://github.com/sledorze)! - use --verbose for claude and format the output
+
 ## 0.1.75
 
 ### Patch Changes
