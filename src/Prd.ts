@@ -133,81 +133,86 @@ export class Prd extends ServiceMap.Service<
     yield* fs.writeFileString(prdFile, PrdIssue.arrayToYaml(current))
 
     const updatedIssues = new Map<string, PrdIssue>()
+    const syncSemaphore = Effect.makeSemaphoreUnsafe(1)
 
-    const sync = Effect.gen(function* () {
-      const updated = yield* readPrd
-      const anyChanges =
-        updated.length !== current.length ||
-        updated.some((u, i) => u.isChangedComparedTo(current[i]!))
-      if (!anyChanges) {
-        return
-      }
-
-      const githubPrs = new Map<string, number>()
-      const toRemove = new Set(
-        current.filter((i) => i.id !== null).map((i) => i.id!),
-      )
-
-      for (const issue of updated) {
-        toRemove.delete(issue.id!)
-
-        if (issue.id === null) {
-          yield* source.createIssue(issue)
-          continue
+    const sync = syncSemaphore.withPermit(
+      Effect.gen(function* () {
+        const updated = yield* readPrd
+        const anyChanges =
+          updated.length !== current.length ||
+          updated.some((u, i) => u.isChangedComparedTo(current[i]!))
+        if (!anyChanges) {
+          return
         }
 
-        if (issue.githubPrNumber) {
-          githubPrs.set(issue.id, issue.githubPrNumber)
+        const githubPrs = new Map<string, number>()
+        const toRemove = new Set(
+          current.filter((i) => i.id !== null).map((i) => i.id!),
+        )
+
+        for (const issue of updated) {
+          toRemove.delete(issue.id!)
+
+          if (issue.id === null) {
+            yield* source.createIssue(issue)
+            continue
+          }
+
+          if (issue.githubPrNumber) {
+            githubPrs.set(issue.id, issue.githubPrNumber)
+          }
+
+          const existing = current.find((i) => i.id === issue.id)
+          if (!existing || !existing.isChangedComparedTo(issue)) continue
+
+          yield* source.updateIssue({
+            issueId: issue.id,
+            title: issue.title,
+            description: issue.description,
+            state: issue.state,
+            blockedBy: issue.blockedBy,
+          })
+
+          updatedIssues.set(issue.id, issue)
         }
 
-        const existing = current.find((i) => i.id === issue.id)
-        if (!existing || !existing.isChangedComparedTo(issue)) continue
+        yield* Effect.forEach(
+          toRemove,
+          (issueId) => source.cancelIssue(issueId),
+          { concurrency: "unbounded" },
+        )
 
-        yield* source.updateIssue({
-          issueId: issue.id,
-          title: issue.title,
-          description: issue.description,
-          state: issue.state,
-          blockedBy: issue.blockedBy,
-        })
-
-        updatedIssues.set(issue.id, issue)
-      }
-
-      yield* Effect.forEach(
-        toRemove,
-        (issueId) => source.cancelIssue(issueId),
-        { concurrency: "unbounded" },
-      )
-
-      current = yield* source.issues
-      yield* fs.writeFileString(
-        prdFile,
-        PrdIssue.arrayToYaml(
-          current.map((issue) => {
-            const prNumber = githubPrs.get(issue.id!)
-            if (!prNumber) return issue
-            return new PrdIssue({ ...issue, githubPrNumber: prNumber })
-          }),
-        ),
-      )
-    }).pipe(Effect.uninterruptible)
+        current = yield* source.issues
+        yield* fs.writeFileString(
+          prdFile,
+          PrdIssue.arrayToYaml(
+            current.map((issue) => {
+              const prNumber = githubPrs.get(issue.id!)
+              if (!prNumber) return issue
+              return new PrdIssue({ ...issue, githubPrNumber: prNumber })
+            }),
+          ),
+        )
+      }).pipe(Effect.uninterruptible),
+    )
 
     const updateSyncHandle = yield* FiberHandle.make()
-    const updateSync = Effect.gen(function* () {
-      const tempFile = yield* fs.makeTempFileScoped()
-      const sourceIssues = yield* source.issues
-      const anyChanges =
-        sourceIssues.length !== current.length ||
-        sourceIssues.some((u, i) => u.isChangedComparedTo(current[i]!))
-      if (!anyChanges) return
+    const updateSync = syncSemaphore.withPermit(
+      Effect.gen(function* () {
+        const tempFile = yield* fs.makeTempFileScoped()
+        const sourceIssues = yield* source.issues
+        const anyChanges =
+          sourceIssues.length !== current.length ||
+          sourceIssues.some((u, i) => u.isChangedComparedTo(current[i]!))
+        if (!anyChanges) return
 
-      yield* fs.writeFileString(tempFile, PrdIssue.arrayToYaml(sourceIssues))
-      yield* fs.rename(tempFile, prdFile)
-      current = sourceIssues
-    }).pipe(
-      Effect.scoped,
-      FiberHandle.run(updateSyncHandle, { onlyIfMissing: true }),
+        yield* fs.writeFileString(tempFile, PrdIssue.arrayToYaml(sourceIssues))
+        yield* fs.rename(tempFile, prdFile)
+        current = sourceIssues
+      }).pipe(
+        Effect.scoped,
+        FiberHandle.run(updateSyncHandle, { onlyIfMissing: true }),
+      ),
     )
 
     yield* fs.watch(lalphDir).pipe(
@@ -237,15 +242,17 @@ export class Prd extends ServiceMap.Service<
       path: prdFile,
       mergableGithubPrs,
       maybeRevertIssue,
-      revertUpdatedIssues: Effect.gen(function* () {
-        for (const issue of updatedIssues.values()) {
-          if (issue.state === "done") continue
-          yield* source.updateIssue({
-            issueId: issue.id!,
-            state: "todo",
-          })
-        }
-      }),
+      revertUpdatedIssues: syncSemaphore.withPermit(
+        Effect.gen(function* () {
+          for (const issue of updatedIssues.values()) {
+            if (issue.state === "done") continue
+            yield* source.updateIssue({
+              issueId: issue.id!,
+              state: "todo",
+            })
+          }
+        }),
+      ),
       flagUnmergable,
       findById,
     }
