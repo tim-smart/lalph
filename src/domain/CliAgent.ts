@@ -1,9 +1,11 @@
-import { Data } from "effect"
+import { Data, PlatformError, Stream } from "effect"
 import { ChildProcess } from "effect/unstable/process"
+import { claudeOutputTransformer } from "../CliAgent/claude.ts"
 
 export class CliAgent extends Data.Class<{
   id: string
   name: string
+  outputTransformer?: OutputTransformer | undefined
   command: (options: {
     readonly outputMode: "pipe" | "inherit"
     readonly prompt: string
@@ -16,6 +18,10 @@ export class CliAgent extends Data.Class<{
     readonly dangerous: boolean
   }) => ChildProcess.Command
 }> {}
+
+export type OutputTransformer = (
+  stream: Stream.Stream<string, PlatformError.PlatformError>,
+) => Stream.Stream<string, PlatformError.PlatformError>
 
 const opencode = new CliAgent({
   id: "opencode",
@@ -56,9 +62,10 @@ const claude = new CliAgent({
       stdout: outputMode,
       stderr: outputMode,
       stdin: "inherit",
-    })`claude --dangerously-skip-permissions --verbose --output-format stream-json -p ${`@${prdFilePath}
+    })`claude --dangerously-skip-permissions --output-format stream-json --verbose -p ${`@${prdFilePath}
 
 ${prompt}`}`,
+  outputTransformer: claudeOutputTransformer,
   commandPlan: ({ outputMode, prompt, prdFilePath, dangerous }) => {
     const run = ChildProcess.make({
       stdout: outputMode,

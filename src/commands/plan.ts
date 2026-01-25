@@ -1,4 +1,4 @@
-import { Effect, Stream, FileSystem, Option, Path, pipe } from "effect"
+import { Effect, FileSystem, Option, Path, pipe } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
@@ -6,7 +6,6 @@ import { Worktree } from "../Worktree.ts"
 import { getCommandPrefix, getOrSelectCliAgent } from "./agent.ts"
 import { Command, Flag } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../IssueSources.ts"
-import { createPrettyWriter } from "../shared/OutputFormatter.ts"
 import { commandRoot } from "./root.ts"
 
 const dangerous = Flag.boolean("dangerous").pipe(
@@ -59,30 +58,19 @@ const plan = Effect.fnUntraced(
     if (Option.isSome(options.targetBranch)) {
       yield* exec`git checkout ${`origin/${options.targetBranch.value}`}`
     }
-    const planCommand = pipe(
+
+    const exitCode = yield* pipe(
       cliAgent.commandPlan({
-        outputMode: "pipe",
+        outputMode: "inherit",
         prompt: promptGen.planPrompt(options),
         prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
         dangerous: options.dangerous,
       }),
       ChildProcess.setCwd(worktree.directory),
       options.commandPrefix,
+      ChildProcess.exitCode,
     )
-    const planPrettyWriter = createPrettyWriter()
-    const exitCode = yield* Effect.scoped(
-      Effect.gen(function* () {
-        const handle = yield* planCommand
-        yield* handle.all.pipe(
-          Stream.runForEach((chunk) => {
-            planPrettyWriter.write(chunk)
-            return Effect.void
-          }),
-          Effect.ensuring(Effect.sync(() => planPrettyWriter.flush())),
-        )
-        return yield* handle.exitCode
-      }),
-    )
+
     yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
     if (!worktree.inExisting) {
