@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.69
+
+### Patch Changes
+
+- [#133](https://github.com/tim-smart/lalph/pull/133) [`cddf946`](https://github.com/tim-smart/lalph/commit/cddf946758cce23f9682cfd37558de9908d329d4) Thanks [@tim-smart](https://github.com/tim-smart)! - Fix issue reversion so non-done updates return to todo.
+
 ## 0.1.68
 
 ### Patch Changes
