@@ -1,5 +1,16 @@
 # lalph
 
+## 0.1.73
+
+### Patch Changes
+
+- [#147](https://github.com/tim-smart/lalph/pull/147) [`ec19437`](https://github.com/tim-smart/lalph/commit/ec1943710d0a1ec13b56d08d796e928051282248) Thanks [@tim-smart](https://github.com/tim-smart)! - Allow configuring the editor used for issue creation (and prd editing) via
+  `LALPH_EDITOR`, falling back to `EDITOR`, defaulting to `nano`.
+
+- [#144](https://github.com/tim-smart/lalph/pull/144) [`a470575`](https://github.com/tim-smart/lalph/commit/a470575fee1e15cdfab94c61955303fad1f253e3) Thanks [@tim-smart](https://github.com/tim-smart)! - Include the specification text in plan-mode prompts for review.
+
+- [#144](https://github.com/tim-smart/lalph/pull/144) [`a470575`](https://github.com/tim-smart/lalph/commit/a470575fee1e15cdfab94c61955303fad1f253e3) Thanks [@tim-smart](https://github.com/tim-smart)! - Move plan-mode specification review to the final step.
+
 ## 0.1.72
 
 ### Patch Changes
