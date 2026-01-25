@@ -18,7 +18,7 @@ import {
 import { KeyValueStore } from "effect/unstable/persistence"
 import { layerKvs } from "../Kvs.ts"
 
-const clientId = "Iv23li5pna7yejMFlPRo"
+const clientId = "Ov23liJMtg6leTI1Vu6m"
 
 export class TokenManager extends ServiceMap.Service<TokenManager>()(
   "lalph/Github/TokenManager",
@@ -78,7 +78,10 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
         const code = yield* HttpClientRequest.post(
           "https://github.com/login/device/code",
         ).pipe(
-          HttpClientRequest.bodyUrlParams({ client_id: clientId }),
+          HttpClientRequest.bodyUrlParams({
+            client_id: clientId,
+            scope: "repo read:user",
+          }),
           httpClient.execute,
           Effect.flatMap(
             HttpClientResponse.schemaBodyUrlParams(DeviceCodeResponse),
