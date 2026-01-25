@@ -52,13 +52,13 @@ export class GithubCli extends ServiceMap.Service<GithubCli>()(
       const prFeedbackMd = (pr: number) =>
         reviewComments(pr).pipe(
           Effect.map(({ comments, reviewThreads }) => {
-            if (comments.length === 0 && reviewThreads.length === 0) {
-              return `No review comments found.`
-            }
-
             const eligibleReviewThreads = reviewThreads.filter(
               (thread) => thread.shouldDisplayThread,
             )
+
+            if (comments.length === 0 && eligibleReviewThreads.length === 0) {
+              return `No review comments found.`
+            }
 
             let content = `# PR feedback
 
