@@ -182,15 +182,15 @@ ${prdNotes(options)}`
    specification to fulfill the request and save it as a file.
    First do some research to understand the request, then interview the user
    to gather all the necessary requirements and details for the specification.
-2. Present the saved specification for review (include the full text in your response).
-   Incorporate feedback or corrections before moving on to planning.
-3. Once you have saved and reviewed the specification, your next job is to create an implementation
+2. Once you have saved the specification, your next job is to create an implementation
    plan by breaking down the specification into smaller, manageable tasks and add
    them to the prd.yml file.
    For each task include in the description where to find the plan specification.
    Read the "### Adding tasks" section below **extremely carefully** for guidelines on creating tasks.
-4. Wait until the tasks are saved, then setup task dependencies using the \`blockedBy\` field.
-5. Start a subagent with a copy of this prompt, to review the plan and provide feedback or improvements.
+3. Wait until the tasks are saved, then setup task dependencies using the \`blockedBy\` field.
+4. Start a subagent with a copy of this prompt, to review the plan and provide feedback or improvements.
+5. Present the saved specification for review (include the full text in your response).
+   If any corrections are needed, update the specification and adjust the plan tasks accordingly.
 
 **Important:** You are only creating or updating a plan, not implementing any tasks yet.
 
