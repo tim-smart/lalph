@@ -1,5 +1,4 @@
 import {
-  DateTime,
   Duration,
   Effect,
   Layer,
@@ -62,13 +61,6 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
           const newToken = yield* deviceCode
           yield* set(Option.some(newToken))
           return newToken
-        } else if (currentToken.value.isExpired()) {
-          const newToken = yield* refresh(currentToken.value)
-          yield* set(newToken)
-          if (Option.isNone(newToken)) {
-            return yield* getNoLock
-          }
-          return newToken.value
         }
         return currentToken.value
       })
@@ -110,21 +102,6 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
         return AccessToken.fromResponse(tokenResponse)
       })
 
-      const refresh = Effect.fnUntraced(function* (token: AccessToken) {
-        const res = yield* HttpClientRequest.post(
-          "https://github.com/login/oauth/access_token",
-        ).pipe(
-          HttpClientRequest.bodyUrlParams({
-            refresh_token: token.refreshToken,
-            client_id: clientId,
-            grant_type: "refresh_token",
-          }),
-          httpClient.execute,
-          Effect.flatMap(HttpClientResponse.schemaBodyJson(TokenResponse)),
-        )
-        return AccessToken.fromResponse(res)
-      }, Effect.option)
-
       return { get } as const
     }),
   },
@@ -138,23 +115,11 @@ export class AccessToken extends Schema.Class<AccessToken>(
   "lalph/Github/AccessToken",
 )({
   token: Schema.String,
-  expiresAt: Schema.DateTimeUtc,
-  refreshToken: Schema.String,
 }) {
   static fromResponse(res: typeof TokenResponse.Type): AccessToken {
     return new AccessToken({
       token: res.access_token,
-      refreshToken: res.refresh_token,
-      expiresAt: DateTime.nowUnsafe().pipe(
-        DateTime.add({ seconds: res.expires_in }),
-      ),
     })
-  }
-
-  isExpired(): boolean {
-    return DateTime.isPastUnsafe(
-      this.expiresAt.pipe(DateTime.subtract({ minutes: 30 })),
-    )
   }
 }
 
@@ -173,8 +138,6 @@ const PollErrorResponse = Schema.Struct({
 const TokenResponse = Schema.Struct({
   access_token: Schema.String,
   token_type: Schema.String,
-  expires_in: Schema.NumberFromString,
-  refresh_token: Schema.String,
   scope: Schema.String,
 })
 
