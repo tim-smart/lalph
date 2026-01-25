@@ -9,6 +9,7 @@ import {
   Schedule,
   ServiceMap,
   Stream,
+  pipe,
 } from "effect"
 import { Worktree } from "./Worktree.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
@@ -68,19 +69,19 @@ export class Prd extends ServiceMap.Service<
       return prs
     })
 
-    const maybeRevertIssue = Effect.fnUntraced(function* (options: {
-      readonly issueId: string
-    }) {
-      const updated = yield* readPrd
-      const issue = updated.find((i) => i.id === options.issueId)
-      if (!issue || issue.state === "in-review") return
-      yield* source.updateIssue({
-        issueId: issue.id!,
-        state: "todo",
-      })
-    })
-    const guardedMaybeRevertIssue = (options: { readonly issueId: string }) =>
-      syncSemaphore.withPermit(maybeRevertIssue(options))
+    const maybeRevertIssue = pipe(
+      Effect.fnUntraced(function* (options: { readonly issueId: string }) {
+        const updated = yield* readPrd
+        const issue = updated.find((i) => i.id === options.issueId)
+        if (!issue || issue.state === "in-review") return
+        yield* source.updateIssue({
+          issueId: issue.id!,
+          state: "todo",
+        })
+      }),
+      (f) => (options: { readonly issueId: string }) =>
+        syncSemaphore.withPermit(f(options)),
+    )
 
     const mergeConflictInstruction =
       "Next step: Rebase PR and resolve merge conflicts."
@@ -110,7 +111,7 @@ export class Prd extends ServiceMap.Service<
       return {
         path: prdFile,
         mergableGithubPrs,
-        maybeRevertIssue: guardedMaybeRevertIssue,
+        maybeRevertIssue,
         revertUpdatedIssues: Effect.gen(function* () {
           const updated = yield* readPrd
           for (const issue of updated) {
@@ -242,7 +243,7 @@ export class Prd extends ServiceMap.Service<
     return {
       path: prdFile,
       mergableGithubPrs,
-      maybeRevertIssue: guardedMaybeRevertIssue,
+      maybeRevertIssue,
       revertUpdatedIssues: syncSemaphore.withPermit(
         Effect.gen(function* () {
           for (const issue of updatedIssues.values()) {
