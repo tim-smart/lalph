@@ -239,7 +239,7 @@ export class Prd extends ServiceMap.Service<
       maybeRevertIssue,
       revertUpdatedIssues: Effect.gen(function* () {
         for (const issue of updatedIssues.values()) {
-          if (issue.state !== "done") continue
+          if (issue.state === "done") continue
           yield* source.updateIssue({
             issueId: issue.id!,
             state: "todo",
