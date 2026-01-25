@@ -9,7 +9,6 @@ import {
   Schedule,
   ServiceMap,
   Stream,
-  pipe,
 } from "effect"
 import { Worktree } from "./Worktree.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
@@ -69,19 +68,17 @@ export class Prd extends ServiceMap.Service<
       return prs
     })
 
-    const maybeRevertIssue = pipe(
-      Effect.fnUntraced(function* (options: { readonly issueId: string }) {
-        const updated = yield* readPrd
-        const issue = updated.find((i) => i.id === options.issueId)
-        if (!issue || issue.state === "in-review") return
-        yield* source.updateIssue({
-          issueId: issue.id!,
-          state: "todo",
-        })
-      }),
-      (f) => (options: { readonly issueId: string }) =>
-        syncSemaphore.withPermit(f(options)),
-    )
+    const maybeRevertIssue = Effect.fnUntraced(function* (options: {
+      readonly issueId: string
+    }) {
+      const updated = yield* readPrd
+      const issue = updated.find((i) => i.id === options.issueId)
+      if (!issue || issue.state === "in-review") return
+      yield* source.updateIssue({
+        issueId: issue.id!,
+        state: "todo",
+      })
+    }, syncSemaphore.withPermit)
 
     const mergeConflictInstruction =
       "Next step: Rebase PR and resolve merge conflicts."
