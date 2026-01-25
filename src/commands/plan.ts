@@ -9,6 +9,7 @@ import { CurrentIssueSource } from "../IssueSources.ts"
 import { commandRoot } from "./root.ts"
 
 const dangerous = Flag.boolean("dangerous").pipe(
+  Flag.withAlias("d"),
   Flag.withDescription(
     "Enable dangerous mode (skip permission prompts) during plan generation",
   ),
