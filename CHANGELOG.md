@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.71
+
+### Patch Changes
+
+- [#138](https://github.com/tim-smart/lalph/pull/138) [`84f2df3`](https://github.com/tim-smart/lalph/commit/84f2df37c0943f582a8ff93b45fa776bd517e348) Thanks [@tim-smart](https://github.com/tim-smart)! - Mention the default PR base branch in the CLI help text.
+
 ## 0.1.70
 
 ### Patch Changes
