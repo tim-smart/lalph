@@ -8,7 +8,7 @@ export class Comment extends S.Class<Comment>("github/Comment")({
   id: S.String,
   body: S.String,
   author: Author,
-  createdAt: S.String,
+  // createdAt: S.String,
 }) {}
 
 export class CommentsEdge extends S.Class<CommentsEdge>("github/CommentsEdge")({
@@ -23,7 +23,6 @@ export class PullRequestComments extends S.Class<PullRequestComments>(
 
 export class PullRequest extends S.Class<PullRequest>("github/PullRequest")({
   url: S.String,
-  reviewDecision: S.Null,
   reviewThreads: S.suspend(() => ReviewThreads),
   comments: PullRequestComments,
 }) {}
@@ -49,7 +48,7 @@ export class ReviewComment extends S.Class<ReviewComment>(
   path: S.String,
   originalLine: S.NullOr(S.Number),
   diffHunk: S.String,
-  createdAt: S.String,
+  // createdAt: S.String,
 }) {}
 
 export class NodeComments extends S.Class<NodeComments>("github/NodeComments")({
@@ -57,7 +56,7 @@ export class NodeComments extends S.Class<NodeComments>("github/NodeComments")({
 }) {}
 
 export class ReviewThreadNode extends S.Class<ReviewThreadNode>(
-  "github/FluffyNode",
+  "github/ReviewThreadNode",
 )({
   isCollapsed: S.Boolean,
   isOutdated: S.Boolean,
