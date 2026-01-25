@@ -53,6 +53,8 @@ export class Prd extends ServiceMap.Service<
       return PrdIssue.arrayFromYaml(yaml)
     })
 
+    const syncSemaphore = Effect.makeSemaphoreUnsafe(1)
+
     const mergableGithubPrs = Effect.gen(function* () {
       const updated = yield* readPrd
       const prs = Array.empty<{ issueId: string; prNumber: number }>()
@@ -77,6 +79,8 @@ export class Prd extends ServiceMap.Service<
         state: "todo",
       })
     })
+    const guardedMaybeRevertIssue = (options: { readonly issueId: string }) =>
+      syncSemaphore.withPermit(maybeRevertIssue(options))
 
     const mergeConflictInstruction =
       "Next step: Rebase PR and resolve merge conflicts."
@@ -106,7 +110,7 @@ export class Prd extends ServiceMap.Service<
       return {
         path: prdFile,
         mergableGithubPrs,
-        maybeRevertIssue,
+        maybeRevertIssue: guardedMaybeRevertIssue,
         revertUpdatedIssues: Effect.gen(function* () {
           const updated = yield* readPrd
           for (const issue of updated) {
@@ -133,7 +137,6 @@ export class Prd extends ServiceMap.Service<
     yield* fs.writeFileString(prdFile, PrdIssue.arrayToYaml(current))
 
     const updatedIssues = new Map<string, PrdIssue>()
-    const syncSemaphore = Effect.makeSemaphoreUnsafe(1)
 
     const sync = syncSemaphore.withPermit(
       Effect.gen(function* () {
@@ -197,22 +200,20 @@ export class Prd extends ServiceMap.Service<
     )
 
     const updateSyncHandle = yield* FiberHandle.make()
-    const updateSync = syncSemaphore.withPermit(
-      Effect.gen(function* () {
-        const tempFile = yield* fs.makeTempFileScoped()
-        const sourceIssues = yield* source.issues
-        const anyChanges =
-          sourceIssues.length !== current.length ||
-          sourceIssues.some((u, i) => u.isChangedComparedTo(current[i]!))
-        if (!anyChanges) return
+    const updateSync = Effect.gen(function* () {
+      const tempFile = yield* fs.makeTempFileScoped()
+      const sourceIssues = yield* source.issues
+      const anyChanges =
+        sourceIssues.length !== current.length ||
+        sourceIssues.some((u, i) => u.isChangedComparedTo(current[i]!))
+      if (!anyChanges) return
 
-        yield* fs.writeFileString(tempFile, PrdIssue.arrayToYaml(sourceIssues))
-        yield* fs.rename(tempFile, prdFile)
-        current = sourceIssues
-      }).pipe(
-        Effect.scoped,
-        FiberHandle.run(updateSyncHandle, { onlyIfMissing: true }),
-      ),
+      yield* fs.writeFileString(tempFile, PrdIssue.arrayToYaml(sourceIssues))
+      yield* fs.rename(tempFile, prdFile)
+      current = sourceIssues
+    }).pipe(
+      Effect.scoped,
+      FiberHandle.run(updateSyncHandle, { onlyIfMissing: true }),
     )
 
     yield* fs.watch(lalphDir).pipe(
@@ -241,7 +242,7 @@ export class Prd extends ServiceMap.Service<
     return {
       path: prdFile,
       mergableGithubPrs,
-      maybeRevertIssue,
+      maybeRevertIssue: guardedMaybeRevertIssue,
       revertUpdatedIssues: syncSemaphore.withPermit(
         Effect.gen(function* () {
           for (const issue of updatedIssues.values()) {
