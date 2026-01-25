@@ -41,7 +41,7 @@ const concurrency = Flag.integer("concurrency").pipe(
 
 const targetBranch = Flag.string("target-branch").pipe(
   Flag.withDescription(
-    "Target branch for PRs. Env variable: LALPH_TARGET_BRANCH",
+    "Target branch for PRs. Defaults to current branch. Env variable: LALPH_TARGET_BRANCH",
   ),
   Flag.withAlias("b"),
   Flag.withFallbackConfig(Config.string("LALPH_TARGET_BRANCH")),
