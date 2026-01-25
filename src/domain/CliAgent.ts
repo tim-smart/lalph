@@ -13,6 +13,7 @@ export class CliAgent extends Data.Class<{
     readonly outputMode: "pipe" | "inherit"
     readonly prompt: string
     readonly prdFilePath: string
+    readonly dangerous: boolean
   }) => ChildProcess.Command
 }> {}
 
@@ -29,9 +30,16 @@ const opencode = new CliAgent({
       stderr: outputMode,
       stdin: "inherit",
     })`opencode run ${prompt} -f ${prdFilePath}`,
-  commandPlan: ({ outputMode, prompt, prdFilePath }) =>
+  commandPlan: ({ outputMode, prompt, prdFilePath, dangerous }) =>
     ChildProcess.make({
       extendEnv: true,
+      ...(dangerous
+        ? {
+            env: {
+              OPENCODE_PERMISSION: '{"*":"allow"}',
+            },
+          }
+        : {}),
       stdout: outputMode,
       stderr: outputMode,
       stdin: "inherit",
@@ -51,14 +59,20 @@ const claude = new CliAgent({
     })`claude --dangerously-skip-permissions --output-format stream-json -p ${`@${prdFilePath}
 
 ${prompt}`}`,
-  commandPlan: ({ outputMode, prompt, prdFilePath }) =>
-    ChildProcess.make({
+  commandPlan: ({ outputMode, prompt, prdFilePath, dangerous }) => {
+    const run = ChildProcess.make({
       stdout: outputMode,
       stderr: outputMode,
       stdin: "inherit",
-    })`claude ${`@${prdFilePath}
+    })
+    return dangerous
+      ? run`claude --dangerously-skip-permissions ${`@${prdFilePath}
 
-${prompt}`}`,
+${prompt}`}`
+      : run`claude ${`@${prdFilePath}
+
+${prompt}`}`
+  },
 })
 
 const codex = new CliAgent({
@@ -72,14 +86,20 @@ const codex = new CliAgent({
     })`codex exec --dangerously-bypass-approvals-and-sandbox ${`@${prdFilePath}
 
 ${prompt}`}`,
-  commandPlan: ({ outputMode, prompt, prdFilePath }) =>
-    ChildProcess.make({
+  commandPlan: ({ outputMode, prompt, prdFilePath, dangerous }) => {
+    const run = ChildProcess.make({
       stdout: outputMode,
       stderr: outputMode,
       stdin: "inherit",
-    })`codex ${`@${prdFilePath}
+    })
+    return dangerous
+      ? run`codex --dangerously-bypass-approvals-and-sandbox ${`@${prdFilePath}
 
-${prompt}`}`,
+${prompt}`}`
+      : run`codex ${`@${prdFilePath}
+
+${prompt}`}`
+  },
 })
 
 const amp = new CliAgent({

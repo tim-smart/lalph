@@ -27,6 +27,7 @@ npx -y lalph@latest
 - Run the main loop: `lalph`
 - Run multiple iterations with concurrency: `lalph --iterations 4 --concurrency 2`
 - Start plan mode: `lalph plan`
+- Start plan mode without permission prompts: `lalph plan --dangerous`
 - Choose your issue source: `lalph source`
 
 It is recommended to add `.lalph/` to your `.gitignore` to avoid committing your

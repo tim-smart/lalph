@@ -4,23 +4,31 @@ import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import { getCommandPrefix, getOrSelectCliAgent } from "./agent.ts"
-import { Command } from "effect/unstable/cli"
+import { Command, Flag } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../IssueSources.ts"
 import { commandRoot } from "./root.ts"
 
-export const commandPlan = Command.make("plan").pipe(
-  Command.withDescription("Iterate on an issue plan and create PRD tasks"),
-  Command.withHandler(
-    Effect.fnUntraced(function* () {
-      const { specsDirectory, targetBranch } = yield* commandRoot
-      const commandPrefix = yield* getCommandPrefix
-      yield* plan({ specsDirectory, targetBranch, commandPrefix }).pipe(
-        Effect.provide(CurrentIssueSource.layer),
-      )
-    }),
+const dangerous = Flag.boolean("dangerous").pipe(
+  Flag.withDescription(
+    "Enable dangerous mode (skip permission prompts) during plan generation",
   ),
 )
 
+export const commandPlan = Command.make("plan", { dangerous }).pipe(
+  Command.withDescription("Iterate on an issue plan and create PRD tasks"),
+  Command.withHandler(
+    Effect.fnUntraced(function* ({ dangerous }) {
+      const { specsDirectory, targetBranch } = yield* commandRoot
+      const commandPrefix = yield* getCommandPrefix
+      yield* plan({
+        specsDirectory,
+        targetBranch,
+        commandPrefix,
+        dangerous,
+      }).pipe(Effect.provide(CurrentIssueSource.layer))
+    }),
+  ),
+)
 const plan = Effect.fnUntraced(
   function* (options: {
     readonly specsDirectory: string
@@ -28,6 +36,7 @@ const plan = Effect.fnUntraced(
     readonly commandPrefix: (
       command: ChildProcess.Command,
     ) => ChildProcess.Command
+    readonly dangerous: boolean
   }) {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
@@ -55,6 +64,7 @@ const plan = Effect.fnUntraced(
         outputMode: "inherit",
         prompt: promptGen.planPrompt(options),
         prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
+        dangerous: options.dangerous,
       }),
       ChildProcess.setCwd(worktree.directory),
       options.commandPrefix,
