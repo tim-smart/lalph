@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.75
+
+### Patch Changes
+
+- [#152](https://github.com/tim-smart/lalph/pull/152) [`3b27cc6`](https://github.com/tim-smart/lalph/commit/3b27cc6f274d85227853f0585e0cd6f560bbe3a3) Thanks [@tim-smart](https://github.com/tim-smart)! - Add a --dangerous flag to plan mode to skip permission prompts for supported agents.
+
 ## 0.1.74
 
 ### Patch Changes
