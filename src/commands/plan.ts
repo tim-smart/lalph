@@ -61,7 +61,6 @@ const plan = Effect.fnUntraced(
 
     const exitCode = yield* pipe(
       cliAgent.commandPlan({
-        outputMode: "inherit",
         prompt: promptGen.planPrompt(options),
         prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
         dangerous: options.dangerous,

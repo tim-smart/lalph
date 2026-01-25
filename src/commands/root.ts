@@ -298,10 +298,9 @@ const run = Effect.fnUntraced(
       )
 
       yield* pipe(
-        cliAgent.command({
+        cliAgent.resolveCommandChoose({
           prompt: promptGen.promptChoose,
           prdFilePath: pathService.join(".lalph", "prd.yml"),
-          outputMode: "inherit",
         }),
         ChildProcess.setCwd(worktree.directory),
         options.commandPrefix,
