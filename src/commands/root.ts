@@ -26,6 +26,7 @@ import { Flag, CliError, Command } from "effect/unstable/cli"
 import { checkForWork } from "../IssueSource.ts"
 import { CurrentIssueSource } from "../IssueSources.ts"
 import { GithubCli } from "../Github/Cli.ts"
+import { createPrettyWriter } from "../shared/OutputFormatter.ts"
 
 const iterations = Flag.integer("iterations").pipe(
   Flag.withDescription("Number of iterations to run, defaults to unlimited"),
@@ -247,16 +248,18 @@ const run = Effect.fnUntraced(
       })
 
       const handle = yield* command
+      const prettyWriter = createPrettyWriter()
 
       yield* handle.all.pipe(
         Stream.runForEachArray((output) => {
           lastOutputAt = DateTime.nowUnsafe()
           for (const chunk of output) {
-            process.stdout.write(chunk)
+            prettyWriter.write(chunk)
           }
           return Effect.void
         }),
         Effect.raceFirst(stallTimeout),
+        Effect.ensuring(Effect.sync(() => prettyWriter.flush())),
       )
       return yield* handle.exitCode
     }, Effect.scoped)
@@ -294,18 +297,31 @@ const run = Effect.fnUntraced(
         }, Effect.ignore),
       )
 
-      yield* pipe(
+      const chooseCommand = pipe(
         cliAgent.command({
           prompt: promptGen.promptChoose,
           prdFilePath: pathService.join(".lalph", "prd.yml"),
-          outputMode: "inherit",
+          outputMode: "pipe",
         }),
         ChildProcess.setCwd(worktree.directory),
         options.commandPrefix,
-        ChildProcess.exitCode,
-        Effect.timeoutOrElse({
-          duration: options.stallTimeout,
-          onTimeout: () => Effect.fail(new RunnerStalled()),
+      )
+      const choosePrettyWriter = createPrettyWriter()
+      yield* Effect.scoped(
+        Effect.gen(function* () {
+          const handle = yield* chooseCommand
+          yield* handle.all.pipe(
+            Stream.runForEach((chunk) => {
+              choosePrettyWriter.write(chunk)
+              return Effect.void
+            }),
+            Effect.ensuring(Effect.sync(() => choosePrettyWriter.flush())),
+            Effect.timeoutOrElse({
+              duration: options.stallTimeout,
+              onTimeout: () => Effect.fail(new RunnerStalled()),
+            }),
+          )
+          return yield* handle.exitCode
         }),
       )
 
