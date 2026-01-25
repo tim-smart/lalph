@@ -56,7 +56,7 @@ const claude = new CliAgent({
       stdout: outputMode,
       stderr: outputMode,
       stdin: "inherit",
-    })`claude --dangerously-skip-permissions --output-format stream-json -p ${`@${prdFilePath}
+    })`claude --dangerously-skip-permissions --verbose --output-format stream-json -p ${`@${prdFilePath}
 
 ${prompt}`}`,
   commandPlan: ({ outputMode, prompt, prdFilePath, dangerous }) => {
