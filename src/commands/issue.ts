@@ -35,7 +35,8 @@ export const commandIssue = Command.make("issue").pipe(
       const tempFile = yield* fs.makeTempFileScoped({
         suffix: ".md",
       })
-      const editor = yield* Config.string("EDITOR").pipe(
+      const editor = yield* Config.string("LALPH_EDITOR").pipe(
+        Config.orElse(() => Config.string("EDITOR")),
         Config.withDefault(() => "nvim"),
       )
       yield* fs.writeFileString(tempFile, issueTemplate)

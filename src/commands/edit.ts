@@ -10,7 +10,8 @@ export const commandEdit = Command.make("edit").pipe(
     Effect.fnUntraced(
       function* () {
         const prd = yield* Prd
-        const editor = yield* Config.string("EDITOR").pipe(
+        const editor = yield* Config.string("LALPH_EDITOR").pipe(
+          Config.orElse(() => Config.string("EDITOR")),
           Config.withDefault(() => "nvim"),
         )
 
