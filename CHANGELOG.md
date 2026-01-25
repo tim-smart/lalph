@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.70
+
+### Patch Changes
+
+- [#135](https://github.com/tim-smart/lalph/pull/135) [`6e52012`](https://github.com/tim-smart/lalph/commit/6e52012de103b7a2fc68a98767ce3665bbfc1272) Thanks [@tim-smart](https://github.com/tim-smart)! - Guard PRD sync/update operations with a semaphore to preserve ordering.
+
 ## 0.1.69
 
 ### Patch Changes
