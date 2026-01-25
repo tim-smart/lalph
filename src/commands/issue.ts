@@ -1,10 +1,11 @@
 import { Command } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../IssueSources.ts"
-import { Config, Effect, FileSystem, Schema } from "effect"
+import { Effect, FileSystem, Schema } from "effect"
 import { IssueSource } from "../IssueSource.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { PrdIssue } from "../domain/PrdIssue.ts"
 import * as Yaml from "yaml"
+import { configEditor } from "../shared/config.ts"
 
 const issueTemplate = `---
 title: Issue Title
@@ -35,9 +36,7 @@ export const commandIssue = Command.make("issue").pipe(
       const tempFile = yield* fs.makeTempFileScoped({
         suffix: ".md",
       })
-      const editor = yield* Config.string("EDITOR").pipe(
-        Config.withDefault(() => "nvim"),
-      )
+      const editor = yield* configEditor
       yield* fs.writeFileString(tempFile, issueTemplate)
 
       const exitCode = yield* ChildProcess.make(editor, [tempFile], {
