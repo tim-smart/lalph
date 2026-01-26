@@ -230,8 +230,11 @@ export const LinearIssueSource = Layer.effect(
             const linearState = linear.states.find(
               (s) => s.id === issue.stateId,
             )!
-            const blockedBy = yield* Stream.runCollect(linear.blockedBy(issue))
             const state = linearStateToPrdState(linearState)
+            const blockedBy =
+              state === "todo"
+                ? yield* Stream.runCollect(linear.blockedBy(issue))
+                : []
             return new PrdIssue({
               id: issue.identifier,
               title: issue.title,
