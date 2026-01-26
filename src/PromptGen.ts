@@ -117,7 +117,7 @@ ${prdNotes()}`
    - Add important discoveries about the codebase, or challenges faced to the task's
      \`description\`. More details below.
 4. Run any checks / feedback loops, such as type checks, unit tests, or linting.
-5. ${!options.githubPrNumber ? `Create a pull request for this task.${options.targetBranch ? ` The target branch for the PR should be \`${options.targetBranch}\`. If the target branch does not exist, create it first.` : ""}` : "Update the pull request with your progress."}
+5. ${!options.githubPrNumber ? `Create a pull request for this task.${options.targetBranch ? ` The target branch for the PR should be \`${options.targetBranch}\`. If the target branch does not exist, create it first.` : ""}` : "Commit and push your changes to the pull request."}
    ${sourceMeta.githubPrInstructions}
    The PR description should include a summary of the changes made.
    - **DO NOT** commit any of the files in the \`.lalph\` directory.
