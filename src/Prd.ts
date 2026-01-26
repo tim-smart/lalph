@@ -146,35 +146,66 @@ export class Prd extends ServiceMap.Service<
           return
         }
 
+        const normalizeTitle = (title: string) =>
+          title.trim().toLowerCase().replace(/\s+/g, " ")
+        const currentByTitle = new Map<string, Array<PrdIssue>>()
+        for (const issue of current) {
+          const key = normalizeTitle(issue.title)
+          const entry = currentByTitle.get(key)
+          if (entry) {
+            entry.push(issue)
+          } else {
+            currentByTitle.set(key, [issue])
+          }
+        }
+        const matchedIds = new Set<string>()
+
         const githubPrs = new Map<string, number>()
         const toRemove = new Set(
           current.filter((i) => i.id !== null).map((i) => i.id!),
         )
 
         for (const issue of updated) {
-          toRemove.delete(issue.id!)
+          const resolvedIssue =
+            issue.id === null
+              ? (() => {
+                  const key = normalizeTitle(issue.title)
+                  const candidates = currentByTitle.get(key)
+                  if (!candidates) return issue
+                  const available = candidates.filter(
+                    (candidate) => !matchedIds.has(candidate.id!),
+                  )
+                  if (available.length !== 1) return issue
+                  const matched = available[0]!
+                  matchedIds.add(matched.id!)
+                  return new PrdIssue({ ...issue, id: matched.id })
+                })()
+              : issue
 
-          if (issue.id === null) {
-            yield* source.createIssue(issue)
+          toRemove.delete(resolvedIssue.id!)
+
+          if (resolvedIssue.id === null) {
+            yield* source.createIssue(resolvedIssue)
             continue
           }
 
-          if (issue.githubPrNumber) {
-            githubPrs.set(issue.id, issue.githubPrNumber)
+          if (resolvedIssue.githubPrNumber) {
+            githubPrs.set(resolvedIssue.id, resolvedIssue.githubPrNumber)
           }
 
-          const existing = current.find((i) => i.id === issue.id)
-          if (!existing || !existing.isChangedComparedTo(issue)) continue
+          const existing = current.find((i) => i.id === resolvedIssue.id)
+          if (!existing || !existing.isChangedComparedTo(resolvedIssue))
+            continue
 
           yield* source.updateIssue({
-            issueId: issue.id,
-            title: issue.title,
-            description: issue.description,
-            state: issue.state,
-            blockedBy: issue.blockedBy,
+            issueId: resolvedIssue.id,
+            title: resolvedIssue.title,
+            description: resolvedIssue.description,
+            state: resolvedIssue.state,
+            blockedBy: resolvedIssue.blockedBy,
           })
 
-          updatedIssues.set(issue.id, issue)
+          updatedIssues.set(resolvedIssue.id, resolvedIssue)
         }
 
         yield* Effect.forEach(
