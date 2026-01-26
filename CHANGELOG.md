@@ -1,5 +1,15 @@
 # lalph
 
+## 0.1.78
+
+### Patch Changes
+
+- [`02aca94`](https://github.com/tim-smart/lalph/commit/02aca94ac74b9afbbe8f7c5f886be631246527d8) Thanks [@tim-smart](https://github.com/tim-smart)! - for github source, ensure tasks are in progress before starting another iteration
+
+- [`0860bdf`](https://github.com/tim-smart/lalph/commit/0860bdfb33193efddcf334e088b6dfbf5ba5cfd3) Thanks [@tim-smart](https://github.com/tim-smart)! - Skip blocked-by lookups for non-todo Linear issues.
+
+- [`4f59174`](https://github.com/tim-smart/lalph/commit/4f59174333c49695eea160c1dc1b394e9becefee) Thanks [@tim-smart](https://github.com/tim-smart)! - Reset in-progress issues to todo before the root loop starts.
+
 ## 0.1.77
 
 ### Patch Changes
