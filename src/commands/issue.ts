@@ -78,7 +78,7 @@ export const commandIssue = Command.make("issue").pipe(
       )
       const description = lines.slice(descriptionStartIndex).join("\n").trim()
 
-      const issueId = yield* source.createIssue(
+      const created = yield* source.createIssue(
         new PrdIssue({
           id: null,
           ...frontMatter,
@@ -87,7 +87,8 @@ export const commandIssue = Command.make("issue").pipe(
           githubPrNumber: null,
         }),
       )
-      console.log(`Created issue with ID: ${issueId}`)
+      console.log(`Created issue with ID: ${created.id}`)
+      console.log(`URL: ${created.url}`)
     }, Effect.scoped),
   ),
   Command.provide(CurrentIssueSource.layer),
