@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.82
+
+### Patch Changes
+
+- [#172](https://github.com/tim-smart/lalph/pull/172) [`a1c2c37`](https://github.com/tim-smart/lalph/commit/a1c2c37c4244d6f9170831a9c64dc8906721bf43) Thanks [@tim-smart](https://github.com/tim-smart)! - Show the created issue URL after running the issue command.
+
 ## 0.1.81
 
 ### Patch Changes
