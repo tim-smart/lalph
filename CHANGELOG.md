@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.77
+
+### Patch Changes
+
+- [#160](https://github.com/tim-smart/lalph/pull/160) [`8256c17`](https://github.com/tim-smart/lalph/commit/8256c171b0a8b6460b8db00200951e1ca6328cd6) Thanks [@tim-smart](https://github.com/tim-smart)! - Avoid duplicate issues when plan reruns regenerate tasks with missing IDs.
+
 ## 0.1.76
 
 ### Patch Changes
