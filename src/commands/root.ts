@@ -90,6 +90,11 @@ const specsDirectory = Flag.directory("specs").pipe(
   Flag.withDefault(".specs"),
 )
 
+const verbose = Flag.boolean("verbose").pipe(
+  Flag.withDescription("Enable verbose logging"),
+  Flag.withAlias("v"),
+)
+
 // handled in cli.ts
 const reset = Flag.boolean("reset").pipe(
   Flag.withDescription("Reset the current issue source before running"),
@@ -104,6 +109,7 @@ export const commandRoot = Command.make("lalph", {
   stallMinutes,
   reset,
   specsDirectory,
+  verbose,
 }).pipe(
   Command.withHandler(
     Effect.fnUntraced(function* ({
@@ -124,7 +130,10 @@ export const commandRoot = Command.make("lalph", {
       const semaphore = Effect.makeSemaphoreUnsafe(runConcurrency)
       const fibers = yield* FiberSet.make()
 
-      yield* resetInProgress.pipe(Effect.provide(source))
+      yield* resetInProgress.pipe(
+        Effect.provide(source),
+        Effect.withSpan("Main.resetInProgress"),
+      )
 
       yield* Effect.log(
         `Executing ${iterationsDisplay} iteration(s) with concurrency ${runConcurrency}`,
