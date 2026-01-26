@@ -182,14 +182,15 @@ ${prdNotes(options)}`
    specification to fulfill the request and save it as a file.
    First do some research to understand the request, then interview the user
    to gather all the necessary requirements and details for the specification.
-2. Once you have saved the specification, your next job is to create an implementation
-   plan by breaking down the specification into smaller, manageable tasks and add
+   - If the user asks you to update an existing specification, find the relevant
+     specification file in the \`${options.specsDirectory}\` directory and update it
+     accordingly.
+2. Once you have saved the specification, your next job is to create or update an
+   implementation plan by breaking down the specification into smaller, manageable tasks and add
    them to the prd.yml file.
    For each task include in the description where to find the plan specification.
    Read the "### Adding tasks" section below **extremely carefully** for guidelines on creating tasks.
-   If you are re-running plan, match existing tasks by normalized title (trim, lowercase,
-   collapse whitespace) and update them in place instead of creating duplicates. Only
-   add new tasks when no normalized-title match exists.
+   - **Important**: If updating an existing plan, make sure not to duplicate any existing tasks.
 3. Wait until the tasks are saved, then setup task dependencies using the \`blockedBy\` field.
 4. Start a subagent with a copy of this prompt, to review the plan and provide feedback or improvements.
 5. Present the saved specification for review (include the full text in your response).
