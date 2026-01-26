@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.81
+
+### Patch Changes
+
+- [`d431496`](https://github.com/tim-smart/lalph/commit/d43149637100dccc97f9b0457f01211dc4721ed8) Thanks [@tim-smart](https://github.com/tim-smart)! - update publish workflow
+
 ## 0.1.80
 
 ### Patch Changes
