@@ -12,6 +12,7 @@ import {
   identity,
   Iterable,
   Layer,
+  References,
   Option,
   Path,
   pipe,
@@ -96,6 +97,15 @@ const reset = Flag.boolean("reset").pipe(
   Flag.withAlias("r"),
 )
 
+const verbose = Flag.boolean("verbose").pipe(
+  Flag.withDescription(
+    "Enable verbose logging (debug level) for timing info. Env variable: LALPH_VERBOSE",
+  ),
+  Flag.withAlias("v"),
+  Flag.withFallbackConfig(Config.boolean("LALPH_VERBOSE")),
+  Flag.withDefault(false),
+)
+
 export const commandRoot = Command.make("lalph", {
   iterations,
   concurrency,
@@ -104,6 +114,7 @@ export const commandRoot = Command.make("lalph", {
   stallMinutes,
   reset,
   specsDirectory,
+  verbose,
 }).pipe(
   Command.withHandler(
     Effect.fnUntraced(function* ({
@@ -113,8 +124,20 @@ export const commandRoot = Command.make("lalph", {
       maxIterationMinutes,
       stallMinutes,
       specsDirectory,
+      verbose,
     }) {
+      const startupTime = yield* DateTime.now
+      yield* Effect.logDebug("lalph: starting up...")
+
       const source = yield* Layer.build(CurrentIssueSource.layer)
+
+      const layerBuildTime = yield* DateTime.now.pipe(
+        Effect.map((now) => DateTime.distanceDuration(startupTime, now)),
+      )
+      yield* Effect.logDebug(
+        `lalph: layer built in ${Duration.format(layerBuildTime)}`,
+      )
+
       const commandPrefix = yield* getCommandPrefix
       yield* getOrSelectCliAgent
 
@@ -140,6 +163,9 @@ export const commandRoot = Command.make("lalph", {
         const currentIteration = iteration
 
         const startedDeferred = yield* Deferred.make<void>()
+
+        const iterationStartTime = yield* DateTime.now
+        yield* Effect.logDebug(`iteration ${currentIteration}: starting`)
 
         yield* checkForWork.pipe(
           Effect.andThen(
@@ -180,6 +206,18 @@ export const commandRoot = Command.make("lalph", {
               return Effect.void
             },
           }),
+          Effect.tap(() =>
+            Effect.gen(function* () {
+              const elapsed = yield* DateTime.now.pipe(
+                Effect.map((now) =>
+                  DateTime.distanceDuration(iterationStartTime, now),
+                ),
+              )
+              yield* Effect.logDebug(
+                `iteration ${currentIteration}: completed in ${Duration.format(elapsed)}`,
+              )
+            }),
+          ),
           Effect.annotateLogs({
             iteration: currentIteration,
           }),
@@ -195,7 +233,17 @@ export const commandRoot = Command.make("lalph", {
       }
 
       yield* FiberSet.awaitEmpty(fibers)
+
+      const totalTime = yield* DateTime.now.pipe(
+        Effect.map((now) => DateTime.distanceDuration(startupTime, now)),
+      )
+      yield* Effect.logDebug(
+        `lalph: total runtime ${Duration.format(totalTime)}`,
+      )
     }, Effect.scoped),
+  ),
+  Command.provideEffect(References.MinimumLogLevel, (options) =>
+    Effect.succeed(options.verbose ? "Debug" : "Info"),
   ),
 )
 
@@ -297,6 +345,10 @@ const run = Effect.fnUntraced(
         }, Effect.ignore),
       )
 
+      // Task selection timing
+      const taskSelectStart = yield* DateTime.now
+      yield* Effect.logDebug("taskSelection: starting...")
+
       yield* pipe(
         cliAgent.resolveCommandChoose({
           prompt: promptGen.promptChoose,
@@ -317,16 +369,40 @@ const run = Effect.fnUntraced(
       const chosenTask = yield* Schema.decodeEffect(ChosenTask)(taskJson)
       taskId = chosenTask.id
 
+      const taskSelectElapsed = yield* DateTime.now.pipe(
+        Effect.map((now) => DateTime.distanceDuration(taskSelectStart, now)),
+      )
+      yield* Effect.logDebug(
+        `taskSelection: selected task ${taskId} in ${Duration.format(taskSelectElapsed)}`,
+      )
+
       yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 
+      // PR checkout timing
       if (chosenTask.githubPrNumber) {
+        const prStart = yield* DateTime.now
+        yield* Effect.logDebug(
+          `prOperations: checking out PR #${chosenTask.githubPrNumber}...`,
+        )
+
         yield* exec`gh pr checkout ${chosenTask.githubPrNumber}`
         const feedback = yield* gh.prFeedbackMd(chosenTask.githubPrNumber)
         yield* fs.writeFileString(
           pathService.join(worktree.directory, ".lalph", "feedback.md"),
           feedback,
         )
+
+        const prElapsed = yield* DateTime.now.pipe(
+          Effect.map((now) => DateTime.distanceDuration(prStart, now)),
+        )
+        yield* Effect.logDebug(
+          `prOperations: checkout complete in ${Duration.format(prElapsed)}`,
+        )
       }
+
+      // Agent execution timing
+      const agentStart = yield* DateTime.now
+      yield* Effect.logDebug(`agentExecution: starting for task ${taskId}`)
 
       const cliCommand = pipe(
         cliAgent.command({
@@ -365,13 +441,26 @@ const run = Effect.fnUntraced(
           }),
         ),
       )
+
+      const agentElapsed = yield* DateTime.now.pipe(
+        Effect.map((now) => DateTime.distanceDuration(agentStart, now)),
+      )
+      yield* Effect.logDebug(
+        `agentExecution: completed in ${Duration.format(agentElapsed)} with exit code ${exitCode}`,
+      )
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
+      // PR merge timing
       const prs = yield* prd.mergableGithubPrs
       const task = yield* prd.findById(taskId)
       if (prs.length === 0) {
         yield* prd.maybeRevertIssue({ issueId: taskId })
       } else if (task?.autoMerge) {
+        const mergeStart = yield* DateTime.now
+        yield* Effect.logDebug(
+          `prMerge: attempting to merge ${prs.length} PR(s)`,
+        )
+
         for (const pr of prs) {
           if (Option.isSome(options.targetBranch)) {
             yield* exec`gh pr edit ${pr.prNumber} --base ${options.targetBranch.value}`
@@ -382,6 +471,13 @@ const run = Effect.fnUntraced(
             yield* prd.flagUnmergable({ issueId: pr.issueId })
           }
         }
+
+        const mergeElapsed = yield* DateTime.now.pipe(
+          Effect.map((now) => DateTime.distanceDuration(mergeStart, now)),
+        )
+        yield* Effect.logDebug(
+          `prMerge: completed in ${Duration.format(mergeElapsed)}`,
+        )
       }
     }).pipe(
       Effect.ensuring(

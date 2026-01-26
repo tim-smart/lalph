@@ -1,4 +1,4 @@
-import { Effect, Schema, ServiceMap } from "effect"
+import { DateTime, Duration, Effect, Schema, ServiceMap } from "effect"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
 
 export class IssueSource extends ServiceMap.Service<
@@ -32,15 +32,35 @@ export class IssueSourceError extends Schema.ErrorClass<IssueSourceError>(
 }) {}
 
 export const checkForWork = Effect.gen(function* () {
+  const startTime = yield* DateTime.now
+  yield* Effect.logDebug("checkForWork: starting...")
+
   const source = yield* IssueSource
-  const issues = yield* source.issues
-  const hasIncomplete = issues.some(
-    (issue) => issue.state === "todo" && issue.blockedBy.length === 0,
+  const issues = yield* source.issues.pipe(
+    Effect.withSpan("IssueSource.fetchIssues"),
   )
+
+  const fetchElapsed = yield* DateTime.now.pipe(
+    Effect.map((now) => DateTime.distanceDuration(startTime, now)),
+  )
+  yield* Effect.logDebug(
+    `checkForWork: fetched ${issues.length} issues in ${Duration.format(fetchElapsed)}`,
+  )
+
+  const todoIssues = issues.filter((issue) => issue.state === "todo")
+  const unblockedTodoIssues = todoIssues.filter(
+    (issue) => issue.blockedBy.length === 0,
+  )
+
+  yield* Effect.logDebug(
+    `checkForWork: ${todoIssues.length} todo, ${unblockedTodoIssues.length} unblocked`,
+  )
+
+  const hasIncomplete = unblockedTodoIssues.length > 0
   if (!hasIncomplete) {
     return yield* new NoMoreWork({})
   }
-})
+}).pipe(Effect.withSpan("checkForWork"))
 
 export class NoMoreWork extends Schema.ErrorClass<NoMoreWork>(
   "lalph/Prd/NoMoreWork",

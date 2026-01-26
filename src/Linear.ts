@@ -1,4 +1,6 @@
 import {
+  DateTime,
+  Duration,
   Effect,
   Stream,
   Layer,
@@ -6,7 +8,6 @@ import {
   ServiceMap,
   Option,
   RcMap,
-  DateTime,
 } from "effect"
 import {
   Connection,
@@ -196,62 +197,77 @@ export const LinearIssueSource = Layer.effect(
       }
     }
 
-    const issues = linear
-      .stream((c) =>
-        c.issues({
-          filter: {
-            project: { id: { eq: project.id } },
-            assignee: { isMe: { eq: true } },
-            labels: {
-              id: labelId.pipe(
-                Option.map((eq) => ({ eq })),
-                Option.getOrNull,
-              ),
+    const issues = Effect.gen(function* () {
+      const startTime = yield* DateTime.now
+      yield* Effect.logDebug("Linear.issues: fetching from Linear API...")
+
+      const result = yield* linear
+        .stream((c) =>
+          c.issues({
+            filter: {
+              project: { id: { eq: project.id } },
+              assignee: { isMe: { eq: true } },
+              labels: {
+                id: labelId.pipe(
+                  Option.map((eq) => ({ eq })),
+                  Option.getOrNull,
+                ),
+              },
+              state: {
+                type: { in: ["unstarted", "started", "completed"] },
+              },
             },
-            state: {
-              type: { in: ["unstarted", "started", "completed"] },
-            },
-          },
-        }),
-      )
-      .pipe(
-        Stream.filter((issue) => {
-          const completedAt = issue.completedAt
-          if (!completedAt) return true
-          const completed = DateTime.makeUnsafe(completedAt)
-          const threeDaysAgo = DateTime.nowUnsafe().pipe(
-            DateTime.subtract({ days: 3 }),
-          )
-          return DateTime.isGreaterThanOrEqualTo(completed, threeDaysAgo)
-        }),
-        Stream.mapEffect(
-          Effect.fnUntraced(function* (issue) {
-            identifierMap.set(issue.identifier, issue.id)
-            const linearState = linear.states.find(
-              (s) => s.id === issue.stateId,
-            )!
-            const blockedBy = yield* Stream.runCollect(linear.blockedBy(issue))
-            const state = linearStateToPrdState(linearState)
-            return new PrdIssue({
-              id: issue.identifier,
-              title: issue.title,
-              description: issue.description ?? "",
-              priority: issue.priority,
-              estimate: issue.estimate ?? null,
-              state,
-              blockedBy: blockedBy.map((i) => i.identifier),
-              autoMerge: autoMergeLabelId.pipe(
-                Option.map((labelId) => issue.labelIds.includes(labelId)),
-                Option.getOrElse(() => false),
-              ),
-              githubPrNumber: null,
-            })
           }),
-          { concurrency: 10 },
-        ),
-        Stream.runCollect,
-        Effect.mapError((cause) => new IssueSourceError({ cause })),
+        )
+        .pipe(
+          Stream.filter((issue) => {
+            const completedAt = issue.completedAt
+            if (!completedAt) return true
+            const completed = DateTime.makeUnsafe(completedAt)
+            const threeDaysAgo = DateTime.nowUnsafe().pipe(
+              DateTime.subtract({ days: 3 }),
+            )
+            return DateTime.isGreaterThanOrEqualTo(completed, threeDaysAgo)
+          }),
+          Stream.mapEffect(
+            Effect.fnUntraced(function* (issue) {
+              identifierMap.set(issue.identifier, issue.id)
+              const linearState = linear.states.find(
+                (s) => s.id === issue.stateId,
+              )!
+              const blockedBy = yield* Stream.runCollect(
+                linear.blockedBy(issue),
+              )
+              const state = linearStateToPrdState(linearState)
+              return new PrdIssue({
+                id: issue.identifier,
+                title: issue.title,
+                description: issue.description ?? "",
+                priority: issue.priority,
+                estimate: issue.estimate ?? null,
+                state,
+                blockedBy: blockedBy.map((i) => i.identifier),
+                autoMerge: autoMergeLabelId.pipe(
+                  Option.map((labelId) => issue.labelIds.includes(labelId)),
+                  Option.getOrElse(() => false),
+                ),
+                githubPrNumber: null,
+              })
+            }),
+            { concurrency: 10 },
+          ),
+          Stream.runCollect,
+        )
+
+      const elapsed = yield* DateTime.now.pipe(
+        Effect.map((now) => DateTime.distanceDuration(startTime, now)),
       )
+      yield* Effect.logDebug(
+        `Linear.issues: fetched ${result.length} issues (with dependencies) in ${Duration.format(elapsed)}`,
+      )
+
+      return result
+    }).pipe(Effect.mapError((cause) => new IssueSourceError({ cause })))
 
     return IssueSource.of({
       issues,
