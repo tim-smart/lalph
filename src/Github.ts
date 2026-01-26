@@ -269,7 +269,10 @@ export const GithubIssueSource = Layer.effect(
 
           yield* Effect.sleep(2000)
 
-          return `#${created.number}`
+          return {
+            id: `#${created.number}`,
+            url: created.html_url,
+          }
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),

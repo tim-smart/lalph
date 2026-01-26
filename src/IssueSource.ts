@@ -8,7 +8,7 @@ export class IssueSource extends ServiceMap.Service<
 
     readonly createIssue: (
       issue: PrdIssue,
-    ) => Effect.Effect<string, IssueSourceError>
+    ) => Effect.Effect<{ id: string; url: string }, IssueSourceError>
 
     readonly updateIssue: (options: {
       readonly issueId: string

@@ -294,7 +294,10 @@ export const LinearIssueSource = Layer.effect(
               { concurrency: 5, discard: true },
             )
           }
-          return linearIssue.identifier
+          return {
+            id: linearIssue.identifier,
+            url: `https://linear.app/issue/${linearIssue.identifier}/`,
+          }
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
