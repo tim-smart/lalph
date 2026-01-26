@@ -19,6 +19,7 @@ jobs:
       contents: write
       pull-requests: write
       id-token: write
+      packages: write
     steps:
       - uses: actions/checkout@v3
         with:
@@ -37,3 +38,8 @@ jobs:
           publish: pnpm changeset publish
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Publish to GitHub Packages
+        if: steps.changesets.outputs.published == 'true'
+        run: pnpm changeset publish --registry https://npm.pkg.github.com
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
