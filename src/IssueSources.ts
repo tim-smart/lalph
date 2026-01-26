@@ -74,7 +74,7 @@ export class CurrentIssueSource extends ServiceMap.Service<
         source.layer,
         yield* Layer.CurrentMemoMap,
         yield* Effect.scope,
-      )
+      ).pipe(Effect.withSpan("CurrentIssueSource.build"))
       return ServiceMap.add(services, CurrentIssueSource, source)
     }),
   )

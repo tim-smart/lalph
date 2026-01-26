@@ -14,6 +14,8 @@ import { commandAgent } from "./commands/agent.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { resetCurrentIssueSource } from "./IssueSources.ts"
 import { GithubCli } from "./Github/Cli.ts"
+import { TracingLayer } from "./Tracing.ts"
+import { MinimumLogLevel } from "effect/References"
 
 commandRoot.pipe(
   Command.withSubcommands([
@@ -31,6 +33,10 @@ commandRoot.pipe(
         yield* resetCurrentIssueSource
       }
     }),
+  ),
+  Command.provide(TracingLayer),
+  Command.provide(({ verbose }) =>
+    verbose ? Layer.succeed(MinimumLogLevel, "All") : Layer.empty,
   ),
   (_) =>
     Command.run(_, {
