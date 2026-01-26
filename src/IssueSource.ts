@@ -42,6 +42,25 @@ export const checkForWork = Effect.gen(function* () {
   }
 })
 
+export const resetInProgress = Effect.gen(function* () {
+  const source = yield* IssueSource
+  const issues = yield* source.issues
+  const inProgress = issues.filter(
+    (issue): issue is PrdIssue & { id: string } =>
+      issue.state === "in-progress" && issue.id !== null,
+  )
+  if (inProgress.length === 0) return
+  yield* Effect.forEach(
+    inProgress,
+    (issue) =>
+      source.updateIssue({
+        issueId: issue.id,
+        state: "todo",
+      }),
+    { concurrency: 5, discard: true },
+  )
+})
+
 export class NoMoreWork extends Schema.ErrorClass<NoMoreWork>(
   "lalph/Prd/NoMoreWork",
 )({

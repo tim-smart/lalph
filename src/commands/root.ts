@@ -24,7 +24,7 @@ import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import { getCommandPrefix, getOrSelectCliAgent } from "./agent.ts"
 import { Flag, CliError, Command } from "effect/unstable/cli"
-import { checkForWork } from "../IssueSource.ts"
+import { checkForWork, resetInProgress } from "../IssueSource.ts"
 import { CurrentIssueSource } from "../IssueSources.ts"
 import { GithubCli } from "../Github/Cli.ts"
 
@@ -127,6 +127,8 @@ export const commandRoot = Command.make("lalph", {
       yield* Effect.log(
         `Executing ${iterationsDisplay} iteration(s) with concurrency ${runConcurrency}`,
       )
+
+      yield* resetInProgress.pipe(Effect.provide(source))
 
       let iteration = 0
       let quit = false
