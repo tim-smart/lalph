@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.79
+
+### Patch Changes
+
+- [#167](https://github.com/tim-smart/lalph/pull/167) [`5ef8606`](https://github.com/tim-smart/lalph/commit/5ef8606311a6a4c4f94226d3a9039fc9e28711f9) Thanks [@tim-smart](https://github.com/tim-smart)! - add verbose logging option
+
 ## 0.1.78
 
 ### Patch Changes
