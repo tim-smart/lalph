@@ -187,6 +187,9 @@ ${prdNotes(options)}`
    them to the prd.yml file.
    For each task include in the description where to find the plan specification.
    Read the "### Adding tasks" section below **extremely carefully** for guidelines on creating tasks.
+   If you are re-running plan, match existing tasks by normalized title (trim, lowercase,
+   collapse whitespace) and update them in place instead of creating duplicates. Only
+   add new tasks when no normalized-title match exists.
 3. Wait until the tasks are saved, then setup task dependencies using the \`blockedBy\` field.
 4. Start a subagent with a copy of this prompt, to review the plan and provide feedback or improvements.
 5. Present the saved specification for review (include the full text in your response).
