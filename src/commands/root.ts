@@ -436,7 +436,9 @@ const run = Effect.fnUntraced(
       const autoMerge = Effect.gen(function* () {
         let prState = yield* viewPrState()
         yield* Effect.log("PR state", prState)
-        if (Option.isNone(prState)) return
+        if (Option.isNone(prState)) {
+          return yield* prd.maybeRevertIssue({ issueId: taskId })
+        }
         if (Option.isSome(options.targetBranch)) {
           yield* exec`gh pr edit --base ${options.targetBranch.value}`
         }
