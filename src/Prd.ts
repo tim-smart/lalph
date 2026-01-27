@@ -1,5 +1,6 @@
 import {
   Array,
+  Cause,
   Effect,
   FiberHandle,
   FileSystem,
@@ -12,7 +13,11 @@ import {
 } from "effect"
 import { Worktree } from "./Worktree.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
-import { IssueSource, IssueSourceError } from "./IssueSource.ts"
+import {
+  IssueSource,
+  IssueSourceError,
+  IssueSourceUpdates,
+} from "./IssueSource.ts"
 
 export class Prd extends ServiceMap.Service<
   Prd,
@@ -45,6 +50,7 @@ export class Prd extends ServiceMap.Service<
     const pathService = yield* Path.Path
     const fs = yield* FileSystem.FileSystem
     const source = yield* IssueSource
+    const sourceUpdates = yield* IssueSourceUpdates
 
     const lalphDir = pathService.join(worktree.directory, `.lalph`)
     const prdFile = pathService.join(worktree.directory, `.lalph`, `prd.yml`)
@@ -141,9 +147,7 @@ export class Prd extends ServiceMap.Service<
       const anyChanges =
         updated.length !== current.length ||
         updated.some((u, i) => u.isChangedComparedTo(current[i]!))
-      if (!anyChanges) {
-        return
-      }
+      if (!anyChanges) return
 
       const githubPrs = new Map<string, number>()
       const toRemove = new Set(
@@ -197,21 +201,28 @@ export class Prd extends ServiceMap.Service<
       Effect.uninterruptible,
       syncSemaphore.withPermit,
       Effect.withSpan("Prd.sync"),
+      Effect.catchTag("IssueSourceError", (e) =>
+        Effect.logWarning(Cause.fail(e)),
+      ),
+      Effect.annotateLogs({
+        module: "Prd",
+        method: "sync",
+      }),
     )
 
     const updateSyncHandle = yield* FiberHandle.make()
-    const updateSync = Effect.gen(function* () {
-      const tempFile = yield* fs.makeTempFileScoped()
-      const sourceIssues = yield* source.issues
-      const anyChanges =
-        sourceIssues.length !== current.length ||
-        sourceIssues.some((u, i) => u.isChangedComparedTo(current[i]!))
-      if (!anyChanges) return
+    const updateSync = Effect.fnUntraced(
+      function* (sourceIssues: ReadonlyArray<PrdIssue>) {
+        const tempFile = yield* fs.makeTempFileScoped()
+        const anyChanges =
+          sourceIssues.length !== current.length ||
+          sourceIssues.some((u, i) => u.isChangedComparedTo(current[i]!))
+        if (!anyChanges) return
 
-      yield* fs.writeFileString(tempFile, PrdIssue.arrayToYaml(sourceIssues))
-      yield* fs.rename(tempFile, prdFile)
-      current = sourceIssues
-    }).pipe(
+        yield* fs.writeFileString(tempFile, PrdIssue.arrayToYaml(sourceIssues))
+        yield* fs.rename(tempFile, prdFile)
+        current = sourceIssues
+      },
       Effect.scoped,
       FiberHandle.run(updateSyncHandle, { onlyIfMissing: true }),
     )
@@ -230,11 +241,7 @@ export class Prd extends ServiceMap.Service<
       Effect.forkScoped,
     )
 
-    yield* updateSync.pipe(
-      Effect.delay("1 minute"),
-      Effect.forever,
-      Effect.forkScoped,
-    )
+    yield* sourceUpdates.pipe(Stream.runForEach(updateSync), Effect.forkScoped)
 
     const findById = (issueId: string) =>
       Effect.sync(() => current.find((i) => i.id === issueId) ?? null)

@@ -24,6 +24,7 @@ export class Issue extends S.Class<Issue>("Issue")({
 export class InverseRelationsNode extends S.Class<InverseRelationsNode>(
   "InverseRelationsNode",
 )({
+  id: S.String,
   type: S.String,
   issue: Issue,
 }) {}
@@ -38,24 +39,25 @@ export class IssuesNode extends S.Class<IssuesNode>("IssuesNode")({
   id: S.String,
   identifier: S.String,
   title: S.String,
-  description: S.String,
+  description: S.NullOr(S.String),
   priority: S.Number,
-  estimate: S.Number,
+  estimate: S.NullOr(S.Number),
   state: State,
-  labelIds: S.Array(S.Any),
+  labelIds: S.Array(S.String),
   inverseRelations: InverseRelations,
+  completedAt: S.NullOr(S.DateTimeUtc),
 }) {}
+
+export const LinearIssueData = S.Struct({
+  issue: IssuesNode,
+})
 
 export class Issues extends S.Class<Issues>("Issues")({
   nodes: S.Array(IssuesNode),
 }) {}
 
-export class Data extends S.Class<Data>("Data")({
-  issues: Issues,
-}) {}
-
 export class LinearIssuesData extends S.Class<LinearIssuesData>(
   "LinearIssuesData",
 )({
-  data: Data,
+  issues: Issues,
 }) {}

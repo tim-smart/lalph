@@ -7,20 +7,25 @@ import {
   Option,
   RcMap,
   DateTime,
+  pipe,
+  Array,
 } from "effect"
 import {
   Connection,
-  Issue,
   IssueRelationType,
   LinearClient,
   Project,
-  WorkflowState,
 } from "@linear/sdk"
 import { TokenManager } from "./Linear/TokenManager.ts"
 import { Prompt } from "effect/unstable/cli"
 import { Setting } from "./Settings.ts"
 import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
+import {
+  LinearIssueData,
+  LinearIssuesData,
+  State,
+} from "./domain/LinearIssues.ts"
 
 class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
   make: Effect.gen(function* () {
@@ -47,10 +52,19 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
         ),
         Effect.scoped,
       )
-    const gql = <A>(query: string, variables?: Record<string, unknown>) =>
-      use((c) => c.client.rawRequest(query, variables)).pipe(
-        Effect.map((r) => r.data as A),
-      )
+    const gql = <S extends Schema.Top>(options: {
+      readonly query: string
+      readonly variables?: Record<string, unknown>
+      readonly schema: S
+    }) => {
+      const decode: (
+        input: S["Encoded"],
+      ) => Effect.Effect<S["Type"], Schema.SchemaError, S["DecodingServices"]> =
+        Schema.decodeEffect(Schema.toCodecJson(options.schema))
+      return use((c) =>
+        c.client.rawRequest(options.query, options.variables),
+      ).pipe(Effect.flatMap((r) => decode(r.data)))
+    }
 
     const stream = <A>(f: (client: LinearClient) => Promise<Connection<A>>) =>
       Stream.paginate(
@@ -86,26 +100,38 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
       stream((client) => client.workflowStates()),
     )
     const viewer = yield* use((client) => client.viewer)
-
-    const blockedByRelations = (issue: Issue) =>
-      stream(() => issue.relations()).pipe(
-        Stream.merge(stream(() => issue.inverseRelations())),
-        Stream.filter(
-          (relation) =>
-            relation.type === "blocks" && relation.relatedIssueId === issue.id,
-        ),
-      )
-
-    const blockedBy = (issue: Issue) =>
-      blockedByRelations(issue).pipe(
-        Stream.mapEffect((relation) => use(() => relation.issue!), {
-          concurrency: "unbounded",
+    const issues = (options: {
+      readonly labelId: Option.Option<string>
+      readonly projectId: string
+    }) =>
+      options.labelId.pipe(
+        Option.match({
+          onNone: () =>
+            gql({
+              query: allIssuesNoLabelQuery,
+              variables: {
+                projectId: options.projectId,
+              },
+              schema: LinearIssuesData,
+            }),
+          onSome: (labelId) =>
+            gql({
+              query: allIssuesQuery,
+              variables: {
+                projectId: options.projectId,
+                labelId,
+              },
+              schema: LinearIssuesData,
+            }),
         }),
-        Stream.filter((issue) => {
-          const state = states.find((s) => s.id === issue.stateId)!
-          return state.type !== "completed"
-        }),
+        Effect.map((data) => data.issues.nodes),
       )
+    const issueById = (id: string) =>
+      gql({
+        query: issueByIdQuery,
+        variables: { id },
+        schema: LinearIssueData,
+      }).pipe(Effect.map((data) => data.issue))
 
     return {
       use,
@@ -114,8 +140,8 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
       labels,
       states,
       viewer,
-      blockedBy,
-      blockedByRelations,
+      issues,
+      issueById,
     } as const
   }),
 }) {
@@ -165,7 +191,7 @@ export const LinearIssueSource = Layer.effect(
       (state) => state.type === "canceled",
     )!
 
-    const linearStateToPrdState = (state: WorkflowState): PrdIssue["state"] => {
+    const linearStateToPrdState = (state: State): PrdIssue["state"] => {
       switch (state.id) {
         case backlogState.id:
           return "backlog"
@@ -200,53 +226,31 @@ export const LinearIssueSource = Layer.effect(
       }
     }
 
-    const issues = linear
-      .stream((c) =>
-        c.issues({
-          filter: {
-            project: { id: { eq: project.id } },
-            assignee: { isMe: { eq: true } },
-            labels: {
-              id: labelId.pipe(
-                Option.map((eq) => ({ eq })),
-                Option.getOrNull,
-              ),
-            },
-            state: {
-              type: { in: ["unstarted", "started", "completed"] },
-            },
-          },
-        }),
-      )
-      .pipe(
-        Stream.filter((issue) => {
-          const completedAt = issue.completedAt
-          if (!completedAt) return true
-          const completed = DateTime.makeUnsafe(completedAt)
-          const threeDaysAgo = DateTime.nowUnsafe().pipe(
-            DateTime.subtract({ days: 3 }),
-          )
-          return DateTime.isGreaterThanOrEqualTo(completed, threeDaysAgo)
-        }),
-        Stream.mapEffect(
-          Effect.fnUntraced(function* (issue) {
+    const issues = linear.issues({ labelId, projectId: project.id }).pipe(
+      Effect.mapError((cause) => new IssueSourceError({ cause })),
+      Effect.map((issues) => {
+        const threeDaysAgo = DateTime.nowUnsafe().pipe(
+          DateTime.subtract({ days: 3 }),
+        )
+        return pipe(
+          Array.filter(issues, (issue) => {
             identifierMap.set(issue.identifier, issue.id)
-            const linearState = linear.states.find(
-              (s) => s.id === issue.stateId,
-            )!
-            const state = linearStateToPrdState(linearState)
-            const blockedBy =
-              state === "todo"
-                ? yield* Stream.runCollect(linear.blockedBy(issue))
-                : []
+            const completedAt = issue.completedAt
+            if (!completedAt) return true
+            return DateTime.isGreaterThanOrEqualTo(completedAt, threeDaysAgo)
+          }),
+          Array.map((issue) => {
+            const blocks = issue.inverseRelations.nodes.filter(
+              (r) => r.type === "blocks",
+            )
             return new PrdIssue({
               id: issue.identifier,
               title: issue.title,
               description: issue.description ?? "",
               priority: issue.priority,
               estimate: issue.estimate ?? null,
-              state,
-              blockedBy: blockedBy.map((i) => i.identifier),
+              state: linearStateToPrdState(issue.state),
+              blockedBy: blocks.map((r) => r.issue.identifier),
               autoMerge: autoMergeLabelId.pipe(
                 Option.map((labelId) => issue.labelIds.includes(labelId)),
                 Option.getOrElse(() => false),
@@ -254,11 +258,9 @@ export const LinearIssueSource = Layer.effect(
               githubPrNumber: null,
             })
           }),
-          { concurrency: 10 },
-        ),
-        Stream.runCollect,
-        Effect.mapError((cause) => new IssueSourceError({ cause })),
-      )
+        )
+      }),
+    )
 
     return IssueSource.of({
       issues,
@@ -333,22 +335,18 @@ export const LinearIssueSource = Layer.effect(
             return blockerIssueId ? [blockerIssueId] : []
           })
 
-          const linearIssue = yield* linear.use((c) => c.issue(issueId))
-          const existingRelations = yield* Stream.runCollect(
-            linear.blockedByRelations(linearIssue),
-          )
-          const existingBlockers = new Map(
-            existingRelations.map((relation) => [
-              relation.issueId!,
-              relation.id,
-            ]),
+          const linearIssue = yield* linear.issueById(issueId)
+          const existingBlockers = linearIssue.inverseRelations.nodes.filter(
+            (r) => r.type === "blocks",
           )
 
           const toAdd = blockedBy.filter(
-            (blockerIssueId) => !existingBlockers.has(blockerIssueId),
+            (blockerIssueId) =>
+              !existingBlockers.some((b) => b.issue.id === blockerIssueId),
           )
-          const toRemove = existingRelations.filter(
-            (relation) => !blockedBy.includes(relation.issueId!),
+
+          const toRemove = existingBlockers.filter(
+            (relation) => !blockedBy.includes(relation.issue.id),
           )
 
           if (toAdd.length === 0 && toRemove.length === 0) return
@@ -530,10 +528,35 @@ const getOrSelectAutoMergeLabel = Effect.gen(function* () {
 })
 
 // graphql queries
-const allIssuesNoLabelQuery = `query allIssues($after: String, $projectId: ID!) {
+const issueQueryFields = `
+  id
+  identifier
+  title
+  description
+  priority
+  estimate
+  state {
+    id
+    name
+    type
+  }
+  labelIds
+  inverseRelations {
+    nodes {
+      id
+      type
+      issue {
+        id
+        identifier
+      }
+    }
+  }
+  completedAt
+`
+
+const allIssuesNoLabelQuery = `query allIssues($projectId: ID!) {
   issues(
     first: 250,
-    after: $after
     filter: {
       project: { id: { eq: $projectId } }
       assignee: { isMe: { eq: true } }
@@ -541,34 +564,14 @@ const allIssuesNoLabelQuery = `query allIssues($after: String, $projectId: ID!) 
     }
   ) {
     nodes {
-      id
-      identifier
-      title
-      description
-      priority
-      estimate
-      state {
-        id
-        name
-        type
-      }
-      labelIds
-      inverseRelations {
-        nodes {
-          type
-          issue {
-            identifier
-          }
-        }
-      }
+      ${issueQueryFields}
     }
   }
 }
 `
-const allIssuesQuery = `query allIssues($after: String, $projectId: ID!, $labelId: ID!) {
+const allIssuesQuery = `query allIssues($projectId: ID!, $labelId: ID!) {
   issues(
     first: 250,
-    after: $after
     filter: {
       project: { id: { eq: $projectId } }
       assignee: { isMe: { eq: true } }
@@ -577,27 +580,14 @@ const allIssuesQuery = `query allIssues($after: String, $projectId: ID!, $labelI
     }
   ) {
     nodes {
-      id
-      identifier
-      title
-      description
-      priority
-      estimate
-      state {
-        id
-        name
-        type
-      }
-      labelIds
-      inverseRelations {
-        nodes {
-          type
-          issue {
-            identifier
-          }
-        }
-      }
+      ${issueQueryFields}
     }
+  }
+}
+`
+const issueByIdQuery = `query issueById($id: String!) {
+  issue(id: $id) {
+    ${issueQueryFields}
   }
 }
 `
