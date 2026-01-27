@@ -71,4 +71,11 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
       )
     )
   }
+
+  withGithubPrNumber(prNumber: number): PrdIssue {
+    return new PrdIssue({
+      ...this,
+      githubPrNumber: prNumber,
+    })
+  }
 }

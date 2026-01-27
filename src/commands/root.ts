@@ -331,15 +331,19 @@ const run = Effect.fnUntraced(
       )
       const chosenTask = yield* Schema.decodeEffect(ChosenTask)(taskJson).pipe(
         Effect.mapError(() => new ChosenTaskNotFound()),
-        Effect.tap(
+        Effect.flatMap(
           Effect.fnUntraced(function* (task) {
             const prdTask = yield* prd.findById(task.id)
-            if (prdTask?.state === "in-progress") return
+            if (prdTask?.state === "in-progress") {
+              return task.githubPrNumber
+                ? prdTask.withGithubPrNumber(task.githubPrNumber)
+                : prdTask
+            }
             return yield* new ChosenTaskNotFound()
           }),
         ),
       )
-      taskId = chosenTask.id
+      taskId = chosenTask.id!
       yield* source.ensureInProgress(taskId).pipe(
         Effect.timeoutOrElse({
           duration: "1 minute",
@@ -358,14 +362,31 @@ const run = Effect.fnUntraced(
         )
       }
 
+      yield* pipe(
+        cliAgent.command({
+          outputMode: "pipe",
+          prompt: promptGen.promptInstructions({
+            task: chosenTask,
+            targetBranch: Option.getOrUndefined(options.targetBranch),
+            specsDirectory: options.specsDirectory,
+            githubPrNumber: chosenTask.githubPrNumber ?? undefined,
+          }),
+          prdFilePath: pathService.join(".lalph", "prd.yml"),
+        }),
+        ChildProcess.setCwd(worktree.directory),
+        options.commandPrefix,
+        execWithStallTimeout,
+      )
+      const prompt = yield* fs.readFileString(
+        pathService.join(worktree.directory, ".lalph", "instructions.md"),
+      )
+
       const cliCommand = pipe(
         cliAgent.command({
           outputMode: "pipe",
           prompt: promptGen.prompt({
-            taskId,
-            targetBranch: Option.getOrUndefined(options.targetBranch),
+            prompt,
             specsDirectory: options.specsDirectory,
-            githubPrNumber: chosenTask.githubPrNumber ?? undefined,
           }),
           prdFilePath: pathService.join(".lalph", "prd.yml"),
         }),

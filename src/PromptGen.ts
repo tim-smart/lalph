@@ -92,42 +92,9 @@ Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.
 
 ${prdNotes()}`
 
-      const prompt = (options: {
-        readonly taskId: string
-        readonly targetBranch: string | undefined
+      const keyInformation = (options: {
         readonly specsDirectory: string
-        readonly githubPrNumber: number | undefined
-      }) => `The following instructions should be done without interaction or asking for permission.
-
-1. Study the ${options.specsDirectory}/README.md file (if available).
-   Then your job is to complete the task with id \`${options.taskId}\` from the prd.yml file.
-   Read the entire prd.yml file to understand the context of the task and any key learnings from previous work.
-2. ${
-        options.githubPrNumber
-          ? `The Github PR #${options.githubPrNumber} has been detected for this task and the branch has been checked out.
-   - Review feedback in the .lalph/feedback.md file (same folder as the prd.yml file).`
-          : `Create a new branch for the task using the format \`{task id}/description\`, using the current HEAD as the base (don't checkout any other branches first).`
-      }
-3. Implement the task.
-   - If this task is a research task, **do not** make any code changes yet.
-   - If this task is a research task and you add follow-up tasks, include this tasks id in each new tasks \`blockedBy\` field.
-   - **If at any point** you discover something that needs fixing, or another task
-     that needs doing, immediately add it to the prd.yml file as a new task unless
-     you plan to fix it as part of this task.
-   - Add important discoveries about the codebase, or challenges faced to the task's
-     \`description\`. More details below.
-4. Run any checks / feedback loops, such as type checks, unit tests, or linting.
-5. ${!options.githubPrNumber ? `Create a pull request for this task.${options.targetBranch ? ` The target branch for the PR should be \`${options.targetBranch}\`. If the target branch does not exist, create it first.` : ""}` : "Commit and push your changes to the pull request."}
-   ${sourceMeta.githubPrInstructions}
-   The PR description should include a summary of the changes made.
-   - **DO NOT** commit any of the files in the \`.lalph\` directory.
-   - You have permission to create or update the PR as needed. You have full permission to push branches, create PRs or create git commits.
-6. Update the prd.yml file to reflect any changes in task states.
-   - Update the prd.yml file after the GitHub PR has been created or updated.
-   - Rewrite the notes in the description to include only the key discoveries and information that could speed up future work on other tasks.
-   - If you believe the task is complete, update the \`state\` to "in-review".
-
-## Important: Adding new tasks
+      }) => `## Important: Adding new tasks
 
 **If at any point** you discover something that needs fixing, or another task
 that needs doing, immediately add it to the prd.yml file as a new task.
@@ -154,6 +121,69 @@ If for any reason you get stuck on a task, mark the task back as "todo" by updat
 challenges faced.
 
 ${prdNotes(options)}`
+
+      const promptInstructions = (options: {
+        readonly task: PrdIssue
+        readonly targetBranch: string | undefined
+        readonly specsDirectory: string
+        readonly githubPrNumber: number | undefined
+      }) => `You are to read all of the following sections, and then output
+step by step instructions for another AI agent to fullfil the task. Make sure to
+do some quick research to understand the task before writing the instructions.
+
+Save the instructions in a markdown file called ".lalph/instructions.md".
+
+**Do not** start working on the task yet, only output the instructions.
+Do everything you can to help the agent succeed.
+
+"Help others achieve their dreams and you will achieve yours."
+
+# The task
+
+ID: ${options.task.id}
+Task: ${options.task.title}
+Description:
+
+${options.task.description}
+
+# Instructions
+
+1. Study the ${options.specsDirectory}/README.md file (if available), and read
+   the entire prd.yml file to understand the context of the task and any key
+   learnings from previous work.
+2. ${
+        options.githubPrNumber
+          ? `The Github PR #${options.githubPrNumber} has been detected for this task and the branch has been checked out.
+   - Review feedback in the .lalph/feedback.md file (same folder as the prd.yml file).`
+          : `Create a new branch for the task using the format \`{task id}/description\`, using the current HEAD as the base (don't checkout any other branches first).`
+      }
+3. Implement the task.
+   - If this task is a research task, **do not** make any code changes yet.
+   - If this task is a research task and you add follow-up tasks, include (at least) "${options.task.id}" in the new task's \`blockedBy\` field.
+   - **If at any point** you discover something that needs fixing, or another task
+     that needs doing, immediately add it to the prd.yml file as a new task unless
+     you plan to fix it as part of this task.
+   - Add important discoveries about the codebase, or challenges faced to the task's
+     \`description\`. More details below.
+4. Run any checks / feedback loops, such as type checks, unit tests, or linting.
+5. ${!options.githubPrNumber ? `Create a pull request for this task.${options.targetBranch ? ` The target branch for the PR should be \`${options.targetBranch}\`. If the target branch does not exist, create it first.` : ""}` : "Commit and push your changes to the pull request."}
+   ${sourceMeta.githubPrInstructions}
+   The PR description should include a summary of the changes made.
+   - **DO NOT** commit any of the files in the \`.lalph\` directory.
+   - You have permission to create or update the PR as needed. You have full permission to push branches, create PRs or create git commits.
+6. Update the prd.yml file to reflect any changes in task states.
+   - Update the prd.yml file after the GitHub PR has been created or updated.
+   - Rewrite the notes in the description to include only the key discoveries and information that could speed up future work on other tasks.
+   - If you believe the task is complete, update the \`state\` to "in-review".
+
+${keyInformation(options)}`
+
+      const prompt = (options: {
+        readonly prompt: string
+        readonly specsDirectory: string
+      }) => `${options.prompt}
+
+${keyInformation(options)}`
 
       const promptTimeout = (options: {
         readonly taskId: string
@@ -208,7 +238,13 @@ ${prdNotes(options)}`
  
 ${prdNotes(options)}`
 
-      return { promptChoose, prompt, promptTimeout, planPrompt } as const
+      return {
+        promptChoose,
+        promptInstructions,
+        prompt,
+        promptTimeout,
+        planPrompt,
+      } as const
     }),
   },
 ) {
