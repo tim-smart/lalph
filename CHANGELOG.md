@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.92
+
+### Patch Changes
+
+- [`f71cc88`](https://github.com/tim-smart/lalph/commit/f71cc880e5edf8a746b31494a6a207fec2f74259) Thanks [@tim-smart](https://github.com/tim-smart)! - if PR is missing, maybe revert issue state
+
 ## 0.1.91
 
 ### Patch Changes
