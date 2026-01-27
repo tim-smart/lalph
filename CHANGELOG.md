@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.91
+
+### Patch Changes
+
+- [`e9db189`](https://github.com/tim-smart/lalph/commit/e9db189b403019b1ebf34f18eb102a81712976cc) Thanks [@tim-smart](https://github.com/tim-smart)! - improve pr auto-merge
+
 ## 0.1.90
 
 ### Patch Changes
