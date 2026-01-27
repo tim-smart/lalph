@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.87
+
+### Patch Changes
+
+- [`843579d`](https://github.com/tim-smart/lalph/commit/843579d191322011ac85d381fd7034dbff33ca6c) Thanks [@tim-smart](https://github.com/tim-smart)! - share the prd.yml betweek worktrees
+
 ## 0.1.86
 
 ### Patch Changes
