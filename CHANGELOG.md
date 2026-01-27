@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.94
+
+### Patch Changes
+
+- [`b30982b`](https://github.com/tim-smart/lalph/commit/b30982bf24943af6f186a490bca1e55cde94a772) Thanks [@tim-smart](https://github.com/tim-smart)! - improve rebase instruction
+
 ## 0.1.93
 
 ### Patch Changes
