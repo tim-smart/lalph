@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.90
+
+### Patch Changes
+
+- [`48fb9be`](https://github.com/tim-smart/lalph/commit/48fb9be92bff1b9f4f4ba03795f3947a54ff4dff) Thanks [@tim-smart](https://github.com/tim-smart)! - only allow updates for the chosen issue
+
 ## 0.1.86
 
 ### Patch Changes
