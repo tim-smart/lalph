@@ -255,7 +255,6 @@ export const LinearIssueSource = Layer.effect(
                 Option.map((labelId) => issue.labelIds.includes(labelId)),
                 Option.getOrElse(() => false),
               ),
-              githubPrNumber: null,
             })
           }),
         )

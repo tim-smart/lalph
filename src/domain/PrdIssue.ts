@@ -37,10 +37,6 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
     description:
       "Whether the issue should be auto-merged when complete. Read-only field",
   }),
-  githubPrNumber: Schema.NullOr(Schema.Finite).annotate({
-    description:
-      "The created or updated Github pull request number for this task.",
-  }),
 }) {
   static Array = Schema.Array(this)
   static ArrayFromJson = Schema.toCodecJson(this.Array)
@@ -70,12 +66,5 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
         issue.blockedBy,
       )
     )
-  }
-
-  withGithubPrNumber(prNumber: number): PrdIssue {
-    return new PrdIssue({
-      ...this,
-      githubPrNumber: prNumber,
-    })
   }
 }

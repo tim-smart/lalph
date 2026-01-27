@@ -241,6 +241,20 @@ const run = Effect.fnUntraced(
         cwd: worktree.directory,
       })(template, ...args).pipe(ChildProcess.exitCode)
 
+    const execString = (
+      template: TemplateStringsArray,
+      ...args: Array<string | number | boolean>
+    ) =>
+      ChildProcess.make({
+        cwd: worktree.directory,
+      })(template, ...args).pipe(ChildProcess.string)
+
+    const viewPrState = (prNumber?: number) =>
+      execString`gh pr view ${prNumber ? prNumber : ""} --json number,state`.pipe(
+        Effect.flatMap(Schema.decodeEffect(PrState)),
+        Effect.option,
+      )
+
     const execWithStallTimeout = Effect.fnUntraced(function* (
       command: ChildProcess.Command,
     ) {
@@ -335,15 +349,13 @@ const run = Effect.fnUntraced(
           Effect.fnUntraced(function* (task) {
             const prdTask = yield* prd.findById(task.id)
             if (prdTask?.state === "in-progress") {
-              return task.githubPrNumber
-                ? prdTask.withGithubPrNumber(task.githubPrNumber)
-                : prdTask
+              return { ...task, prd: prdTask }
             }
             return yield* new ChosenTaskNotFound()
           }),
         ),
       )
-      taskId = chosenTask.id!
+      taskId = chosenTask.id
       yield* prd.setChosenIssueId(taskId)
       yield* source.ensureInProgress(taskId).pipe(
         Effect.timeoutOrElse({
@@ -367,7 +379,7 @@ const run = Effect.fnUntraced(
         cliAgent.command({
           outputMode: "pipe",
           prompt: promptGen.promptInstructions({
-            task: chosenTask,
+            task: chosenTask.prd,
             targetBranch: Option.getOrUndefined(options.targetBranch),
             specsDirectory: options.specsDirectory,
             githubPrNumber: chosenTask.githubPrNumber ?? undefined,
@@ -419,21 +431,31 @@ const run = Effect.fnUntraced(
       )
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
-      const prs = yield* prd.mergableGithubPrs
-      const task = yield* prd.findById(taskId)
-      if (prs.length === 0) {
-        yield* prd.maybeRevertIssue({ issueId: taskId })
-      } else if (task?.autoMerge) {
-        for (const pr of prs) {
-          if (Option.isSome(options.targetBranch)) {
-            yield* exec`gh pr edit ${pr.prNumber} --base ${options.targetBranch.value}`
-          }
+      // Auto-merge logic
 
-          const exitCode = yield* exec`gh pr merge ${pr.prNumber} -sd`
-          if (exitCode !== 0) {
-            yield* prd.flagUnmergable({ issueId: pr.issueId })
-          }
+      const autoMerge = Effect.gen(function* () {
+        let prState = yield* viewPrState()
+        yield* Effect.log("PR state", prState)
+        if (Option.isNone(prState)) return
+        if (Option.isSome(options.targetBranch)) {
+          yield* exec`gh pr edit --base ${options.targetBranch.value}`
         }
+        yield* exec`gh pr merge -sd`
+        yield* Effect.sleep(Duration.seconds(3))
+        prState = yield* viewPrState(prState.value.number)
+        yield* Effect.log("PR state after merge", prState)
+        if (Option.isSome(prState) && prState.value.state === "MERGED") {
+          return
+        }
+        yield* Effect.log("Flagging unmergable PR")
+        yield* prd.flagUnmergable({ issueId: taskId })
+      }).pipe(Effect.annotateLogs({ phase: "autoMerge" }))
+
+      const task = yield* prd.findById(taskId)
+      if (task?.autoMerge) {
+        yield* autoMerge
+      } else {
+        yield* prd.maybeRevertIssue({ issueId: taskId })
       }
     }).pipe(
       Effect.ensuring(
@@ -467,5 +489,11 @@ const ChosenTask = Schema.fromJsonString(
   Schema.Struct({
     id: Schema.String,
     githubPrNumber: Schema.NullOr(Schema.Finite),
+  }),
+)
+const PrState = Schema.fromJsonString(
+  Schema.Struct({
+    number: Schema.Finite,
+    state: Schema.String,
   }),
 )

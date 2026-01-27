@@ -182,7 +182,6 @@ export const GithubIssueSource = Layer.effect(
                 Option.map((labelName) => hasLabel(issue.labels, labelName)),
                 Option.getOrElse(() => false),
               ),
-              githubPrNumber: null,
             })
           }),
           { concurrency: 10 },

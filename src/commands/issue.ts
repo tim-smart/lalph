@@ -84,7 +84,6 @@ export const commandIssue = Command.make("issue").pipe(
           ...frontMatter,
           description,
           state: "todo",
-          githubPrNumber: null,
         }),
       )
       console.log(`Created issue with ID: ${created.id}`)

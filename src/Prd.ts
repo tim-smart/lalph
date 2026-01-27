@@ -1,5 +1,4 @@
 import {
-  Array,
   Cause,
   Effect,
   FiberHandle,
@@ -23,13 +22,6 @@ export class Prd extends ServiceMap.Service<
   Prd,
   {
     readonly path: string
-    readonly mergableGithubPrs: Effect.Effect<
-      {
-        issueId: string
-        prNumber: number
-      }[],
-      PlatformError.PlatformError
-    >
     readonly maybeRevertIssue: (options: {
       readonly issueId: string
     }) => Effect.Effect<void, PlatformError.PlatformError | IssueSourceError>
@@ -63,19 +55,6 @@ export class Prd extends ServiceMap.Service<
     })
 
     const syncSemaphore = Effect.makeSemaphoreUnsafe(1)
-
-    const mergableGithubPrs = Effect.gen(function* () {
-      const updated = yield* readPrd
-      const prs = Array.empty<{ issueId: string; prNumber: number }>()
-      for (const issue of updated) {
-        const entry = updatedIssues.get(issue.id ?? "")
-        if (!entry || !issue.githubPrNumber || issue.state !== "in-review") {
-          continue
-        }
-        prs.push({ issueId: issue.id!, prNumber: issue.githubPrNumber })
-      }
-      return prs
-    })
 
     const maybeRevertIssue = Effect.fnUntraced(function* (options: {
       readonly issueId: string
@@ -116,7 +95,6 @@ export class Prd extends ServiceMap.Service<
       const initialPrdIssues = yield* readPrd
       return {
         path: prdFile,
-        mergableGithubPrs,
         maybeRevertIssue,
         revertUpdatedIssues: Effect.gen(function* () {
           const updated = yield* readPrd
@@ -156,7 +134,6 @@ export class Prd extends ServiceMap.Service<
         updated.some((u, i) => u.isChangedComparedTo(current[i]!))
       if (!anyChanges) return
 
-      const githubPrs = new Map<string, number>()
       const toRemove = new Set(
         current.filter((i) => i.id !== null).map((i) => i.id!),
       )
@@ -167,10 +144,6 @@ export class Prd extends ServiceMap.Service<
         if (issue.id === null) {
           yield* source.createIssue(issue)
           continue
-        }
-
-        if (issue.githubPrNumber) {
-          githubPrs.set(issue.id, issue.githubPrNumber)
         }
 
         const existing = current.find((i) => i.id === issue.id)
@@ -195,16 +168,7 @@ export class Prd extends ServiceMap.Service<
       )
 
       current = yield* source.issues
-      yield* fs.writeFileString(
-        prdFile,
-        PrdIssue.arrayToYaml(
-          current.map((issue) => {
-            const prNumber = githubPrs.get(issue.id!)
-            if (!prNumber) return issue
-            return new PrdIssue({ ...issue, githubPrNumber: prNumber })
-          }),
-        ),
-      )
+      yield* fs.writeFileString(prdFile, PrdIssue.arrayToYaml(current))
     }).pipe(
       Effect.uninterruptible,
       syncSemaphore.withPermit,
@@ -256,7 +220,6 @@ export class Prd extends ServiceMap.Service<
 
     return {
       path: prdFile,
-      mergableGithubPrs,
       maybeRevertIssue,
       revertUpdatedIssues: syncSemaphore.withPermit(
         Effect.gen(function* () {
