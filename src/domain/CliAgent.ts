@@ -77,7 +77,7 @@ const claude = new CliAgent({
       stdout: outputMode,
       stderr: outputMode,
       stdin: "inherit",
-    })`claude --dangerously-skip-permissions --output-format stream-json --verbose -p ${`@${prdFilePath}
+    })`claude --dangerously-skip-permissions --output-format stream-json --verbose --disallowed-tools AskUserQuestion -p ${`@${prdFilePath}
 
 ${prompt}`}`,
   outputTransformer: claudeOutputTransformer,
