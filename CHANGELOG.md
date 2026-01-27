@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.85
+
+### Patch Changes
+
+- [`f55d212`](https://github.com/tim-smart/lalph/commit/f55d2129e89cfc224864ff0fed7e143f15dfa8c7) Thanks [@tim-smart](https://github.com/tim-smart)! - preserve spec info in descriptions
+
 ## 0.1.84
 
 ### Patch Changes
