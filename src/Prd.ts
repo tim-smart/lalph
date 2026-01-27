@@ -43,6 +43,8 @@ export class Prd extends ServiceMap.Service<
     readonly findById: (
       issueId: string,
     ) => Effect.Effect<PrdIssue | null, PlatformError.PlatformError>
+
+    readonly setChosenIssueId: (issueId: string | null) => Effect.Effect<void>
   }
 >()("lalph/Prd", {
   make: Effect.gen(function* () {
@@ -51,6 +53,7 @@ export class Prd extends ServiceMap.Service<
     const fs = yield* FileSystem.FileSystem
     const source = yield* IssueSource
     const sourceUpdates = yield* IssueSourceUpdates
+    let chosenIssueId: string | null = null
 
     const lalphDir = pathService.join(worktree.directory, `.lalph`)
     const prdFile = pathService.join(worktree.directory, `.lalph`, `prd.yml`)
@@ -132,6 +135,10 @@ export class Prd extends ServiceMap.Service<
           const prdIssues = yield* readPrd
           return prdIssues.find((i) => i.id === issueId) ?? null
         }),
+        setChosenIssueId: (issueId: string | null) =>
+          Effect.sync(() => {
+            chosenIssueId = issueId
+          }),
       }
     }
 
@@ -168,6 +175,7 @@ export class Prd extends ServiceMap.Service<
 
         const existing = current.find((i) => i.id === issue.id)
         if (!existing || !existing.isChangedComparedTo(issue)) continue
+        if (chosenIssueId && existing.id !== chosenIssueId) continue
 
         yield* source.updateIssue({
           issueId: issue.id,
@@ -263,6 +271,10 @@ export class Prd extends ServiceMap.Service<
       ),
       flagUnmergable,
       findById,
+      setChosenIssueId: (issueId: string | null) =>
+        Effect.sync(() => {
+          chosenIssueId = issueId
+        }),
     }
   }).pipe(Effect.withSpan("Prd.build")),
 }) {

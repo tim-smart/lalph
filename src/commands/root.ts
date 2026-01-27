@@ -344,6 +344,7 @@ const run = Effect.fnUntraced(
         ),
       )
       taskId = chosenTask.id!
+      yield* prd.setChosenIssueId(taskId)
       yield* source.ensureInProgress(taskId).pipe(
         Effect.timeoutOrElse({
           duration: "1 minute",
