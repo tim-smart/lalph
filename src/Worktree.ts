@@ -1,10 +1,12 @@
 import { Effect, FileSystem, Layer, Path, ServiceMap } from "effect"
 import { ChildProcess } from "effect/unstable/process"
+import { Prd } from "./Prd.ts"
 
 export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   make: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
+    const prd = yield* Prd
 
     const inExisting = yield* fs.exists(pathService.join(".lalph", "prd.yml"))
     if (inExisting) {
@@ -29,6 +31,10 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     yield* fs.makeDirectory(pathService.join(directory, ".lalph"), {
       recursive: true,
     })
+    yield* fs.symlink(
+      prd.path,
+      pathService.join(directory, ".lalph", "prd.yml"),
+    )
 
     const setupPath = pathService.resolve("scripts", "worktree-setup.sh")
     yield* seedSetupScript(setupPath)

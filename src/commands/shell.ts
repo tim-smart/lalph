@@ -28,7 +28,12 @@ export const commandShell = Command.make("shell").pipe(
         }).pipe(ChildProcess.exitCode)
       },
       Effect.scoped,
-      Effect.provide(Prd.layer.pipe(Layer.provide(CurrentIssueSource.layer))),
+      Effect.provide(
+        Worktree.layer.pipe(
+          Layer.provide(Prd.layer),
+          Layer.provide(CurrentIssueSource.layer),
+        ),
+      ),
     ),
   ),
 )

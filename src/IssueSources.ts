@@ -3,7 +3,7 @@ import { Setting, Settings } from "./Settings.ts"
 import { LinearIssueSource, resetLinear } from "./Linear.ts"
 import { Prompt } from "effect/unstable/cli"
 import { GithubIssueSource, resetGithub } from "./Github.ts"
-import { IssueSourceUpdates, type IssueSource } from "./IssueSource.ts"
+import { type IssueSource } from "./IssueSource.ts"
 
 const issueSources: ReadonlyArray<typeof CurrentIssueSource.Service> = [
   {
@@ -71,7 +71,7 @@ export class CurrentIssueSource extends ServiceMap.Service<
     Effect.gen(function* () {
       const source = yield* getOrSelectIssueSource
       const services = yield* Layer.buildWithMemoMap(
-        IssueSourceUpdates.layer.pipe(Layer.provideMerge(source.layer)),
+        source.layer,
         yield* Layer.CurrentMemoMap,
         yield* Effect.scope,
       ).pipe(Effect.withSpan("CurrentIssueSource.build"))

@@ -11,13 +11,8 @@ import {
   ServiceMap,
   Stream,
 } from "effect"
-import { Worktree } from "./Worktree.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
-import {
-  IssueSource,
-  IssueSourceError,
-  IssueSourceUpdates,
-} from "./IssueSource.ts"
+import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 
 export class Prd extends ServiceMap.Service<
   Prd,
@@ -46,14 +41,12 @@ export class Prd extends ServiceMap.Service<
   }
 >()("lalph/Prd", {
   make: Effect.gen(function* () {
-    const worktree = yield* Worktree
     const pathService = yield* Path.Path
     const fs = yield* FileSystem.FileSystem
     const source = yield* IssueSource
-    const sourceUpdates = yield* IssueSourceUpdates
 
-    const lalphDir = pathService.join(worktree.directory, `.lalph`)
-    const prdFile = pathService.join(worktree.directory, `.lalph`, `prd.yml`)
+    const lalphDir = pathService.resolve(`.lalph`)
+    const prdFile = pathService.join(lalphDir, `prd.yml`)
     const readPrd = Effect.gen(function* () {
       const yaml = yield* fs.readFileString(prdFile)
       return PrdIssue.arrayFromYaml(yaml)
@@ -108,32 +101,6 @@ export class Prd extends ServiceMap.Service<
         state: "todo",
       })
     })
-
-    if (worktree.inExisting) {
-      const initialPrdIssues = yield* readPrd
-      return {
-        path: prdFile,
-        mergableGithubPrs,
-        maybeRevertIssue,
-        revertUpdatedIssues: Effect.gen(function* () {
-          const updated = yield* readPrd
-          for (const issue of updated) {
-            if (issue.state !== "in-progress") continue
-            const prevIssue = initialPrdIssues.find((i) => i.id === issue.id)
-            if (!prevIssue || prevIssue.state === "in-progress") continue
-            yield* source.updateIssue({
-              issueId: issue.id!,
-              state: prevIssue.state,
-            })
-          }
-        }),
-        flagUnmergable,
-        findById: Effect.fnUntraced(function* (issueId: string) {
-          const prdIssues = yield* readPrd
-          return prdIssues.find((i) => i.id === issueId) ?? null
-        }),
-      }
-    }
 
     yield* Effect.addFinalizer(() => Effect.ignore(fs.remove(prdFile)))
 
@@ -211,18 +178,18 @@ export class Prd extends ServiceMap.Service<
     )
 
     const updateSyncHandle = yield* FiberHandle.make()
-    const updateSync = Effect.fnUntraced(
-      function* (sourceIssues: ReadonlyArray<PrdIssue>) {
-        const tempFile = yield* fs.makeTempFileScoped()
-        const anyChanges =
-          sourceIssues.length !== current.length ||
-          sourceIssues.some((u, i) => u.isChangedComparedTo(current[i]!))
-        if (!anyChanges) return
+    const updateSync = Effect.gen(function* () {
+      const tempFile = yield* fs.makeTempFileScoped()
+      const sourceIssues = yield* source.issues
+      const anyChanges =
+        sourceIssues.length !== current.length ||
+        sourceIssues.some((u, i) => u.isChangedComparedTo(current[i]!))
+      if (!anyChanges) return
 
-        yield* fs.writeFileString(tempFile, PrdIssue.arrayToYaml(sourceIssues))
-        yield* fs.rename(tempFile, prdFile)
-        current = sourceIssues
-      },
+      yield* fs.writeFileString(tempFile, PrdIssue.arrayToYaml(sourceIssues))
+      yield* fs.rename(tempFile, prdFile)
+      current = sourceIssues
+    }).pipe(
       Effect.scoped,
       FiberHandle.run(updateSyncHandle, { onlyIfMissing: true }),
     )
@@ -241,7 +208,11 @@ export class Prd extends ServiceMap.Service<
       Effect.forkScoped,
     )
 
-    yield* sourceUpdates.pipe(Stream.runForEach(updateSync), Effect.forkScoped)
+    yield* updateSync.pipe(
+      Effect.delay("1 minute"),
+      Effect.forever,
+      Effect.forkScoped,
+    )
 
     const findById = (issueId: string) =>
       Effect.sync(() => current.find((i) => i.id === issueId) ?? null)
@@ -266,9 +237,5 @@ export class Prd extends ServiceMap.Service<
     }
   }).pipe(Effect.withSpan("Prd.build")),
 }) {
-  static layerNoWorktree = Layer.effect(this, this.make)
-  static layer = this.layerNoWorktree.pipe(Layer.provideMerge(Worktree.layer))
-  static layerLocal = this.layerNoWorktree.pipe(
-    Layer.provideMerge(Worktree.layerLocal),
-  )
+  static layer = Layer.effect(this, this.make)
 }

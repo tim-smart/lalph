@@ -112,104 +112,109 @@ export const commandRoot = Command.make("lalph", {
   verbose,
 }).pipe(
   Command.withHandler(
-    Effect.fnUntraced(function* ({
-      iterations,
-      concurrency,
-      targetBranch,
-      maxIterationMinutes,
-      stallMinutes,
-      specsDirectory,
-    }) {
-      const source = yield* Layer.build(CurrentIssueSource.layer)
-      const commandPrefix = yield* getCommandPrefix
-      yield* getOrSelectCliAgent
+    Effect.fnUntraced(
+      function* ({
+        iterations,
+        concurrency,
+        targetBranch,
+        maxIterationMinutes,
+        stallMinutes,
+        specsDirectory,
+      }) {
+        const commandPrefix = yield* getCommandPrefix
+        yield* getOrSelectCliAgent
 
-      const isFinite = Number.isFinite(iterations)
-      const iterationsDisplay = isFinite ? iterations : "unlimited"
-      const runConcurrency = Math.max(1, concurrency)
-      const semaphore = Effect.makeSemaphoreUnsafe(runConcurrency)
-      const fibers = yield* FiberSet.make()
+        const isFinite = Number.isFinite(iterations)
+        const iterationsDisplay = isFinite ? iterations : "unlimited"
+        const runConcurrency = Math.max(1, concurrency)
+        const semaphore = Effect.makeSemaphoreUnsafe(runConcurrency)
+        const fibers = yield* FiberSet.make()
 
-      yield* resetInProgress.pipe(
-        Effect.provide(source),
-        Effect.withSpan("Main.resetInProgress"),
-      )
+        yield* resetInProgress.pipe(Effect.withSpan("Main.resetInProgress"))
 
-      yield* Effect.log(
-        `Executing ${iterationsDisplay} iteration(s) with concurrency ${runConcurrency}`,
-      )
-      if (Option.isSome(targetBranch)) {
-        yield* Effect.log(`Using target branch: ${targetBranch.value}`)
-      }
-
-      let iteration = 0
-      let quit = false
-
-      while (true) {
-        yield* semaphore.take(1)
-        if (quit || (isFinite && iteration >= iterations)) {
-          break
+        yield* Effect.log(
+          `Executing ${iterationsDisplay} iteration(s) with concurrency ${runConcurrency}`,
+        )
+        if (Option.isSome(targetBranch)) {
+          yield* Effect.log(`Using target branch: ${targetBranch.value}`)
         }
 
-        const currentIteration = iteration
+        let iteration = 0
+        let quit = false
 
-        const startedDeferred = yield* Deferred.make<void>()
+        while (true) {
+          yield* semaphore.take(1)
+          if (quit || (isFinite && iteration >= iterations)) {
+            break
+          }
 
-        yield* checkForWork.pipe(
-          Effect.andThen(
-            run({
-              startedDeferred,
-              targetBranch,
-              specsDirectory,
-              stallTimeout: Duration.minutes(stallMinutes),
-              runTimeout: Duration.minutes(maxIterationMinutes),
-              commandPrefix,
+          const currentIteration = iteration
+
+          const startedDeferred = yield* Deferred.make<void>()
+
+          yield* checkForWork.pipe(
+            Effect.andThen(
+              run({
+                startedDeferred,
+                targetBranch,
+                specsDirectory,
+                stallTimeout: Duration.minutes(stallMinutes),
+                runTimeout: Duration.minutes(maxIterationMinutes),
+                commandPrefix,
+              }),
+            ),
+            Effect.catchFilter(
+              (e) =>
+                e._tag === "NoMoreWork" || e._tag === "QuitError"
+                  ? Filter.fail(e)
+                  : e,
+              (e) => Effect.logWarning(Cause.fail(e)),
+            ),
+            Effect.catchTags({
+              NoMoreWork(_) {
+                if (isFinite) {
+                  // If we have a finite number of iterations, we exit when no more
+                  // work is found
+                  iterations = currentIteration
+                  return Effect.log(
+                    `No more work to process, ending after ${currentIteration} iteration(s).`,
+                  )
+                }
+                const log =
+                  Iterable.size(fibers) <= 1
+                    ? Effect.log(
+                        "No more work to process, waiting 30 seconds...",
+                      )
+                    : Effect.void
+                return Effect.andThen(log, Effect.sleep(Duration.seconds(30)))
+              },
+              QuitError(_) {
+                quit = true
+                return Effect.void
+              },
             }),
-          ),
-          Effect.catchFilter(
-            (e) =>
-              e._tag === "NoMoreWork" || e._tag === "QuitError"
-                ? Filter.fail(e)
-                : e,
-            (e) => Effect.logWarning(Cause.fail(e)),
-          ),
-          Effect.catchTags({
-            NoMoreWork(_) {
-              if (isFinite) {
-                // If we have a finite number of iterations, we exit when no more
-                // work is found
-                iterations = currentIteration
-                return Effect.log(
-                  `No more work to process, ending after ${currentIteration} iteration(s).`,
-                )
-              }
-              const log =
-                Iterable.size(fibers) <= 1
-                  ? Effect.log("No more work to process, waiting 30 seconds...")
-                  : Effect.void
-              return Effect.andThen(log, Effect.sleep(Duration.seconds(30)))
-            },
-            QuitError(_) {
-              quit = true
-              return Effect.void
-            },
-          }),
-          Effect.annotateLogs({
-            iteration: currentIteration,
-          }),
-          Effect.ensuring(semaphore.release(1)),
-          Effect.ensuring(Deferred.completeWith(startedDeferred, Effect.void)),
-          Effect.provide(source),
-          FiberSet.run(fibers),
-        )
+            Effect.annotateLogs({
+              iteration: currentIteration,
+            }),
+            Effect.ensuring(semaphore.release(1)),
+            Effect.ensuring(
+              Deferred.completeWith(startedDeferred, Effect.void),
+            ),
+            FiberSet.run(fibers),
+          )
 
-        yield* Deferred.await(startedDeferred)
+          yield* Deferred.await(startedDeferred)
 
-        iteration++
-      }
+          iteration++
+        }
 
-      yield* FiberSet.awaitEmpty(fibers)
-    }, Effect.scoped),
+        yield* FiberSet.awaitEmpty(fibers)
+      },
+      Effect.scoped,
+      Effect.provide(
+        Prd.layer.pipe(Layer.provideMerge(CurrentIssueSource.layer)),
+      ),
+    ),
   ),
 )
 
@@ -451,7 +456,7 @@ const run = Effect.fnUntraced(
     )
   },
   Effect.scoped,
-  Effect.provide([PromptGen.layer, Prd.layer]),
+  Effect.provide([PromptGen.layer, Worktree.layer]),
 )
 
 class RunnerStalled extends Data.TaggedError("RunnerStalled") {

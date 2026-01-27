@@ -1,4 +1,4 @@
-import { Effect, Layer, Schedule, Schema, ServiceMap, Stream } from "effect"
+import { Effect, Schema, ServiceMap } from "effect"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
 
 export class IssueSource extends ServiceMap.Service<
@@ -27,29 +27,6 @@ export class IssueSource extends ServiceMap.Service<
     ) => Effect.Effect<void, IssueSourceError>
   }
 >()("lalph/IssueSource") {}
-
-export class IssueSourceUpdates extends ServiceMap.Service<IssueSourceUpdates>()(
-  "lalph/IssueSourceUpdates",
-  {
-    make: Effect.gen(function* () {
-      const source = yield* IssueSource
-      const updates = yield* Stream.fromEffectSchedule(
-        source.issues,
-        Schedule.spaced("1 minute"),
-      ).pipe(
-        Stream.retry(Schedule.spaced("10 seconds")),
-        Stream.orDie,
-        Stream.share({
-          capacity: 1,
-          strategy: "dropping",
-        }),
-      )
-      return updates
-    }),
-  },
-) {
-  static layer = Layer.effect(this, this.make)
-}
 
 export class IssueSourceError extends Schema.ErrorClass<IssueSourceError>(
   "lalph/IssueSourceError",

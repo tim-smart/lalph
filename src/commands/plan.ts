@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Option, Path, pipe } from "effect"
+import { Effect, FileSystem, Layer, Option, Path, pipe } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
@@ -26,7 +26,11 @@ export const commandPlan = Command.make("plan", { dangerous }).pipe(
         targetBranch,
         commandPrefix,
         dangerous,
-      }).pipe(Effect.provide(CurrentIssueSource.layer))
+      }).pipe(
+        Effect.provide(
+          Prd.layer.pipe(Layer.provideMerge(CurrentIssueSource.layer)),
+        ),
+      )
     }),
   ),
 )
@@ -85,5 +89,5 @@ const plan = Effect.fnUntraced(
     }
   },
   Effect.scoped,
-  Effect.provide([PromptGen.layer, Prd.layer, Worktree.layer]),
+  Effect.provide([PromptGen.layer, Worktree.layer]),
 )
