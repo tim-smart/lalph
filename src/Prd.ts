@@ -69,7 +69,7 @@ export class Prd extends ServiceMap.Service<
     }, syncSemaphore.withPermit)
 
     const mergeConflictInstruction =
-      "**Before doing anything else**: rebase the PR against the target branch, and resolve any merge conflicts."
+      "**Your only remaining task**: rebase the PR against the target branch, and resolve any merge conflicts. Once done, you can remove this instruction from the issue description."
 
     const flagUnmergable = Effect.fnUntraced(function* (options: {
       readonly issueId: string
