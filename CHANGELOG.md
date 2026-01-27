@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.86
+
+### Patch Changes
+
+- [`a796227`](https://github.com/tim-smart/lalph/commit/a7962276250bdbb41fd4c7479ba3a6fd1f4faf1d) Thanks [@tim-smart](https://github.com/tim-smart)! - clarify only open PR's should be re-used
+
 ## 0.1.85
 
 ### Patch Changes
