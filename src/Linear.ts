@@ -47,6 +47,10 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
         ),
         Effect.scoped,
       )
+    const gql = <A>(query: string, variables?: Record<string, unknown>) =>
+      use((c) => c.client.rawRequest(query, variables)).pipe(
+        Effect.map((r) => r.data as A),
+      )
 
     const stream = <A>(f: (client: LinearClient) => Promise<Connection<A>>) =>
       Stream.paginate(
@@ -524,3 +528,76 @@ const getOrSelectAutoMergeLabel = Effect.gen(function* () {
   }
   return yield* autoMergeLabelIdSelect
 })
+
+// graphql queries
+const allIssuesNoLabelQuery = `query allIssues($after: String, $projectId: ID!) {
+  issues(
+    first: 250,
+    after: $after
+    filter: {
+      project: { id: { eq: $projectId } }
+      assignee: { isMe: { eq: true } }
+      state: { type: { in: ["unstarted", "started", "completed"] } }
+    }
+  ) {
+    nodes {
+      id
+      identifier
+      title
+      description
+      priority
+      estimate
+      state {
+        id
+        name
+        type
+      }
+      labelIds
+      inverseRelations {
+        nodes {
+          type
+          issue {
+            identifier
+          }
+        }
+      }
+    }
+  }
+}
+`
+const allIssuesQuery = `query allIssues($after: String, $projectId: ID!, $labelId: ID!) {
+  issues(
+    first: 250,
+    after: $after
+    filter: {
+      project: { id: { eq: $projectId } }
+      assignee: { isMe: { eq: true } }
+      labels: { id: { eq: $labelId } }
+      state: { type: { in: ["unstarted", "started", "completed"] } }
+    }
+  ) {
+    nodes {
+      id
+      identifier
+      title
+      description
+      priority
+      estimate
+      state {
+        id
+        name
+        type
+      }
+      labelIds
+      inverseRelations {
+        nodes {
+          type
+          issue {
+            identifier
+          }
+        }
+      }
+    }
+  }
+}
+`
