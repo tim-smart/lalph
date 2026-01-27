@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.83
+
+### Patch Changes
+
+- [`54d1908`](https://github.com/tim-smart/lalph/commit/54d19087646c6e4359614de9b7c57fec67122e3d) Thanks [@tim-smart](https://github.com/tim-smart)! - add a 3rd step to the main loop, which generates the prompt for the main work agent
+
 ## 0.1.82
 
 ### Patch Changes
