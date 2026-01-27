@@ -8,7 +8,7 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     const pathService = yield* Path.Path
     const prd = yield* Prd
 
-    const inExisting = yield* fs.exists(pathService.join(".lalph", "prd.yml"))
+    const inExisting = yield* fs.exists(pathService.join(".lalph", "worktree"))
     if (inExisting) {
       const directory = pathService.resolve(".")
       return { directory, inExisting } as const
@@ -31,6 +31,11 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     yield* fs.makeDirectory(pathService.join(directory, ".lalph"), {
       recursive: true,
     })
+    yield* Effect.scoped(
+      fs.open(pathService.join(directory, ".lalph", "worktree"), {
+        flag: "a+",
+      }),
+    )
     yield* fs.symlink(
       prd.path,
       pathService.join(directory, ".lalph", "prd.yml"),
