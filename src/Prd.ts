@@ -45,8 +45,8 @@ export class Prd extends ServiceMap.Service<
     const fs = yield* FileSystem.FileSystem
     const source = yield* IssueSource
 
-    const lalphDir = pathService.resolve(`.lalph`)
-    const prdFile = pathService.join(lalphDir, `prd.yml`)
+    const tempDir = yield* fs.makeTempDirectoryScoped()
+    const prdFile = pathService.join(tempDir, `prd.yml`)
     const readPrd = Effect.gen(function* () {
       const yaml = yield* fs.readFileString(prdFile)
       return PrdIssue.arrayFromYaml(yaml)
@@ -101,8 +101,6 @@ export class Prd extends ServiceMap.Service<
         state: "todo",
       })
     })
-
-    yield* Effect.addFinalizer(() => Effect.ignore(fs.remove(prdFile)))
 
     let current = yield* source.issues
     yield* fs.writeFileString(prdFile, PrdIssue.arrayToYaml(current))
@@ -194,7 +192,7 @@ export class Prd extends ServiceMap.Service<
       FiberHandle.run(updateSyncHandle, { onlyIfMissing: true }),
     )
 
-    yield* fs.watch(lalphDir).pipe(
+    yield* fs.watch(tempDir).pipe(
       Stream.buffer({
         capacity: 1,
         strategy: "dropping",
