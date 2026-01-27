@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.84
+
+### Patch Changes
+
+- [`c4f2c44`](https://github.com/tim-smart/lalph/commit/c4f2c44b4e60e739cc236a5ef22fe21e4bacc1af) Thanks [@tim-smart](https://github.com/tim-smart)! - reduce linear api calls
+
 ## 0.1.83
 
 ### Patch Changes
