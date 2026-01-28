@@ -1,5 +1,13 @@
 # lalph
 
+```
+ _       _       _
+| | ___ | | __ _| |__
+| |/ _ \| |/ _` | '_ \
+| | (_) | | (_| | | | |
+|_|\___/|_|\__,_|_| |_|
+```
+
 A LLM agent orchestrator driven by your chosen source of issues.
 
 ## Features
