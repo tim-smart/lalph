@@ -186,6 +186,19 @@ ${keyInformation(options)}`
 
 ${keyInformation(options)}`
 
+      const promptReview = (options: {
+        readonly prompt: string
+        readonly specsDirectory: string
+      }) => `A previous AI agent has completed a task from the instructions below.
+
+You job is to review their work, and make any necessary improvements or corrections if needed.
+
+# Prevous instructions
+
+${options.prompt}
+
+${keyInformation(options)}`
+
       const promptTimeout = (options: {
         readonly taskId: string
         readonly specsDirectory: string
@@ -243,6 +256,7 @@ ${prdNotes(options)}`
         promptChoose,
         promptInstructions,
         prompt,
+        promptReview,
         promptTimeout,
         planPrompt,
       } as const

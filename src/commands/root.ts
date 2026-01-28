@@ -1,22 +1,16 @@
 import {
   Cause,
   Config,
-  Data,
-  DateTime,
   Deferred,
   Duration,
   Effect,
   FiberSet,
   FileSystem,
   Filter,
-  identity,
   Iterable,
   Layer,
   Option,
   Path,
-  pipe,
-  Schema,
-  Stream,
 } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
@@ -27,6 +21,12 @@ import { Flag, CliError, Command } from "effect/unstable/cli"
 import { checkForWork, IssueSource, resetInProgress } from "../IssueSource.ts"
 import { CurrentIssueSource } from "../IssueSources.ts"
 import { GithubCli } from "../Github/Cli.ts"
+import { agentInstructor } from "../Agents/instructor.ts"
+import { agentWorker } from "../Agents/worker.ts"
+import { agentChooser } from "../Agents/chooser.ts"
+import { RunnerStalled } from "../domain/Errors.ts"
+import { agentReviewer } from "../Agents/reviewer.ts"
+import { agentTimeout } from "../Agents/timeout.ts"
 
 const iterations = Flag.integer("iterations").pipe(
   Flag.withDescription("Number of iterations to run, defaults to unlimited"),
@@ -227,278 +227,149 @@ const run = Effect.fnUntraced(
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
     const worktree = yield* Worktree
-    const promptGen = yield* PromptGen
     const gh = yield* GithubCli
     const cliAgent = yield* getOrSelectCliAgent
     const prd = yield* Prd
     const source = yield* IssueSource
 
-    const exec = (
-      template: TemplateStringsArray,
-      ...args: Array<string | number | boolean>
-    ) =>
-      ChildProcess.make({
-        cwd: worktree.directory,
-      })(template, ...args).pipe(ChildProcess.exitCode)
-
-    const execString = (
-      template: TemplateStringsArray,
-      ...args: Array<string | number | boolean>
-    ) =>
-      ChildProcess.make({
-        cwd: worktree.directory,
-      })(template, ...args).pipe(ChildProcess.string)
-
-    const viewPrState = (prNumber?: number) =>
-      execString`gh pr view ${prNumber ? prNumber : ""} --json number,state`.pipe(
-        Effect.flatMap(Schema.decodeEffect(PrState)),
-        Effect.option,
-      )
-
-    const execWithStallTimeout = Effect.fnUntraced(function* (
-      command: ChildProcess.Command,
-    ) {
-      let lastOutputAt = yield* DateTime.now
-
-      const stallTimeout = Effect.suspend(function loop(): Effect.Effect<
-        never,
-        RunnerStalled
-      > {
-        const now = DateTime.nowUnsafe()
-        const deadline = DateTime.addDuration(
-          lastOutputAt,
-          options.stallTimeout,
-        )
-        if (DateTime.isLessThan(deadline, now)) {
-          return Effect.fail(new RunnerStalled())
-        }
-        const timeUntilDeadline = DateTime.distanceDuration(deadline, now)
-        return Effect.flatMap(Effect.sleep(timeUntilDeadline), loop)
-      })
-
-      const handle = yield* command
-
-      yield* handle.all.pipe(
-        Stream.decodeText(),
-        cliAgent.outputTransformer ? cliAgent.outputTransformer : identity,
-        Stream.runForEachArray((output) => {
-          lastOutputAt = DateTime.nowUnsafe()
-          for (const chunk of output) {
-            process.stdout.write(chunk)
-          }
-          return Effect.void
-        }),
-        Effect.raceFirst(stallTimeout),
-      )
-      return yield* handle.exitCode
-    }, Effect.scoped)
-
-    const currentBranch = (dir: string) =>
-      ChildProcess.make({
-        cwd: dir,
-      })`git branch --show-current`.pipe(
-        ChildProcess.string,
-        Effect.flatMap((output) =>
-          Option.some(output.trim()).pipe(
-            Option.filter((b) => b.length > 0),
-            Effect.fromOption,
-          ),
-        ),
-      )
-
     if (Option.isSome(options.targetBranch)) {
       const targetWithRemote = options.targetBranch.value.includes("/")
         ? options.targetBranch.value
         : `origin/${options.targetBranch.value}`
-      yield* exec`git checkout ${targetWithRemote}`
+      yield* worktree.exec`git checkout ${targetWithRemote}`
     }
 
+    // ensure cleanup of branch after run
+    yield* Effect.addFinalizer(
+      Effect.fnUntraced(function* () {
+        const currentBranchName = yield* worktree
+          .currentBranch(worktree.directory)
+          .pipe(Effect.option, Effect.map(Option.getOrUndefined))
+        if (!currentBranchName) return
+
+        // enter detached state
+        yield* worktree.exec`git checkout --detach ${currentBranchName}`
+        // delete the branch
+        yield* worktree.exec`git branch -D ${currentBranchName}`
+      }, Effect.ignore),
+    )
+
+    let taskId: string | undefined = undefined
+
+    // setup finalizer to revert issue if we fail
+    yield* Effect.addFinalizer(
+      Effect.fnUntraced(function* (exit) {
+        if (exit._tag === "Success") return
+        const prd = yield* Prd
+        if (taskId) {
+          yield* prd.maybeRevertIssue({
+            issueId: taskId,
+          })
+        } else {
+          yield* prd.revertUpdatedIssues
+        }
+      }, Effect.ignore),
+    )
+
+    // 1. Choose task
+    const chosenTask = yield* agentChooser({
+      stallTimeout: options.stallTimeout,
+      commandPrefix: options.commandPrefix,
+      cliAgent,
+    })
+    taskId = chosenTask.id
+    yield* prd.setChosenIssueId(taskId)
+
+    yield* source.ensureInProgress(taskId).pipe(
+      Effect.timeoutOrElse({
+        duration: "1 minute",
+        onTimeout: () => Effect.fail(new RunnerStalled()),
+      }),
+    )
+
+    yield* Deferred.completeWith(options.startedDeferred, Effect.void)
+
+    if (chosenTask.githubPrNumber) {
+      yield* worktree.exec`gh pr checkout ${chosenTask.githubPrNumber}`
+      const feedback = yield* gh.prFeedbackMd(chosenTask.githubPrNumber)
+      yield* fs.writeFileString(
+        pathService.join(worktree.directory, ".lalph", "feedback.md"),
+        feedback,
+      )
+    }
+
+    // 2. Generate instructions
+    const instructions = yield* agentInstructor({
+      stallTimeout: options.stallTimeout,
+      commandPrefix: options.commandPrefix,
+      specsDirectory: options.specsDirectory,
+      targetBranch: options.targetBranch,
+      task: chosenTask.prd,
+      cliAgent,
+      githubPrNumber: chosenTask.githubPrNumber ?? undefined,
+    })
+
     yield* Effect.gen(function* () {
-      let taskId: string | undefined = undefined
-      yield* Effect.addFinalizer(
-        Effect.fnUntraced(function* (exit) {
-          if (exit._tag === "Success") return
-          const prd = yield* Prd
-          if (taskId) {
-            yield* prd.maybeRevertIssue({
-              issueId: taskId,
-            })
-          } else {
-            yield* prd.revertUpdatedIssues
-          }
-        }, Effect.ignore),
-      )
-
-      yield* pipe(
-        cliAgent.resolveCommandChoose({
-          prompt: promptGen.promptChoose,
-          prdFilePath: pathService.join(".lalph", "prd.yml"),
-        }),
-        ChildProcess.setCwd(worktree.directory),
-        options.commandPrefix,
-        ChildProcess.exitCode,
-        Effect.timeoutOrElse({
-          duration: options.stallTimeout,
-          onTimeout: () => Effect.fail(new RunnerStalled()),
-        }),
-      )
-
-      const taskJson = yield* fs.readFileString(
-        pathService.join(worktree.directory, ".lalph", "task.json"),
-      )
-      const chosenTask = yield* Schema.decodeEffect(ChosenTask)(taskJson).pipe(
-        Effect.mapError(() => new ChosenTaskNotFound()),
-        Effect.flatMap(
-          Effect.fnUntraced(function* (task) {
-            const prdTask = yield* prd.findById(task.id)
-            if (prdTask?.state === "in-progress") {
-              return { ...task, prd: prdTask }
-            }
-            return yield* new ChosenTaskNotFound()
-          }),
-        ),
-      )
-      taskId = chosenTask.id
-      yield* prd.setChosenIssueId(taskId)
-      yield* source.ensureInProgress(taskId).pipe(
-        Effect.timeoutOrElse({
-          duration: "1 minute",
-          onTimeout: () => Effect.fail(new RunnerStalled()),
-        }),
-      )
-
-      yield* Deferred.completeWith(options.startedDeferred, Effect.void)
-
-      if (chosenTask.githubPrNumber) {
-        yield* exec`gh pr checkout ${chosenTask.githubPrNumber}`
-        const feedback = yield* gh.prFeedbackMd(chosenTask.githubPrNumber)
-        yield* fs.writeFileString(
-          pathService.join(worktree.directory, ".lalph", "feedback.md"),
-          feedback,
-        )
-      }
-
-      yield* pipe(
-        cliAgent.command({
-          outputMode: "pipe",
-          prompt: promptGen.promptInstructions({
-            task: chosenTask.prd,
-            targetBranch: Option.getOrUndefined(options.targetBranch),
-            specsDirectory: options.specsDirectory,
-            githubPrNumber: chosenTask.githubPrNumber ?? undefined,
-          }),
-          prdFilePath: pathService.join(".lalph", "prd.yml"),
-        }),
-        ChildProcess.setCwd(worktree.directory),
-        options.commandPrefix,
-        execWithStallTimeout,
-      )
-      const prompt = yield* fs.readFileString(
-        pathService.join(worktree.directory, ".lalph", "instructions.md"),
-      )
-
-      const cliCommand = pipe(
-        cliAgent.command({
-          outputMode: "pipe",
-          prompt: promptGen.prompt({
-            prompt,
-            specsDirectory: options.specsDirectory,
-          }),
-          prdFilePath: pathService.join(".lalph", "prd.yml"),
-        }),
-        ChildProcess.setCwd(worktree.directory),
-        options.commandPrefix,
-      )
-
-      const exitCode = yield* execWithStallTimeout(cliCommand).pipe(
-        Effect.timeout(options.runTimeout),
-        Effect.catchTag(
-          "TimeoutError",
-          Effect.fnUntraced(function* (error) {
-            const timeoutCommand = pipe(
-              cliAgent.command({
-                outputMode: "pipe",
-                prompt: promptGen.promptTimeout({
-                  taskId,
-                  specsDirectory: options.specsDirectory,
-                }),
-                prdFilePath: pathService.join(".lalph", "prd.yml"),
-              }),
-              ChildProcess.setCwd(worktree.directory),
-              options.commandPrefix,
-            )
-            yield* execWithStallTimeout(timeoutCommand)
-            return yield* error
-          }),
-        ),
-      )
+      // 3. Work on task
+      const exitCode = yield* agentWorker({
+        specsDirectory: options.specsDirectory,
+        stallTimeout: options.stallTimeout,
+        cliAgent,
+        commandPrefix: options.commandPrefix,
+        instructions,
+      })
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
-      // Auto-merge logic
-
-      const autoMerge = Effect.gen(function* () {
-        let prState = yield* viewPrState()
-        yield* Effect.log("PR state", prState)
-        if (Option.isNone(prState)) {
-          return yield* prd.maybeRevertIssue({ issueId: taskId })
-        }
-        if (Option.isSome(options.targetBranch)) {
-          yield* exec`gh pr edit --base ${options.targetBranch.value}`
-        }
-        yield* exec`gh pr merge -sd`
-        yield* Effect.sleep(Duration.seconds(3))
-        prState = yield* viewPrState(prState.value.number)
-        yield* Effect.log("PR state after merge", prState)
-        if (Option.isSome(prState) && prState.value.state === "MERGED") {
-          return
-        }
-        yield* Effect.log("Flagging unmergable PR")
-        yield* prd.flagUnmergable({ issueId: taskId })
-      }).pipe(Effect.annotateLogs({ phase: "autoMerge" }))
-
-      const task = yield* prd.findById(taskId)
-      if (task?.autoMerge) {
-        yield* autoMerge
-      } else {
-        yield* prd.maybeRevertIssue({ issueId: taskId })
-      }
+      // 4. Review task
+      yield* agentReviewer({
+        specsDirectory: options.specsDirectory,
+        stallTimeout: options.stallTimeout,
+        cliAgent,
+        commandPrefix: options.commandPrefix,
+        instructions,
+      })
     }).pipe(
-      Effect.ensuring(
-        Effect.gen(function* () {
-          const currentBranchName = yield* currentBranch(
-            worktree.directory,
-          ).pipe(Effect.option, Effect.map(Option.getOrUndefined))
-          if (!currentBranchName) return
-
-          // enter detached state
-          yield* exec`git checkout --detach ${currentBranchName}`
-          // delete the branch
-          yield* exec`git branch -D ${currentBranchName}`
-        }).pipe(Effect.ignore),
+      Effect.timeout(options.runTimeout),
+      Effect.tapErrorTag("TimeoutError", () =>
+        agentTimeout({
+          specsDirectory: options.specsDirectory,
+          stallTimeout: options.stallTimeout,
+          cliAgent,
+          commandPrefix: options.commandPrefix,
+          task: chosenTask.prd,
+        }),
       ),
     )
+
+    // Auto-merge logic
+
+    const autoMerge = Effect.gen(function* () {
+      let prState = yield* worktree.viewPrState()
+      yield* Effect.log("PR state", prState)
+      if (Option.isNone(prState)) {
+        return yield* prd.maybeRevertIssue({ issueId: taskId })
+      }
+      if (Option.isSome(options.targetBranch)) {
+        yield* worktree.exec`gh pr edit --base ${options.targetBranch.value}`
+      }
+      yield* worktree.exec`gh pr merge -sd`
+      yield* Effect.sleep(Duration.seconds(3))
+      prState = yield* worktree.viewPrState(prState.value.number)
+      yield* Effect.log("PR state after merge", prState)
+      if (Option.isSome(prState) && prState.value.state === "MERGED") {
+        return
+      }
+      yield* Effect.log("Flagging unmergable PR")
+      yield* prd.flagUnmergable({ issueId: taskId })
+    }).pipe(Effect.annotateLogs({ phase: "autoMerge" }))
+
+    const task = yield* prd.findById(taskId)
+    if (task?.autoMerge) {
+      yield* autoMerge
+    } else {
+      yield* prd.maybeRevertIssue({ issueId: taskId })
+    }
   },
   Effect.scoped,
   Effect.provide([PromptGen.layer, Prd.layer]),
-)
-
-class RunnerStalled extends Data.TaggedError("RunnerStalled") {
-  readonly message = "The runner has stalled due to inactivity."
-}
-
-class ChosenTaskNotFound extends Data.TaggedError("ChosenTaskNotFound") {
-  readonly message = "The AI agent failed to choose a task."
-}
-
-const ChosenTask = Schema.fromJsonString(
-  Schema.Struct({
-    id: Schema.String,
-    githubPrNumber: Schema.NullOr(Schema.Finite),
-  }),
-)
-const PrState = Schema.fromJsonString(
-  Schema.Struct({
-    number: Schema.Finite,
-    state: Schema.String,
-  }),
 )

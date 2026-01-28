@@ -1,5 +1,19 @@
-import { Effect, FileSystem, Layer, Path, ServiceMap } from "effect"
-import { ChildProcess } from "effect/unstable/process"
+import {
+  DateTime,
+  Duration,
+  Effect,
+  FileSystem,
+  identity,
+  Layer,
+  Option,
+  Path,
+  Schema,
+  ServiceMap,
+  Stream,
+} from "effect"
+import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
+import { RunnerStalled } from "./domain/Errors.ts"
+import type { CliAgent } from "./domain/CliAgent.ts"
 
 export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   make: Effect.gen(function* () {
@@ -9,7 +23,11 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     const inExisting = yield* fs.exists(pathService.join(".lalph", "prd.yml"))
     if (inExisting) {
       const directory = pathService.resolve(".")
-      return { directory, inExisting } as const
+      return {
+        directory,
+        inExisting,
+        ...(yield* makeExecHelpers({ directory })),
+      } as const
     }
 
     const directory = yield* fs.makeTempDirectory()
@@ -40,7 +58,11 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
       })`${setupPath}`.pipe(ChildProcess.exitCode)
     }
 
-    return { directory, inExisting } as const
+    return {
+      directory,
+      inExisting,
+      ...(yield* makeExecHelpers({ directory })),
+    } as const
   }),
 }) {
   static layer = Layer.effect(this, this.make)
@@ -53,6 +75,7 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
       return {
         directory,
         inExisting: yield* fs.exists(pathService.join(".lalph", "prd.yml")),
+        ...(yield* makeExecHelpers({ directory })),
       } as const
     }),
   )
@@ -110,3 +133,107 @@ git checkout origin/${baseBranch}
 
 # Seeded by lalph. Customize this to prepare new worktrees.
 `
+
+const makeExecHelpers = Effect.fnUntraced(function* (options: {
+  readonly directory: string
+}) {
+  const spawner = yield* ChildProcessSpawner.ChildProcessSpawner
+  const provide = Effect.provideService(
+    ChildProcessSpawner.ChildProcessSpawner,
+    spawner,
+  )
+
+  const exec = (
+    template: TemplateStringsArray,
+    ...args: Array<string | number | boolean>
+  ) =>
+    ChildProcess.make({
+      cwd: options.directory,
+    })(template, ...args).pipe(ChildProcess.exitCode, provide)
+
+  const execString = (
+    template: TemplateStringsArray,
+    ...args: Array<string | number | boolean>
+  ) =>
+    ChildProcess.make({
+      cwd: options.directory,
+    })(template, ...args).pipe(ChildProcess.string, provide)
+
+  const viewPrState = (prNumber?: number) =>
+    execString`gh pr view ${prNumber ? prNumber : ""} --json number,state`.pipe(
+      Effect.flatMap(Schema.decodeEffect(PrState)),
+      Effect.option,
+      provide,
+    )
+
+  const execWithStallTimeout = (options: {
+    readonly stallTimeout: Duration.Duration
+    readonly cliAgent: CliAgent
+  }) =>
+    Effect.fnUntraced(function* (command: ChildProcess.Command) {
+      let lastOutputAt = yield* DateTime.now
+
+      const stallTimeout = Effect.suspend(function loop(): Effect.Effect<
+        never,
+        RunnerStalled
+      > {
+        const now = DateTime.nowUnsafe()
+        const deadline = DateTime.addDuration(
+          lastOutputAt,
+          options.stallTimeout,
+        )
+        if (DateTime.isLessThan(deadline, now)) {
+          return Effect.fail(new RunnerStalled())
+        }
+        const timeUntilDeadline = DateTime.distanceDuration(deadline, now)
+        return Effect.flatMap(Effect.sleep(timeUntilDeadline), loop)
+      })
+
+      const handle = yield* provide(command.asEffect())
+
+      yield* handle.all.pipe(
+        Stream.decodeText(),
+        options.cliAgent.outputTransformer
+          ? options.cliAgent.outputTransformer
+          : identity,
+        Stream.runForEachArray((output) => {
+          lastOutputAt = DateTime.nowUnsafe()
+          for (const chunk of output) {
+            process.stdout.write(chunk)
+          }
+          return Effect.void
+        }),
+        Effect.raceFirst(stallTimeout),
+      )
+      return yield* handle.exitCode
+    }, Effect.scoped)
+
+  const currentBranch = (dir: string) =>
+    ChildProcess.make({
+      cwd: dir,
+    })`git branch --show-current`.pipe(
+      ChildProcess.string,
+      provide,
+      Effect.flatMap((output) =>
+        Option.some(output.trim()).pipe(
+          Option.filter((b) => b.length > 0),
+          Effect.fromOption,
+        ),
+      ),
+    )
+
+  return {
+    exec,
+    execString,
+    viewPrState,
+    execWithStallTimeout,
+    currentBranch,
+  } as const
+})
+
+const PrState = Schema.fromJsonString(
+  Schema.Struct({
+    number: Schema.Finite,
+    state: Schema.String,
+  }),
+)
