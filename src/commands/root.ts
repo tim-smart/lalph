@@ -40,6 +40,7 @@ const run = Effect.fnUntraced(
     readonly commandPrefix: (
       command: ChildProcess.Command,
     ) => ChildProcess.Command
+    readonly review: boolean
   }) {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
@@ -138,13 +139,15 @@ const run = Effect.fnUntraced(
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
       // 4. Review task
-      yield* agentReviewer({
-        specsDirectory: options.specsDirectory,
-        stallTimeout: options.stallTimeout,
-        cliAgent,
-        commandPrefix: options.commandPrefix,
-        instructions,
-      })
+      if (options.review) {
+        yield* agentReviewer({
+          specsDirectory: options.specsDirectory,
+          stallTimeout: options.stallTimeout,
+          cliAgent,
+          commandPrefix: options.commandPrefix,
+          instructions,
+        })
+      }
     }).pipe(
       Effect.timeout(options.runTimeout),
       Effect.tapErrorTag("TimeoutError", () =>
@@ -260,6 +263,10 @@ const verbose = Flag.boolean("verbose").pipe(
   Flag.withAlias("v"),
 )
 
+const review = Flag.boolean("review").pipe(
+  Flag.withDescription("Enabled the AI peer-review step"),
+)
+
 // handled in cli.ts
 const reset = Flag.boolean("reset").pipe(
   Flag.withDescription("Reset the current issue source before running"),
@@ -273,6 +280,7 @@ export const commandRoot = Command.make("lalph", {
   maxIterationMinutes,
   stallMinutes,
   reset,
+  review,
   specsDirectory,
   verbose,
 }).pipe(
@@ -284,6 +292,7 @@ export const commandRoot = Command.make("lalph", {
       maxIterationMinutes,
       stallMinutes,
       specsDirectory,
+      review,
     }) {
       const source = yield* Layer.build(CurrentIssueSource.layer)
       const commandPrefix = yield* getCommandPrefix
@@ -329,6 +338,7 @@ export const commandRoot = Command.make("lalph", {
               stallTimeout: Duration.minutes(stallMinutes),
               runTimeout: Duration.minutes(maxIterationMinutes),
               commandPrefix,
+              review,
             }),
           ),
           Effect.catchFilter(
