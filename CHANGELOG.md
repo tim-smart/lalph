@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.95
+
+### Patch Changes
+
+- [`f8a01a0`](https://github.com/tim-smart/lalph/commit/f8a01a05b39909cbeda4ba34f9e81e1dbd3881e4) Thanks [@tim-smart](https://github.com/tim-smart)! - add reviewer agent
+
+- [`7a4f1a7`](https://github.com/tim-smart/lalph/commit/7a4f1a70b5a2a07ca45f101519c4a1ad9f7d3b54) Thanks [@tim-smart](https://github.com/tim-smart)! - allow added remote to target branch setting
+
 ## 0.1.94
 
 ### Patch Changes
