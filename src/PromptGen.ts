@@ -192,6 +192,7 @@ ${keyInformation(options)}`
       }) => `A previous AI agent has completed a task from the instructions below.
 
 You job is to review their work, and make any necessary improvements or corrections if needed.
+If you make any changes, commit and push them to the same pull request.
 
 # Prevous instructions
 
