@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.96
+
+### Patch Changes
+
+- [`28e4ff8`](https://github.com/tim-smart/lalph/commit/28e4ff873d0584978227762841f48e09c14222c3) Thanks [@tim-smart](https://github.com/tim-smart)! - sort linear issues
+
 ## 0.1.95
 
 ### Patch Changes
