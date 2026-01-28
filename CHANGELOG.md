@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.98
+
+### Patch Changes
+
+- [#185](https://github.com/tim-smart/lalph/pull/185) [`046cd94`](https://github.com/tim-smart/lalph/commit/046cd949ebc5aacd0af3e79cb4a639ecffaa20bf) Thanks [@sledorze](https://github.com/sledorze)! - disable AskUserQuestion tool to prevent hangs
+
+- [#188](https://github.com/tim-smart/lalph/pull/188) [`ec835f7`](https://github.com/tim-smart/lalph/commit/ec835f790b926153d3dff303c0d18c27c43a4ea7) Thanks [@sledorze](https://github.com/sledorze)! - improve claude output transformer
+
 ## 0.1.97
 
 ### Patch Changes
