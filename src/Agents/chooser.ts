@@ -5,6 +5,7 @@ import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import { RunnerStalled } from "../domain/Errors.ts"
 import type { CliAgent } from "../domain/CliAgent.ts"
+import { makeWaitForFile } from "../shared/fs.ts"
 
 export const agentChooser = Effect.fnUntraced(function* (options: {
   readonly stallTimeout: Duration.Duration
@@ -18,6 +19,12 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
   const prd = yield* Prd
+  const waitForFile = yield* makeWaitForFile
+
+  const taskJsonCreated = waitForFile(
+    pathService.join(worktree.directory, ".lalph"),
+    "task.json",
+  )
 
   yield* pipe(
     options.cliAgent.resolveCommandChoose({
@@ -31,6 +38,7 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
       duration: options.stallTimeout,
       onTimeout: () => Effect.fail(new RunnerStalled()),
     }),
+    Effect.raceFirst(taskJsonCreated),
   )
 
   const taskJson = yield* fs.readFileString(

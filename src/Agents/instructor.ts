@@ -4,6 +4,7 @@ import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import type { CliAgent } from "../domain/CliAgent.ts"
 import type { PrdIssue } from "../domain/PrdIssue.ts"
+import { makeWaitForFile } from "../shared/fs.ts"
 
 export const agentInstructor = Effect.fnUntraced(function* (options: {
   readonly targetBranch: Option.Option<string>
@@ -20,6 +21,7 @@ export const agentInstructor = Effect.fnUntraced(function* (options: {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
+  const waitForFile = yield* makeWaitForFile
 
   yield* pipe(
     options.cliAgent.command({
@@ -38,6 +40,12 @@ export const agentInstructor = Effect.fnUntraced(function* (options: {
       cliAgent: options.cliAgent,
       stallTimeout: options.stallTimeout,
     }),
+    Effect.raceFirst(
+      waitForFile(
+        pathService.join(worktree.directory, ".lalph"),
+        "instructions.md",
+      ),
+    ),
   )
   return yield* fs.readFileString(
     pathService.join(worktree.directory, ".lalph", "instructions.md"),
