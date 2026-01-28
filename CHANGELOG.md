@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.97
+
+### Patch Changes
+
+- [`5d716e6`](https://github.com/tim-smart/lalph/commit/5d716e672c9c566e7055597756626ceb1909fc52) Thanks [@tim-smart](https://github.com/tim-smart)! - add option to enable the review agent
+
 ## 0.1.96
 
 ### Patch Changes
