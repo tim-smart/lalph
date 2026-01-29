@@ -2,6 +2,18 @@
 
 A LLM agent orchestrator driven by your chosen source of issues.
 
+```
+        .-.
+       (o o)  agent
+       | O |  orchestrator
+        \=/
+       .-"-.
+      //\ /\\
+     _\\ V //_
+    /  /| |\  \
+   /__/ |_| \__\
+```
+
 ## Features
 
 - Integrate with various issue sources (GitHub Issues, Linear, etc.)
