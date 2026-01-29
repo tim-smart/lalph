@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.107
+
+### Patch Changes
+
+- [`5a15514`](https://github.com/tim-smart/lalph/commit/5a15514b339bed920c8f08b09f775ab9c342a9cb) Thanks [@github-actions[bot]](https://github.com/github-actions%5Bbot%5D)! - add flagUnmergable to git commit flow
+
 ## 0.1.106
 
 ### Patch Changes
