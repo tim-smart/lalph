@@ -192,10 +192,11 @@ ${keyInformation(options)}`
       }) => `A previous AI agent has completed a task from the instructions below.
 
 You job is to review their work, and make any necessary improvements or corrections if needed.
+
 You are already on the PR branch with their changes.
 After making any changes, commit and push them to the same pull request.
 
-# Prevous instructions
+# Prevous instructions (only for context, do not repeat)
 
 ${options.prompt}
 
