@@ -13,9 +13,9 @@ import { commandSource } from "./commands/source.ts"
 import { commandAgent } from "./commands/agent.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { resetCurrentIssueSource } from "./IssueSources.ts"
-import { GithubCli } from "./Github/Cli.ts"
 import { TracingLayer } from "./Tracing.ts"
 import { MinimumLogLevel } from "effect/References"
+import { lalphMemoMap } from "./shared/runtime.ts"
 
 commandRoot.pipe(
   Command.withSubcommands([
@@ -34,6 +34,7 @@ commandRoot.pipe(
       }
     }),
   ),
+  Command.provide(Settings.layer),
   Command.provide(TracingLayer),
   Command.provide(({ verbose }) =>
     verbose ? Layer.succeed(MinimumLogLevel, "All") : Layer.empty,
@@ -42,10 +43,7 @@ commandRoot.pipe(
     Command.run(_, {
       version: PackageJson.version,
     }),
-  Effect.provide(
-    Layer.mergeAll(Settings.layer, GithubCli.layer).pipe(
-      Layer.provideMerge(NodeServices.layer),
-    ),
-  ),
+  Effect.provide(NodeServices.layer),
+  Effect.provideService(Layer.CurrentMemoMap, lalphMemoMap),
   NodeRuntime.runMain,
 )

@@ -8,7 +8,6 @@ import {
   FileSystem,
   Filter,
   Iterable,
-  Layer,
   Option,
   Path,
 } from "effect"
@@ -27,6 +26,7 @@ import { agentChooser } from "../Agents/chooser.ts"
 import { RunnerStalled } from "../domain/Errors.ts"
 import { agentReviewer } from "../Agents/reviewer.ts"
 import { agentTimeout } from "../Agents/timeout.ts"
+import { Settings } from "../Settings.ts"
 
 // Main iteration run logic
 
@@ -69,7 +69,7 @@ const run = Effect.fnUntraced(
         yield* worktree.exec`git checkout --detach ${currentBranchName}`
         // delete the branch
         yield* worktree.exec`git branch -D ${currentBranchName}`
-      }, Effect.ignore),
+      }, Effect.ignore()),
     )
 
     let taskId: string | undefined = undefined
@@ -86,7 +86,7 @@ const run = Effect.fnUntraced(
         } else {
           yield* prd.revertUpdatedIssues
         }
-      }, Effect.ignore),
+      }, Effect.ignore()),
     )
 
     // 1. Choose task
@@ -94,7 +94,7 @@ const run = Effect.fnUntraced(
       stallTimeout: options.stallTimeout,
       commandPrefix: options.commandPrefix,
       cliAgent,
-    }).pipe(Effect.withSpan("run.agentChooser"))
+    }).pipe(Effect.withSpan("Main.agentChooser"))
     taskId = chosenTask.id
     yield* prd.setChosenIssueId(taskId)
 
@@ -125,7 +125,7 @@ const run = Effect.fnUntraced(
       task: chosenTask.prd,
       cliAgent,
       githubPrNumber: chosenTask.githubPrNumber ?? undefined,
-    }).pipe(Effect.withSpan("run.agentInstructor"))
+    }).pipe(Effect.withSpan("Main.agentInstructor"))
 
     const postWorkPrState = yield* Effect.gen(function* () {
       // 3. Work on task
@@ -135,7 +135,7 @@ const run = Effect.fnUntraced(
         cliAgent,
         commandPrefix: options.commandPrefix,
         instructions,
-      }).pipe(Effect.withSpan("run.agentWorker"))
+      }).pipe(Effect.withSpan("Main.agentWorker"))
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
       const prState = (yield* worktree.viewPrState()).pipe(
@@ -150,7 +150,7 @@ const run = Effect.fnUntraced(
           cliAgent,
           commandPrefix: options.commandPrefix,
           instructions,
-        }).pipe(Effect.withSpan("run.agentReviewer"))
+        }).pipe(Effect.withSpan("Main.agentReviewer"))
       }
 
       return prState
@@ -197,7 +197,7 @@ const run = Effect.fnUntraced(
     }
   },
   Effect.scoped,
-  Effect.provide([PromptGen.layer, Prd.layer]),
+  Effect.provide(Prd.layer, { local: true }),
 )
 
 // Command
@@ -291,105 +291,113 @@ export const commandRoot = Command.make("lalph", {
   verbose,
 }).pipe(
   Command.withHandler(
-    Effect.fnUntraced(function* ({
-      iterations,
-      concurrency,
-      targetBranch,
-      maxIterationMinutes,
-      stallMinutes,
-      specsDirectory,
-      review,
-    }) {
-      const source = yield* Layer.build(CurrentIssueSource.layer)
-      const commandPrefix = yield* getCommandPrefix
-      yield* getOrSelectCliAgent
+    Effect.fnUntraced(
+      function* ({
+        iterations,
+        concurrency,
+        targetBranch,
+        maxIterationMinutes,
+        stallMinutes,
+        specsDirectory,
+        review,
+      }) {
+        const commandPrefix = yield* getCommandPrefix
+        yield* getOrSelectCliAgent
 
-      const isFinite = Number.isFinite(iterations)
-      const iterationsDisplay = isFinite ? iterations : "unlimited"
-      const runConcurrency = Math.max(1, concurrency)
-      const semaphore = Effect.makeSemaphoreUnsafe(runConcurrency)
-      const fibers = yield* FiberSet.make()
+        const isFinite = Number.isFinite(iterations)
+        const iterationsDisplay = isFinite ? iterations : "unlimited"
+        const runConcurrency = Math.max(1, concurrency)
+        const semaphore = Effect.makeSemaphoreUnsafe(runConcurrency)
+        const fibers = yield* FiberSet.make()
 
-      yield* resetInProgress.pipe(
-        Effect.provide(source),
-        Effect.withSpan("Main.resetInProgress"),
-      )
+        yield* resetInProgress.pipe(Effect.withSpan("Main.resetInProgress"))
 
-      yield* Effect.log(
-        `Executing ${iterationsDisplay} iteration(s) with concurrency ${runConcurrency}`,
-      )
-      if (Option.isSome(targetBranch)) {
-        yield* Effect.log(`Using target branch: ${targetBranch.value}`)
-      }
-
-      let iteration = 0
-      let quit = false
-
-      while (true) {
-        yield* semaphore.take(1)
-        if (quit || (isFinite && iteration >= iterations)) {
-          break
+        yield* Effect.log(
+          `Executing ${iterationsDisplay} iteration(s) with concurrency ${runConcurrency}`,
+        )
+        if (Option.isSome(targetBranch)) {
+          yield* Effect.log(`Using target branch: ${targetBranch.value}`)
         }
 
-        const currentIteration = iteration
+        let iteration = 0
+        let quit = false
 
-        const startedDeferred = yield* Deferred.make<void>()
+        while (true) {
+          yield* semaphore.take(1)
+          if (quit || (isFinite && iteration >= iterations)) {
+            break
+          }
 
-        yield* checkForWork.pipe(
-          Effect.andThen(
-            run({
-              startedDeferred,
-              targetBranch,
-              specsDirectory,
-              stallTimeout: Duration.minutes(stallMinutes),
-              runTimeout: Duration.minutes(maxIterationMinutes),
-              commandPrefix,
-              review,
+          const currentIteration = iteration
+
+          const startedDeferred = yield* Deferred.make<void>()
+
+          yield* checkForWork.pipe(
+            Effect.andThen(
+              run({
+                startedDeferred,
+                targetBranch,
+                specsDirectory,
+                stallTimeout: Duration.minutes(stallMinutes),
+                runTimeout: Duration.minutes(maxIterationMinutes),
+                commandPrefix,
+                review,
+              }),
+            ),
+            Effect.catchFilter(
+              (e) =>
+                e._tag === "NoMoreWork" || e._tag === "QuitError"
+                  ? Filter.fail(e)
+                  : e,
+              (e) => Effect.logWarning(Cause.fail(e)),
+            ),
+            Effect.catchTags({
+              NoMoreWork(_) {
+                if (isFinite) {
+                  // If we have a finite number of iterations, we exit when no more
+                  // work is found
+                  iterations = currentIteration
+                  return Effect.log(
+                    `No more work to process, ending after ${currentIteration} iteration(s).`,
+                  )
+                }
+                const log =
+                  Iterable.size(fibers) <= 1
+                    ? Effect.log(
+                        "No more work to process, waiting 30 seconds...",
+                      )
+                    : Effect.void
+                return Effect.andThen(log, Effect.sleep(Duration.seconds(30)))
+              },
+              QuitError(_) {
+                quit = true
+                return Effect.void
+              },
             }),
-          ),
-          Effect.catchFilter(
-            (e) =>
-              e._tag === "NoMoreWork" || e._tag === "QuitError"
-                ? Filter.fail(e)
-                : e,
-            (e) => Effect.logWarning(Cause.fail(e)),
-          ),
-          Effect.catchTags({
-            NoMoreWork(_) {
-              if (isFinite) {
-                // If we have a finite number of iterations, we exit when no more
-                // work is found
-                iterations = currentIteration
-                return Effect.log(
-                  `No more work to process, ending after ${currentIteration} iteration(s).`,
-                )
-              }
-              const log =
-                Iterable.size(fibers) <= 1
-                  ? Effect.log("No more work to process, waiting 30 seconds...")
-                  : Effect.void
-              return Effect.andThen(log, Effect.sleep(Duration.seconds(30)))
-            },
-            QuitError(_) {
-              quit = true
-              return Effect.void
-            },
-          }),
-          Effect.annotateLogs({
-            iteration: currentIteration,
-          }),
-          Effect.ensuring(semaphore.release(1)),
-          Effect.ensuring(Deferred.completeWith(startedDeferred, Effect.void)),
-          Effect.provide(source),
-          FiberSet.run(fibers),
-        )
+            Effect.annotateLogs({
+              iteration: currentIteration,
+            }),
+            Effect.ensuring(semaphore.release(1)),
+            Effect.ensuring(
+              Deferred.completeWith(startedDeferred, Effect.void),
+            ),
+            FiberSet.run(fibers),
+          )
 
-        yield* Deferred.await(startedDeferred)
+          yield* Deferred.await(startedDeferred)
 
-        iteration++
-      }
+          iteration++
+        }
 
-      yield* FiberSet.awaitEmpty(fibers)
-    }, Effect.scoped),
+        yield* FiberSet.awaitEmpty(fibers)
+      },
+      Effect.scoped,
+      Effect.provide([
+        PromptGen.layer,
+        GithubCli.layer,
+        Settings.layer,
+        CurrentIssueSource.layer,
+      ]),
+    ),
   ),
 )

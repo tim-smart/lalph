@@ -70,12 +70,10 @@ export class CurrentIssueSource extends ServiceMap.Service<
   static layer = Layer.effectServices(
     Effect.gen(function* () {
       const source = yield* getOrSelectIssueSource
-      const services = yield* Layer.buildWithMemoMap(
+      const services = yield* Layer.build(
         IssueSourceUpdates.layer.pipe(Layer.provideMerge(source.layer)),
-        yield* Layer.CurrentMemoMap,
-        yield* Effect.scope,
       ).pipe(Effect.withSpan("CurrentIssueSource.build"))
       return ServiceMap.add(services, CurrentIssueSource, source)
     }),
-  )
+  ).pipe(Layer.provide(Settings.layer))
 }

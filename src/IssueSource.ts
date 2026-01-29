@@ -1,5 +1,7 @@
 import { Effect, Layer, Schedule, Schema, ServiceMap, Stream } from "effect"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
+import { Atom } from "effect/unstable/reactivity"
+import { makeAtomRuntime } from "./shared/runtime.ts"
 
 export class IssueSource extends ServiceMap.Service<
   IssueSource,
@@ -27,6 +29,10 @@ export class IssueSource extends ServiceMap.Service<
     ) => Effect.Effect<void, IssueSourceError>
   }
 >()("lalph/IssueSource") {}
+
+export const currentIssuesAtom = Atom.make<ReadonlyArray<PrdIssue>>([]).pipe(
+  makeAtomRuntime.withReactivity([""]),
+)
 
 export class IssueSourceUpdates extends ServiceMap.Service<IssueSourceUpdates>()(
   "lalph/IssueSourceUpdates",

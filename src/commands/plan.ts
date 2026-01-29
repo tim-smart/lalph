@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Option, Path, pipe } from "effect"
+import { Effect, FileSystem, Layer, Option, Path, pipe } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
@@ -7,6 +7,7 @@ import { getCommandPrefix, getOrSelectCliAgent } from "./agent.ts"
 import { Command, Flag } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../IssueSources.ts"
 import { commandRoot } from "./root.ts"
+import { Settings } from "../Settings.ts"
 
 const dangerous = Flag.boolean("dangerous").pipe(
   Flag.withAlias("d"),
@@ -26,8 +27,8 @@ export const commandPlan = Command.make("plan", { dangerous }).pipe(
         targetBranch,
         commandPrefix,
         dangerous,
-      }).pipe(Effect.provide(CurrentIssueSource.layer))
-    }),
+      })
+    }, Effect.provide(Settings.layer)),
   ),
 )
 const plan = Effect.fnUntraced(
@@ -88,5 +89,11 @@ const plan = Effect.fnUntraced(
     }
   },
   Effect.scoped,
-  Effect.provide([PromptGen.layer, Prd.layer, Worktree.layer]),
+  Effect.provide([
+    PromptGen.layer,
+    Prd.layer.pipe(Layer.provide(CurrentIssueSource.layer)),
+    Worktree.layer,
+    Settings.layer,
+    CurrentIssueSource.layer,
+  ]),
 )

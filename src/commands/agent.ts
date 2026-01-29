@@ -2,7 +2,7 @@ import { Array, Effect, Option, Schema, String, identity } from "effect"
 import { Command, Prompt } from "effect/unstable/cli"
 import { ChildProcess } from "effect/unstable/process"
 import { allCliAgents } from "../domain/CliAgent.ts"
-import { Setting, selectedCliAgentId } from "../Settings.ts"
+import { Setting, Settings, selectedCliAgentId } from "../Settings.ts"
 import { parseCommand } from "../shared/child-process.ts"
 
 const commandPrefixSetting = new Setting(
@@ -64,5 +64,7 @@ export const getOrSelectCliAgent = Effect.gen(function* () {
 
 export const commandAgent = Command.make("agent").pipe(
   Command.withDescription("Select the CLI agent to use"),
-  Command.withHandler(() => selectCliAgent),
+  Command.withHandler(() =>
+    selectCliAgent.pipe(Effect.provide(Settings.layer)),
+  ),
 )

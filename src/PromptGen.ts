@@ -266,5 +266,7 @@ ${prdNotes(options)}`
     }),
   },
 ) {
-  static layer = Layer.effect(this, this.make)
+  static layer = Layer.effect(this, this.make).pipe(
+    Layer.provide(CurrentIssueSource.layer),
+  )
 }

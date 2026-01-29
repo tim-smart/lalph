@@ -38,7 +38,7 @@ export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
     }
 
     return { get, set } as const
-  }),
+  }).pipe(Effect.withSpan("Settings.build")),
 }) {
   static layer = Layer.effect(this, this.make).pipe(Layer.provide(layerKvs))
 }
