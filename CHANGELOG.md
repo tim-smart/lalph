@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.108
+
+### Patch Changes
+
+- [`2c01153`](https://github.com/tim-smart/lalph/commit/2c011536b8bfeed15355340a78a9044dfe07c110) Thanks [@tim-smart](https://github.com/tim-smart)! - improve instruction prompt
+
 ## 0.1.107
 
 ### Patch Changes
