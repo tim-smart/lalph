@@ -216,7 +216,6 @@ export class Prd extends ServiceMap.Service<
     )
 
     yield* AtomRegistry.toStreamResult(registry, currentIssuesAtom).pipe(
-      Stream.changes,
       Stream.runForEach(updateSync),
       Effect.forkScoped,
     )
