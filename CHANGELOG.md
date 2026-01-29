@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.104
+
+### Patch Changes
+
+- [`c15ce88`](https://github.com/tim-smart/lalph/commit/c15ce88b4f1c6bff2821a930bfa01f53d24bcc4d) Thanks [@tim-smart](https://github.com/tim-smart)! - when reading issues, don't use stale values
+
 ## 0.1.103
 
 ### Patch Changes
