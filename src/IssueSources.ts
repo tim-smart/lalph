@@ -106,8 +106,12 @@ export const currentIssuesAtom = pipe(
 
 // Helpers
 
+const getCurrentIssues = Atom.getResult(currentIssuesAtom, {
+  suspendOnWaiting: true,
+})
+
 export const checkForWork = Effect.gen(function* () {
-  const issues = yield* Atom.getResult(currentIssuesAtom)
+  const issues = yield* getCurrentIssues
   const hasIncomplete = issues.some(
     (issue) => issue.state === "todo" && issue.blockedBy.length === 0,
   )
@@ -119,7 +123,7 @@ export const checkForWork = Effect.gen(function* () {
 export const resetInProgress = Effect.gen(function* () {
   const source = yield* IssueSource
   const reactivity = yield* Reactivity.Reactivity
-  const issues = yield* Atom.getResult(currentIssuesAtom)
+  const issues = yield* getCurrentIssues
   const inProgress = issues.filter(
     (issue): issue is PrdIssue & { id: string } =>
       issue.state === "in-progress" && issue.id !== null,

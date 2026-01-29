@@ -54,6 +54,11 @@ export class Prd extends ServiceMap.Service<
       const yaml = yield* fs.readFileString(prdFile)
       return PrdIssue.arrayFromYaml(yaml)
     })
+    const getCurrentIssues = AtomRegistry.getResult(
+      registry,
+      currentIssuesAtom,
+      { suspendOnWaiting: true },
+    )
 
     const syncSemaphore = Effect.makeSemaphoreUnsafe(1)
 
@@ -75,7 +80,7 @@ export class Prd extends ServiceMap.Service<
     const flagUnmergable = Effect.fnUntraced(function* (options: {
       readonly issueId: string
     }) {
-      const current = yield* AtomRegistry.getResult(registry, currentIssuesAtom)
+      const current = yield* getCurrentIssues
       const issue = current.find((entry) => entry.id === options.issueId)
       if (!issue) return
 
@@ -126,15 +131,13 @@ export class Prd extends ServiceMap.Service<
 
     yield* fs.writeFileString(
       prdFile,
-      PrdIssue.arrayToYaml(
-        yield* AtomRegistry.getResult(registry, currentIssuesAtom),
-      ),
+      PrdIssue.arrayToYaml(yield* getCurrentIssues),
     )
 
     const updatedIssues = new Map<string, PrdIssue>()
 
     const sync = Effect.gen(function* () {
-      const current = yield* AtomRegistry.getResult(registry, currentIssuesAtom)
+      const current = yield* getCurrentIssues
       const updated = yield* readPrd
       const anyChanges =
         updated.length !== current.length ||
@@ -221,7 +224,7 @@ export class Prd extends ServiceMap.Service<
     )
 
     const findById = Effect.fnUntraced(function* (issueId: string) {
-      const current = yield* AtomRegistry.getResult(registry, currentIssuesAtom)
+      const current = yield* getCurrentIssues
       return current.find((i) => i.id === issueId) ?? null
     })
 
