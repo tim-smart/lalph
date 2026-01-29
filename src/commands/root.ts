@@ -94,7 +94,7 @@ const run = Effect.fnUntraced(
       stallTimeout: options.stallTimeout,
       commandPrefix: options.commandPrefix,
       cliAgent,
-    })
+    }).pipe(Effect.withSpan("run.agentChooser"))
     taskId = chosenTask.id
     yield* prd.setChosenIssueId(taskId)
 
@@ -125,7 +125,7 @@ const run = Effect.fnUntraced(
       task: chosenTask.prd,
       cliAgent,
       githubPrNumber: chosenTask.githubPrNumber ?? undefined,
-    })
+    }).pipe(Effect.withSpan("run.agentInstructor"))
 
     yield* Effect.gen(function* () {
       // 3. Work on task
@@ -135,7 +135,7 @@ const run = Effect.fnUntraced(
         cliAgent,
         commandPrefix: options.commandPrefix,
         instructions,
-      })
+      }).pipe(Effect.withSpan("run.agentWorker"))
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
       // 4. Review task
@@ -146,7 +146,7 @@ const run = Effect.fnUntraced(
           cliAgent,
           commandPrefix: options.commandPrefix,
           instructions,
-        })
+        }).pipe(Effect.withSpan("run.agentReviewer"))
       }
     }).pipe(
       Effect.timeout(options.runTimeout),
