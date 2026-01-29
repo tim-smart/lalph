@@ -68,7 +68,11 @@ const run = Effect.fnUntraced(
 
     if (Option.isSome(options.targetBranch)) {
       const parsed = parseBranch(options.targetBranch.value)
-      yield* worktree.exec`git checkout ${parsed.branchWithRemote}`
+      const code = yield* worktree.exec`git checkout ${parsed.branchWithRemote}`
+      if (code !== 0) {
+        yield* worktree.exec`git checkout -b ${parsed.branch}`
+        yield* worktree.exec`git push -u ${parsed.remote} ${parsed.branch}`
+      }
     }
     if (gitFlow.branch) {
       yield* worktree.exec`git checkout -b ${gitFlow.branch}`

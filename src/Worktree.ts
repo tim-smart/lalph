@@ -153,6 +153,8 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
   ) =>
     ChildProcess.make({
       cwd: options.directory,
+      stderr: "inherit",
+      stdout: "inherit",
     })(template, ...args).pipe(ChildProcess.exitCode, provide)
 
   const execString = (
