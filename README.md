@@ -3,15 +3,14 @@
 A LLM agent orchestrator driven by your chosen source of issues.
 
 ```
-        .-.
-       (o o)  agent
-       | O |  orchestrator
-        \=/
-       .-"-.
-      //\ /\\
-     _\\ V //_
-    /  /| |\  \
-   /__/ |_| \__\
+      /\_/\
+     ( o.o )  agent
+      > ^ <   orchestrator
+     /\___/\
+    (  =^.^= )
+     )     (
+    (       )
+     `-"-"-`
 ```
 
 ## Features
