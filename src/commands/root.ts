@@ -31,7 +31,13 @@ import { RunnerStalled } from "../domain/Errors.ts"
 import { agentReviewer } from "../Agents/reviewer.ts"
 import { agentTimeout } from "../Agents/timeout.ts"
 import { Settings } from "../Settings.ts"
-import { AtomRegistry, Reactivity } from "effect/unstable/reactivity"
+import { Atom, AtomRegistry, Reactivity } from "effect/unstable/reactivity"
+import {
+  activeWorkerLoggingAtom,
+  CurrentWorkerState,
+  withWorkerState,
+} from "../Workers.ts"
+import { WorkerStatus } from "../domain/WorkerState.ts"
 
 // Main iteration run logic
 
@@ -54,6 +60,8 @@ const run = Effect.fnUntraced(
     const cliAgent = yield* getOrSelectCliAgent
     const prd = yield* Prd
     const source = yield* IssueSource
+    const currentWorker = yield* CurrentWorkerState
+    const registry = yield* AtomRegistry.AtomRegistry
 
     if (Option.isSome(options.targetBranch)) {
       const targetWithRemote = options.targetBranch.value.includes("/")
@@ -95,6 +103,12 @@ const run = Effect.fnUntraced(
     )
 
     // 1. Choose task
+    // --------------
+
+    registry.update(currentWorker.state, (s) =>
+      s.transitionTo(WorkerStatus.ChoosingTask()),
+    )
+
     const chosenTask = yield* agentChooser({
       stallTimeout: options.stallTimeout,
       commandPrefix: options.commandPrefix,
@@ -122,6 +136,12 @@ const run = Effect.fnUntraced(
     }
 
     // 2. Generate instructions
+    // -----------------------
+
+    registry.update(currentWorker.state, (s) =>
+      s.transitionTo(WorkerStatus.Instructing({ issueId: taskId })),
+    )
+
     const instructions = yield* agentInstructor({
       stallTimeout: options.stallTimeout,
       commandPrefix: options.commandPrefix,
@@ -133,7 +153,14 @@ const run = Effect.fnUntraced(
     }).pipe(Effect.withSpan("Main.agentInstructor"))
 
     const postWorkPrState = yield* Effect.gen(function* () {
+      //
       // 3. Work on task
+      // -----------------------
+
+      registry.update(currentWorker.state, (s) =>
+        s.transitionTo(WorkerStatus.Working({ issueId: taskId })),
+      )
+
       const exitCode = yield* agentWorker({
         specsDirectory: options.specsDirectory,
         stallTimeout: options.stallTimeout,
@@ -148,7 +175,13 @@ const run = Effect.fnUntraced(
       )
 
       // 4. Review task
+      // -----------------------
+
       if (options.review && Option.isSome(prState)) {
+        registry.update(currentWorker.state, (s) =>
+          s.transitionTo(WorkerStatus.Reviewing({ issueId: taskId })),
+        )
+
         yield* agentReviewer({
           specsDirectory: options.specsDirectory,
           stallTimeout: options.stallTimeout,
@@ -175,6 +208,10 @@ const run = Effect.fnUntraced(
     // Auto-merge logic
 
     const autoMerge = Effect.gen(function* () {
+      registry.update(currentWorker.state, (s) =>
+        s.transitionTo(WorkerStatus.Merging({ issueId: taskId })),
+      )
+
       let prState = postWorkPrState
       yield* Effect.log("PR state", prState)
       if (Option.isNone(prState)) {
@@ -327,6 +364,8 @@ export const commandRoot = Command.make("lalph", {
         let iteration = 0
         let quit = false
 
+        yield* Atom.mount(activeWorkerLoggingAtom)
+
         while (true) {
           yield* semaphore.take(1)
           if (quit || (isFinite && iteration >= iterations)) {
@@ -347,7 +386,7 @@ export const commandRoot = Command.make("lalph", {
                 runTimeout: Duration.minutes(maxIterationMinutes),
                 commandPrefix,
                 review,
-              }),
+              }).pipe(withWorkerState(currentIteration)),
             ),
             Effect.catchFilter(
               (e) =>

@@ -27,13 +27,13 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
   )
 
   yield* pipe(
-    options.cliAgent.resolveCommandChoose({
+    options.cliAgent.command({
       prompt: promptGen.promptChoose,
       prdFilePath: pathService.join(".lalph", "prd.yml"),
     }),
     ChildProcess.setCwd(worktree.directory),
     options.commandPrefix,
-    ChildProcess.exitCode,
+    worktree.execWithWorkerOutput({ cliAgent: options.cliAgent }),
     Effect.timeoutOrElse({
       duration: options.stallTimeout,
       onTimeout: () => Effect.fail(new RunnerStalled()),

@@ -20,7 +20,6 @@ export const agentTimeout = Effect.fnUntraced(function* (options: {
 
   const timeoutCommand = pipe(
     options.cliAgent.command({
-      outputMode: "pipe",
       prompt: promptGen.promptTimeout({
         taskId: options.task.id!,
         specsDirectory: options.specsDirectory,

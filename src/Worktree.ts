@@ -1,8 +1,10 @@
 import {
+  Chunk,
   DateTime,
   Duration,
   Effect,
   FileSystem,
+  flow,
   identity,
   Layer,
   Option,
@@ -14,6 +16,8 @@ import {
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { RunnerStalled } from "./domain/Errors.ts"
 import type { CliAgent } from "./domain/CliAgent.ts"
+import { constWorkerMaxOutputChunks, CurrentWorkerState } from "./Workers.ts"
+import { AtomRegistry } from "effect/unstable/reactivity"
 
 export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   make: Effect.gen(function* () {
@@ -166,11 +170,42 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
       provide,
     )
 
+  const execWithWorkerOutput = (options: { readonly cliAgent: CliAgent }) =>
+    Effect.fnUntraced(function* (command: ChildProcess.Command) {
+      const registry = yield* AtomRegistry.AtomRegistry
+      const worker = yield* CurrentWorkerState
+
+      const handle = yield* provide(command.asEffect())
+
+      yield* handle.all.pipe(
+        Stream.decodeText(),
+        options.cliAgent.outputTransformer
+          ? options.cliAgent.outputTransformer
+          : identity,
+        Stream.runForEachArray((output) => {
+          for (const chunk of output) {
+            process.stdout.write(chunk)
+          }
+          registry.update(
+            worker.output,
+            flow(
+              Chunk.appendAll(Chunk.fromArrayUnsafe(output)),
+              Chunk.takeRight(constWorkerMaxOutputChunks),
+            ),
+          )
+          return Effect.void
+        }),
+      )
+      return yield* handle.exitCode
+    }, Effect.scoped)
+
   const execWithStallTimeout = (options: {
     readonly stallTimeout: Duration.Duration
     readonly cliAgent: CliAgent
   }) =>
     Effect.fnUntraced(function* (command: ChildProcess.Command) {
+      const registry = yield* AtomRegistry.AtomRegistry
+      const worker = yield* CurrentWorkerState
       let lastOutputAt = yield* DateTime.now
 
       const stallTimeout = Effect.suspend(function loop(): Effect.Effect<
@@ -201,6 +236,13 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
           for (const chunk of output) {
             process.stdout.write(chunk)
           }
+          registry.update(
+            worker.output,
+            flow(
+              Chunk.appendAll(Chunk.fromArrayUnsafe(output)),
+              Chunk.takeRight(constWorkerMaxOutputChunks),
+            ),
+          )
           return Effect.void
         }),
         Effect.raceFirst(stallTimeout),
@@ -227,6 +269,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
     execString,
     viewPrState,
     execWithStallTimeout,
+    execWithWorkerOutput,
     currentBranch,
   } as const
 })

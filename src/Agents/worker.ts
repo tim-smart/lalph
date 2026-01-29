@@ -19,7 +19,6 @@ export const agentWorker = Effect.fnUntraced(function* (options: {
 
   const cliCommand = pipe(
     options.cliAgent.command({
-      outputMode: "pipe",
       prompt: promptGen.prompt({
         prompt: options.instructions,
         specsDirectory: options.specsDirectory,

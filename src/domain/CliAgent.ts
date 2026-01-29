@@ -7,11 +7,6 @@ export class CliAgent extends Data.Class<{
   name: string
   outputTransformer?: OutputTransformer | undefined
   command: (options: {
-    readonly outputMode: "pipe" | "inherit"
-    readonly prompt: string
-    readonly prdFilePath: string
-  }) => ChildProcess.Command
-  commandChoose?: (options: {
     readonly prompt: string
     readonly prdFilePath: string
   }) => ChildProcess.Command
@@ -20,19 +15,7 @@ export class CliAgent extends Data.Class<{
     readonly prdFilePath: string
     readonly dangerous: boolean
   }) => ChildProcess.Command
-}> {
-  resolveCommandChoose(options: {
-    readonly prompt: string
-    readonly prdFilePath: string
-  }) {
-    return this.commandChoose
-      ? this.commandChoose(options)
-      : this.command({
-          ...options,
-          outputMode: "inherit",
-        })
-  }
-}
+}> {}
 
 export type OutputTransformer = (
   stream: Stream.Stream<string, PlatformError.PlatformError>,
@@ -41,14 +24,14 @@ export type OutputTransformer = (
 const opencode = new CliAgent({
   id: "opencode",
   name: "opencode",
-  command: ({ outputMode, prompt, prdFilePath }) =>
+  command: ({ prompt, prdFilePath }) =>
     ChildProcess.make({
       extendEnv: true,
       env: {
         OPENCODE_PERMISSION: '{"*":"allow"}',
       },
-      stdout: outputMode,
-      stderr: outputMode,
+      stdout: "pipe",
+      stderr: "pipe",
       stdin: "inherit",
     })`opencode run ${prompt} -f ${prdFilePath}`,
   commandPlan: ({ prompt, prdFilePath, dangerous }) =>
@@ -72,23 +55,15 @@ ${prompt}`}`,
 const claude = new CliAgent({
   id: "claude",
   name: "Claude Code",
-  command: ({ outputMode, prompt, prdFilePath }) =>
+  command: ({ prompt, prdFilePath }) =>
     ChildProcess.make({
-      stdout: outputMode,
-      stderr: outputMode,
+      stdout: "pipe",
+      stderr: "pipe",
       stdin: "inherit",
     })`claude --dangerously-skip-permissions --output-format stream-json --verbose --disallowed-tools AskUserQuestion -p ${`@${prdFilePath}
 
 ${prompt}`}`,
   outputTransformer: claudeOutputTransformer,
-  commandChoose: ({ prompt, prdFilePath }) =>
-    ChildProcess.make({
-      stdout: "inherit",
-      stderr: "inherit",
-      stdin: "inherit",
-    })`claude --dangerously-skip-permissions -p ${`@${prdFilePath}
-
-${prompt}`}`,
   commandPlan: ({ prompt, prdFilePath, dangerous }) =>
     ChildProcess.make(
       "claude",
@@ -109,10 +84,10 @@ ${prompt}`,
 const codex = new CliAgent({
   id: "codex",
   name: "Codex CLI",
-  command: ({ outputMode, prompt, prdFilePath }) =>
+  command: ({ prompt, prdFilePath }) =>
     ChildProcess.make({
-      stdout: outputMode,
-      stderr: outputMode,
+      stdout: "pipe",
+      stderr: "pipe",
       stdin: "inherit",
     })`codex exec --dangerously-bypass-approvals-and-sandbox ${`@${prdFilePath}
 
@@ -137,10 +112,10 @@ ${prompt}`,
 const amp = new CliAgent({
   id: "amp",
   name: "amp",
-  command: ({ outputMode, prompt, prdFilePath }) =>
+  command: ({ prompt, prdFilePath }) =>
     ChildProcess.make({
-      stdout: outputMode,
-      stderr: outputMode,
+      stdout: "pipe",
+      stderr: "pipe",
       stdin: "inherit",
     })`amp --dangerously-allow-all --stream-json-thinking -x ${`@${prdFilePath}
 

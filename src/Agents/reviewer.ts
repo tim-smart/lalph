@@ -19,7 +19,6 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
 
   const cliCommand = pipe(
     options.cliAgent.command({
-      outputMode: "pipe",
       prompt: promptGen.promptReview({
         prompt: options.instructions,
         specsDirectory: options.specsDirectory,

@@ -25,7 +25,6 @@ export const agentInstructor = Effect.fnUntraced(function* (options: {
 
   yield* pipe(
     options.cliAgent.command({
-      outputMode: "pipe",
       prompt: promptGen.promptInstructions({
         task: options.task,
         targetBranch: Option.getOrUndefined(options.targetBranch),
