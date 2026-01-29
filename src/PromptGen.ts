@@ -1,6 +1,7 @@
 import { Effect, Layer, ServiceMap } from "effect"
 import { PrdIssue } from "./domain/PrdIssue.ts"
 import { CurrentIssueSource } from "./IssueSources.ts"
+import type { GitFlow } from "./GitFlow.ts"
 
 export class PromptGen extends ServiceMap.Service<PromptGen>()(
   "lalph/PromptGen",
@@ -66,21 +67,27 @@ To remove a task, simply delete the item from the prd.yml file.
 ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
 \`\`\``
 
-      const promptChoose = `Your job is to choose the next task to work on from the prd.yml file. **DO NOT** implement the task yet.
+      const promptChoose = (options: {
+        readonly gitFlow: GitFlow["Service"]
+      }) => `Your job is to choose the next task to work on from the prd.yml file. **DO NOT** implement the task yet.
 
 The following instructions should be done without interaction or asking for permission.
 
-1. Decide which single task to work on next from the prd.yml file. This should
+- Decide which single task to work on next from the prd.yml file. This should
    be the task YOU decide as the most important to work on next, not just the
    first task in the list.
    - Only start tasks that are in a "todo" state.
    - You **cannot** start tasks unless they have an empty \`blockedBy\` field.
-2. **Before doing anything else**, mark the task as "in-progress" by updating its
+- **Before doing anything else**, mark the task as "in-progress" by updating its
    \`state\` in the prd.yml file.
-   This prevents other people or agents from working on the same task simultaneously.
-3. Check if there is an existing Github PR for the chosen task. If there is, note the PR number for inclusion in the task.json file.
-   - Only include "open" PRs that are not yet merged.
-4. Once you have chosen a task, save its information in a "task.json" file alongside
+This prevents other people or agents from working on the same task simultaneously.${
+        options.gitFlow.requiresGithubPr
+          ? `
+- Check if there is an existing Github PR for the chosen task. If there is, note the PR number for inclusion in the task.json file.
+   - Only include "open" PRs that are not yet merged.`
+          : ""
+      }
+- Once you have chosen a task, save its information in a "task.json" file alongside
    the prd.yml file. Use the following format:
 
 \`\`\`json
@@ -88,8 +95,14 @@ The following instructions should be done without interaction or asking for perm
   "id": "task id",
   "githubPrNumber": null
 }
-\`\`\`
+\`\`\`${
+        options.gitFlow.requiresGithubPr
+          ? `
+
 Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.
+`
+          : "Leave `githubPrNumber` as null."
+      }
 
 ${prdNotes()}`
 
@@ -128,6 +141,7 @@ ${prdNotes(options)}`
         readonly targetBranch: string | undefined
         readonly specsDirectory: string
         readonly githubPrNumber: number | undefined
+        readonly gitFlow: GitFlow["Service"]
       }) => `You are to read all of the following sections, and then output
 step by step instructions for another AI agent to fullfil the task. Make sure to
 do some quick research to understand the task before writing the instructions.
@@ -152,12 +166,7 @@ ${options.task.description}
 1. Study the ${options.specsDirectory}/README.md file (if available), and read
    the entire prd.yml file to understand the context of the task and any key
    learnings from previous work.
-2. ${
-        options.githubPrNumber
-          ? `The Github PR #${options.githubPrNumber} has been detected for this task and the branch has been checked out.
-   - Review feedback in the .lalph/feedback.md file (same folder as the prd.yml file).`
-          : `Create a new branch for the task using the format \`{task id}/description\`, using the current HEAD as the base (don't checkout any other branches first).`
-      }
+2. ${options.gitFlow.setupInstructions(options)}
 3. Implement the task.
    - If this task is a research task, **do not** make any code changes yet.
    - If this task is a research task and you add follow-up tasks, include (at least) "${options.task.id}" in the new task's \`blockedBy\` field.
@@ -167,13 +176,13 @@ ${options.task.description}
    - Add important discoveries about the codebase, or challenges faced to the task's
      \`description\`. More details below.
 4. Run any checks / feedback loops, such as type checks, unit tests, or linting.
-5. ${!options.githubPrNumber ? `Create a pull request for this task. If the target branch does not exist, create it first.` : "Commit and push your changes to the pull request."}
-   ${sourceMeta.githubPrInstructions}
-   The PR description should include a summary of the changes made.${options.targetBranch ? `\n   - The target branch for the PR should be \`${options.targetBranch}\`.` : ""}
-   - **DO NOT** commit any of the files in the \`.lalph\` directory.
-   - You have permission to create or update the PR as needed. You have full permission to push branches, create PRs or create git commits.
+5. ${options.gitFlow.commitInstructions({
+        githubPrInstructions: sourceMeta.githubPrInstructions,
+        githubPrNumber: options.githubPrNumber,
+        targetBranch: options.targetBranch,
+      })}
 6. Update the prd.yml file to reflect any changes in task states.
-   - Update the prd.yml file after the GitHub PR has been created or updated.
+   - Update the prd.yml file **after** pushing your changes.
    - Rewrite the notes in the description to include only the key discoveries and information that could speed up future work on other tasks. Make sure to preserve important information such as specification file references.
    - If you believe the task is complete, update the \`state\` to "in-review".
 
@@ -189,12 +198,12 @@ ${keyInformation(options)}`
       const promptReview = (options: {
         readonly prompt: string
         readonly specsDirectory: string
+        readonly gitFlow: GitFlow["Service"]
       }) => `A previous AI agent has completed a task from the instructions below.
 
 You job is to review their work, and make any necessary improvements or corrections if needed.
 
-You are already on the PR branch with their changes.
-After making any changes, commit and push them to the same pull request.
+${options.gitFlow.reviewInstructions}
 
 # Prevous instructions (only for context, do not repeat)
 

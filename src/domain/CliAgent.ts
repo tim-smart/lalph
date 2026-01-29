@@ -24,8 +24,9 @@ export type OutputTransformer = (
 const opencode = new CliAgent({
   id: "opencode",
   name: "opencode",
-  command: ({ prompt, prdFilePath }) =>
-    ChildProcess.make({
+  command: ({ prompt, prdFilePath }) => {
+    console.log("Got prompt:", prompt)
+    return ChildProcess.make({
       extendEnv: true,
       env: {
         OPENCODE_PERMISSION: '{"*":"allow"}',
@@ -33,7 +34,8 @@ const opencode = new CliAgent({
       stdout: "pipe",
       stderr: "pipe",
       stdin: "inherit",
-    })`opencode run ${prompt} -f ${prdFilePath}`,
+    })`opencode run ${prompt} -f ${prdFilePath}`
+  },
   commandPlan: ({ prompt, prdFilePath, dangerous }) =>
     ChildProcess.make({
       extendEnv: true,

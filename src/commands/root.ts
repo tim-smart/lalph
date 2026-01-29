@@ -38,6 +38,8 @@ import {
   withWorkerState,
 } from "../Workers.ts"
 import { WorkerStatus } from "../domain/WorkerState.ts"
+import { GitFlow, GitFlowCommit, GitFlowPR } from "../GitFlow.ts"
+import { parseBranch } from "../shared/git.ts"
 
 // Main iteration run logic
 
@@ -60,14 +62,13 @@ const run = Effect.fnUntraced(
     const cliAgent = yield* getOrSelectCliAgent
     const prd = yield* Prd
     const source = yield* IssueSource
+    const gitFlow = yield* GitFlow
     const currentWorker = yield* CurrentWorkerState
     const registry = yield* AtomRegistry.AtomRegistry
 
     if (Option.isSome(options.targetBranch)) {
-      const targetWithRemote = options.targetBranch.value.includes("/")
-        ? options.targetBranch.value
-        : `origin/${options.targetBranch.value}`
-      yield* worktree.exec`git checkout ${targetWithRemote}`
+      const parsed = parseBranch(options.targetBranch.value)
+      yield* worktree.exec`git checkout ${parsed.branchWithRemote}`
     }
 
     // ensure cleanup of branch after run
@@ -126,7 +127,7 @@ const run = Effect.fnUntraced(
 
     yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 
-    if (chosenTask.githubPrNumber) {
+    if (gitFlow.requiresGithubPr && chosenTask.githubPrNumber) {
       yield* worktree.exec`gh pr checkout ${chosenTask.githubPrNumber}`
       const feedback = yield* gh.prFeedbackMd(chosenTask.githubPrNumber)
       yield* fs.writeFileString(
@@ -152,7 +153,7 @@ const run = Effect.fnUntraced(
       githubPrNumber: chosenTask.githubPrNumber ?? undefined,
     }).pipe(Effect.withSpan("Main.agentInstructor"))
 
-    const postWorkPrState = yield* Effect.gen(function* () {
+    yield* Effect.gen(function* () {
       //
       // 3. Work on task
       // -----------------------
@@ -170,14 +171,10 @@ const run = Effect.fnUntraced(
       }).pipe(Effect.withSpan("Main.agentWorker"))
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
-      const prState = (yield* worktree.viewPrState()).pipe(
-        Option.filter((pr) => pr.state === "OPEN"),
-      )
-
       // 4. Review task
       // -----------------------
 
-      if (options.review && Option.isSome(prState)) {
+      if (options.review) {
         registry.update(currentWorker.state, (s) =>
           s.transitionTo(WorkerStatus.Reviewing({ issueId: taskId })),
         )
@@ -190,8 +187,6 @@ const run = Effect.fnUntraced(
           instructions,
         }).pipe(Effect.withSpan("Main.agentReviewer"))
       }
-
-      return prState
     }).pipe(
       Effect.timeout(options.runTimeout),
       Effect.tapErrorTag("TimeoutError", () =>
@@ -205,35 +200,18 @@ const run = Effect.fnUntraced(
       ),
     )
 
-    // Auto-merge logic
-
-    const autoMerge = Effect.gen(function* () {
-      registry.update(currentWorker.state, (s) =>
-        s.transitionTo(WorkerStatus.Merging({ issueId: taskId })),
-      )
-
-      let prState = postWorkPrState
-      yield* Effect.log("PR state", prState)
-      if (Option.isNone(prState)) {
-        return yield* prd.maybeRevertIssue({ issueId: taskId })
-      }
-      if (Option.isSome(options.targetBranch)) {
-        yield* worktree.exec`gh pr edit --base ${options.targetBranch.value}`
-      }
-      yield* worktree.exec`gh pr merge -sd`
-      yield* Effect.sleep(Duration.seconds(3))
-      prState = yield* worktree.viewPrState(prState.value.number)
-      yield* Effect.log("PR state after merge", prState)
-      if (Option.isSome(prState) && prState.value.state === "MERGED") {
-        return
-      }
-      yield* Effect.log("Flagging unmergable PR")
-      yield* prd.flagUnmergable({ issueId: taskId })
-    }).pipe(Effect.annotateLogs({ phase: "autoMerge" }))
+    yield* gitFlow.postWork({
+      worktree,
+      targetBranch: Option.getOrUndefined(options.targetBranch),
+    })
 
     const task = yield* prd.findById(taskId)
     if (task?.autoMerge) {
-      yield* autoMerge
+      yield* gitFlow.autoMerge({
+        targetBranch: Option.getOrUndefined(options.targetBranch),
+        issueId: taskId,
+        worktree,
+      })
     } else {
       yield* prd.maybeRevertIssue({ issueId: taskId })
     }
@@ -306,6 +284,10 @@ const specsDirectory = Flag.directory("specs").pipe(
   Flag.withDefault(".specs"),
 )
 
+const commitMode = Flag.boolean("commit").pipe(
+  Flag.withDescription("Commit to the target branch instead of creating PRs"),
+)
+
 const verbose = Flag.boolean("verbose").pipe(
   Flag.withDescription("Enable verbose logging"),
   Flag.withAlias("v"),
@@ -327,6 +309,7 @@ export const commandRoot = Command.make("lalph", {
   targetBranch,
   maxIterationMinutes,
   stallMinutes,
+  commitMode,
   reset,
   review,
   specsDirectory,
@@ -342,6 +325,7 @@ export const commandRoot = Command.make("lalph", {
         stallMinutes,
         specsDirectory,
         review,
+        commitMode,
       }) {
         const commandPrefix = yield* getCommandPrefix
         yield* getOrSelectCliAgent
@@ -386,7 +370,12 @@ export const commandRoot = Command.make("lalph", {
                 runTimeout: Duration.minutes(maxIterationMinutes),
                 commandPrefix,
                 review,
-              }).pipe(withWorkerState(currentIteration)),
+              }).pipe(
+                Effect.provide(commitMode ? GitFlowCommit : GitFlowPR, {
+                  local: true,
+                }),
+                withWorkerState(currentIteration),
+              ),
             ),
             Effect.catchFilter(
               (e) =>

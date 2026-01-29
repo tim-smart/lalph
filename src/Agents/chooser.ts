@@ -6,6 +6,7 @@ import { Worktree } from "../Worktree.ts"
 import { RunnerStalled } from "../domain/Errors.ts"
 import type { CliAgent } from "../domain/CliAgent.ts"
 import { makeWaitForFile } from "../shared/fs.ts"
+import { GitFlow } from "../GitFlow.ts"
 
 export const agentChooser = Effect.fnUntraced(function* (options: {
   readonly stallTimeout: Duration.Duration
@@ -19,6 +20,7 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
   const prd = yield* Prd
+  const gitFlow = yield* GitFlow
   const waitForFile = yield* makeWaitForFile
 
   const taskJsonCreated = waitForFile(
@@ -28,7 +30,7 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
 
   yield* pipe(
     options.cliAgent.command({
-      prompt: promptGen.promptChoose,
+      prompt: promptGen.promptChoose({ gitFlow }),
       prdFilePath: pathService.join(".lalph", "prd.yml"),
     }),
     ChildProcess.setCwd(worktree.directory),

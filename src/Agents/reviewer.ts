@@ -3,6 +3,7 @@ import { PromptGen } from "../PromptGen.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import type { CliAgent } from "../domain/CliAgent.ts"
+import { GitFlow } from "../GitFlow.ts"
 
 export const agentReviewer = Effect.fnUntraced(function* (options: {
   readonly specsDirectory: string
@@ -16,12 +17,14 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
+  const gitFlow = yield* GitFlow
 
   const cliCommand = pipe(
     options.cliAgent.command({
       prompt: promptGen.promptReview({
         prompt: options.instructions,
         specsDirectory: options.specsDirectory,
+        gitFlow,
       }),
       prdFilePath: pathService.join(".lalph", "prd.yml"),
     }),

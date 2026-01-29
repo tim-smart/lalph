@@ -23,6 +23,7 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   make: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
+    const branch = yield* WorktreeBranch
 
     const inExisting = yield* fs.exists(pathService.join(".lalph", "prd.yml"))
     if (inExisting) {
@@ -44,9 +45,15 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
       }),
     )
 
-    yield* ChildProcess.make`git worktree add ${directory} -d HEAD`.pipe(
-      ChildProcess.exitCode,
-    )
+    yield* ChildProcess.make("git", [
+      "worktree",
+      "add",
+      ...Option.match(branch, {
+        onNone: () => ["-d", "HEAD"],
+        onSome: (branch) => ["-b", branch],
+      }),
+      directory,
+    ]).pipe(ChildProcess.exitCode)
 
     yield* fs.makeDirectory(pathService.join(directory, ".lalph"), {
       recursive: true,
@@ -84,6 +91,11 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     }),
   )
 }
+
+export const WorktreeBranch = ServiceMap.Reference<Option.Option<string>>(
+  "lalph/Worktree/Branch",
+  { defaultValue: Option.none<string> },
+)
 
 const execIgnore = (command: ChildProcess.Command) =>
   command.pipe(ChildProcess.exitCode, Effect.catchCause(Effect.logWarning))

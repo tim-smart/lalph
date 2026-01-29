@@ -5,6 +5,7 @@ import { Worktree } from "../Worktree.ts"
 import type { CliAgent } from "../domain/CliAgent.ts"
 import type { PrdIssue } from "../domain/PrdIssue.ts"
 import { makeWaitForFile } from "../shared/fs.ts"
+import { GitFlow } from "../GitFlow.ts"
 
 export const agentInstructor = Effect.fnUntraced(function* (options: {
   readonly targetBranch: Option.Option<string>
@@ -21,6 +22,7 @@ export const agentInstructor = Effect.fnUntraced(function* (options: {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
+  const gitFlow = yield* GitFlow
   const waitForFile = yield* makeWaitForFile
 
   yield* pipe(
@@ -30,6 +32,7 @@ export const agentInstructor = Effect.fnUntraced(function* (options: {
         targetBranch: Option.getOrUndefined(options.targetBranch),
         specsDirectory: options.specsDirectory,
         githubPrNumber: options.githubPrNumber,
+        gitFlow,
       }),
       prdFilePath: pathService.join(".lalph", "prd.yml"),
     }),
