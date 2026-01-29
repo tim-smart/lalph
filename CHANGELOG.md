@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.103
+
+### Patch Changes
+
+- [#201](https://github.com/tim-smart/lalph/pull/201) [`98d2ab5`](https://github.com/tim-smart/lalph/commit/98d2ab541893c6d3482f231a1f0f020013201ebf) Thanks [@tim-smart](https://github.com/tim-smart)! - add worker state logging
+
 ## 0.1.102
 
 ### Patch Changes
