@@ -101,6 +101,7 @@ After making any changes, commit and push them to the same pull request.`,
       }
       yield* Effect.log("Flagging unmergable PR")
       yield* prd.flagUnmergable({ issueId: options.issueId })
+      yield* worktree.exec`gh pr close -d`
     }),
   }),
 )
