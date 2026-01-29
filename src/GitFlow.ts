@@ -26,6 +26,7 @@ export class GitFlow extends ServiceMap.Service<
     readonly postWork: (options: {
       readonly worktree: Worktree["Service"]
       readonly targetBranch: string | undefined
+      readonly issueId: string
     }) => Effect.Effect<
       void,
       IssueSourceError | PlatformError | GitFlowError,
@@ -126,17 +127,24 @@ export const GitFlowCommit = Layer.effect(
       reviewInstructions: `You are already on the branch with their changes.
 After making any changes, commit them to the same branch. Do not git push your changes or switch branches.`,
 
-      postWork: Effect.fnUntraced(function* ({ worktree, targetBranch }) {
+      postWork: Effect.fnUntraced(function* ({
+        worktree,
+        targetBranch,
+        issueId,
+      }) {
         if (!targetBranch) {
           return yield* Effect.logWarning(
             "GitFlowCommit: No target branch specified, skipping postWork.",
           )
         }
+        const prd = yield* Prd
+
         const parsed = parseBranch(targetBranch)
         yield* worktree.exec`git fetch ${parsed.remote}`
         const rebaseResult =
           yield* worktree.exec`git rebase ${parsed.branchWithRemote}`
         if (rebaseResult !== 0) {
+          yield* prd.flagUnmergable({ issueId })
           return yield* new GitFlowError({
             message: `Failed to rebase onto ${parsed.branchWithRemote}. Aborting task.`,
           })
@@ -145,6 +153,7 @@ After making any changes, commit them to the same branch. Do not git push your c
         const pushResult =
           yield* worktree.exec`git push ${parsed.remote} ${`HEAD:${parsed.branch}`}`
         if (pushResult !== 0) {
+          yield* prd.flagUnmergable({ issueId })
           return yield* new GitFlowError({
             message: `Failed to push changes to ${parsed.branchWithRemote}. Aborting task.`,
           })

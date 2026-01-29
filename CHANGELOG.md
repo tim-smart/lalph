@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.106
+
+### Patch Changes
+
+- [`8d781a0`](https://github.com/tim-smart/lalph/commit/8d781a07fa9b06eee87dd1ef85f97d95a0145da3) Thanks [@tim-smart](https://github.com/tim-smart)! - try again if there are merge conflicts during auto-merge
+
 ## 0.1.105
 
 ### Patch Changes

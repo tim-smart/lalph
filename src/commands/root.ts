@@ -210,6 +210,7 @@ const run = Effect.fnUntraced(
     yield* gitFlow.postWork({
       worktree,
       targetBranch: Option.getOrUndefined(options.targetBranch),
+      issueId: taskId,
     })
 
     const task = yield* prd.findById(taskId)
