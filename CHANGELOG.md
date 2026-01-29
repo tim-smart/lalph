@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.99
+
+### Patch Changes
+
+- [`b17c814`](https://github.com/tim-smart/lalph/commit/b17c8142eecfbb20cfe46d470afe48e2cb583315) Thanks [@tim-smart](https://github.com/tim-smart)! - add spans to agents
+
 ## 0.1.98
 
 ### Patch Changes
