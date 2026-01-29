@@ -1,16 +1,12 @@
 # lalph
 
-A LLM agent orchestrator driven by your chosen source of issues.
+```
+  .--.
+ | () |  lalph
+  '--'
+```
 
-```
-     .----.
-    / .--. \
-   | | () | |
-    \ '--' /
-  .-./____\.-.
- (  )  |  (  )  lalph
-  '-'  |_|  '-'
-```
+A LLM agent orchestrator driven by your chosen source of issues.
 
 ## Features
 
