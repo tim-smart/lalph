@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.100
+
+### Patch Changes
+
+- [`6858c70`](https://github.com/tim-smart/lalph/commit/6858c70c1cf111c163e2bffb7b39c7d0917b69dc) Thanks [@tim-smart](https://github.com/tim-smart)! - fix linear blockedBy
+
 ## 0.1.99
 
 ### Patch Changes
