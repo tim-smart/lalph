@@ -1,4 +1,8 @@
-# lalph
+```
+  .--.
+ | () |  lalph
+  '--'
+```
 
 A LLM agent orchestrator driven by your chosen source of issues.
 
