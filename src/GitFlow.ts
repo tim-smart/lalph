@@ -1,7 +1,7 @@
 import { Data, Duration, Effect, Layer, Option, ServiceMap } from "effect"
 import { IssueSource, type IssueSourceError } from "./IssueSource.ts"
 import type { PlatformError } from "effect/PlatformError"
-import { WorktreeBranch, type Worktree } from "./Worktree.ts"
+import type { Worktree } from "./Worktree.ts"
 import { Prd } from "./Prd.ts"
 import { CurrentWorkerState } from "./Workers.ts"
 import { Atom } from "effect/unstable/reactivity"
@@ -13,6 +13,7 @@ export class GitFlow extends ServiceMap.Service<
   GitFlow,
   {
     readonly requiresGithubPr: boolean
+    readonly branch: string | undefined
     readonly setupInstructions: (options: {
       readonly githubPrNumber: number | undefined
     }) => string
@@ -52,6 +53,7 @@ export const GitFlowPR = Layer.succeed(
   GitFlow,
   GitFlow.of({
     requiresGithubPr: true,
+    branch: undefined,
 
     setupInstructions: ({ githubPrNumber }) =>
       githubPrNumber
@@ -103,71 +105,65 @@ After making any changes, commit and push them to the same pull request.`,
   }),
 )
 
-export const GitFlowCommit = Layer.succeed(
+export const GitFlowCommit = Layer.effect(
   GitFlow,
-  GitFlow.of({
-    requiresGithubPr: false,
+  Effect.gen(function* () {
+    const currentWorker = yield* CurrentWorkerState
+    const workerState = yield* Atom.get(currentWorker.state)
 
-    setupInstructions: () =>
-      `You are already on a new branch for this task. You do not need to checkout any other branches.`,
+    return GitFlow.of({
+      requiresGithubPr: false,
+      branch: `lalph/worker-${workerState.iteration}`,
 
-    commitInstructions:
-      () => `When you have completed your changes, commit and push them to the current local branch. Do not git push your changes or switch branches.
+      setupInstructions: () =>
+        `You are already on a new branch for this task. You do not need to checkout any other branches.`,
+
+      commitInstructions:
+        () => `When you have completed your changes, commit them to the current local branch. Do not git push your changes or switch branches.
    - **DO NOT** commit any of the files in the \`.lalph\` directory.`,
 
-    reviewInstructions: `You are already on the branch with their changes.
-After making any changes, commit and push them to the same branch. Do not git push your changes or switch branches.`,
+      reviewInstructions: `You are already on the branch with their changes.
+After making any changes, commit them to the same branch. Do not git push your changes or switch branches.`,
 
-    postWork: Effect.fnUntraced(function* ({ worktree, targetBranch }) {
-      if (!targetBranch) {
-        return yield* Effect.logWarning(
-          "GitFlowCommit: No target branch specified, skipping postWork.",
-        )
-      }
-      const parsed = parseBranch(targetBranch)
-      yield* worktree.exec`git fetch ${parsed.branchWithRemote}`
-      const rebaseResult =
-        yield* worktree.exec`git rebase ${parsed.branchWithRemote}`
-      if (rebaseResult !== 0) {
-        return yield* new GitFlowError({
-          message: `Failed to rebase onto ${parsed.branchWithRemote}. Aborting task.`,
-        })
-      }
+      postWork: Effect.fnUntraced(function* ({ worktree, targetBranch }) {
+        if (!targetBranch) {
+          return yield* Effect.logWarning(
+            "GitFlowCommit: No target branch specified, skipping postWork.",
+          )
+        }
+        const parsed = parseBranch(targetBranch)
+        yield* worktree.exec`git fetch ${parsed.branchWithRemote}`
+        const rebaseResult =
+          yield* worktree.exec`git rebase ${parsed.branchWithRemote}`
+        if (rebaseResult !== 0) {
+          return yield* new GitFlowError({
+            message: `Failed to rebase onto ${parsed.branchWithRemote}. Aborting task.`,
+          })
+        }
 
-      const pushResult =
-        yield* worktree.exec`git push ${parsed.remote} ${`HEAD:${parsed.branch}`}`
-      if (pushResult !== 0) {
-        return yield* new GitFlowError({
-          message: `Failed to push changes to ${parsed.branchWithRemote}. Aborting task.`,
-        })
-      }
-    }),
-    autoMerge: Effect.fnUntraced(function* (options) {
-      const prd = yield* Prd
-      const issue = yield* prd.findById(options.issueId)
-      if (!issue || issue.state !== "in-review") {
-        return
-      }
-      const source = yield* IssueSource
-      yield* source.updateIssue({
-        issueId: options.issueId,
-        state: "done",
-      })
-    }),
-  }),
-).pipe(
-  Layer.merge(
-    Layer.effect(
-      WorktreeBranch,
-      Effect.gen(function* () {
-        const currentWorker = yield* CurrentWorkerState
-        const workerState = yield* Atom.get(currentWorker.state)
-        return Option.some(`lalph/worker-${workerState.iteration}`)
+        const pushResult =
+          yield* worktree.exec`git push ${parsed.remote} ${`HEAD:${parsed.branch}`}`
+        if (pushResult !== 0) {
+          return yield* new GitFlowError({
+            message: `Failed to push changes to ${parsed.branchWithRemote}. Aborting task.`,
+          })
+        }
       }),
-    ),
-  ),
-  Layer.provide(AtomRegistry.layer),
-)
+      autoMerge: Effect.fnUntraced(function* (options) {
+        const prd = yield* Prd
+        const issue = yield* prd.findById(options.issueId)
+        if (!issue || issue.state !== "in-review") {
+          return
+        }
+        const source = yield* IssueSource
+        yield* source.updateIssue({
+          issueId: options.issueId,
+          state: "done",
+        })
+      }),
+    })
+  }),
+).pipe(Layer.provide(AtomRegistry.layer))
 
 // Errors
 

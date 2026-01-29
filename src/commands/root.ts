@@ -70,6 +70,9 @@ const run = Effect.fnUntraced(
       const parsed = parseBranch(options.targetBranch.value)
       yield* worktree.exec`git checkout ${parsed.branchWithRemote}`
     }
+    if (gitFlow.branch) {
+      yield* worktree.exec`git checkout -b ${gitFlow.branch}`
+    }
 
     // ensure cleanup of branch after run
     yield* Effect.addFinalizer(
