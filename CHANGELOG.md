@@ -1,5 +1,15 @@
 # lalph
 
+## 0.1.105
+
+### Patch Changes
+
+- [`f1d183a`](https://github.com/tim-smart/lalph/commit/f1d183afa43ed5ff8be11e7c451386a79c2074b7) Thanks [@tim-smart](https://github.com/tim-smart)! - add --commit mode to not create github PRs
+
+- [`2060bc0`](https://github.com/tim-smart/lalph/commit/2060bc04e1489ead997833bb6c260a896dcfc9bb) Thanks [@tim-smart](https://github.com/tim-smart)! - capture worker state transition timing
+
+- [#205](https://github.com/tim-smart/lalph/pull/205) [`c9dfffa`](https://github.com/tim-smart/lalph/commit/c9dfffa838f5395769186d4a5e73fa0ce4518f32) Thanks [@tim-smart](https://github.com/tim-smart)! - Add an ASCII mascot to the README introduction.
+
 ## 0.1.104
 
 ### Patch Changes
