@@ -183,7 +183,7 @@ ${options.task.description}
         targetBranch: options.targetBranch,
       })}
 6. Update the prd.yml file to reflect any changes in task states.
-   - Update the prd.yml file **after** committing your changes.
+   - Update the prd.yml file **after** ${options.gitFlow.requiresGithubPr ? "pushing" : "committing"} your changes.
    - Rewrite the notes in the description to include only the key discoveries and information that could speed up future work on other tasks. Make sure to preserve important information such as specification file references.
    - If you believe the task is complete, update the \`state\` to "in-review".
 
