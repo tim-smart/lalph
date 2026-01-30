@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.111
+
+### Patch Changes
+
+- [`42a30e2`](https://github.com/tim-smart/lalph/commit/42a30e234e8ba3c077555a7152138589e0a43d16) Thanks [@tim-smart](https://github.com/tim-smart)! - created tasks inherit parent auto-merge
+
 ## 0.1.110
 
 ### Patch Changes
