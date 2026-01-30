@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.110
+
+### Patch Changes
+
+- [`34ab42b`](https://github.com/tim-smart/lalph/commit/34ab42b9951ed877ac1a47004e1c32efd07b0ce7) Thanks [@tim-smart](https://github.com/tim-smart)! - support custom review instructions
+
 ## 0.1.109
 
 ### Patch Changes
