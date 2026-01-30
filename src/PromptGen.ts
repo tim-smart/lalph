@@ -180,7 +180,6 @@ ${keyInformation(options)}`
 
       const promptReview = (options: {
         readonly prompt: string
-        readonly specsDirectory: string
         readonly gitFlow: GitFlow["Service"]
       }) => `A previous AI agent has completed a task from the instructions below.
 
@@ -191,6 +190,13 @@ ${options.gitFlow.reviewInstructions}
 # Prevous instructions (only for context, do not repeat)
 
 ${options.prompt}`
+
+      const promptReviewCustom = (options: {
+        readonly prompt: string
+        readonly specsDirectory: string
+      }) => `${options.prompt}
+
+${prdNotes(options)}`
 
       const promptTimeout = (options: {
         readonly taskId: string
@@ -249,6 +255,7 @@ ${prdNotes(options)}`
         promptChoose,
         prompt,
         promptReview,
+        promptReviewCustom,
         promptTimeout,
         planPrompt,
       } as const

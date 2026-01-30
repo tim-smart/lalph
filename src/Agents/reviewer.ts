@@ -1,4 +1,4 @@
-import { Duration, Effect, Path, pipe } from "effect"
+import { Duration, Effect, FileSystem, Option, Path, pipe } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
@@ -14,17 +14,30 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
   ) => ChildProcess.Command
   readonly instructions: string
 }) {
+  const fs = yield* FileSystem.FileSystem
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
   const gitFlow = yield* GitFlow
 
+  const customInstructions = yield* pipe(
+    fs.readFileString(pathService.join(worktree.directory, "LALPH_REVIEW.md")),
+    Effect.option,
+  )
+
   const cliCommand = pipe(
     options.cliAgent.command({
-      prompt: promptGen.promptReview({
-        prompt: options.instructions,
-        specsDirectory: options.specsDirectory,
-        gitFlow,
+      prompt: Option.match(customInstructions, {
+        onNone: () =>
+          promptGen.promptReview({
+            prompt: options.instructions,
+            gitFlow,
+          }),
+        onSome: (prompt) =>
+          promptGen.promptReviewCustom({
+            prompt,
+            specsDirectory: options.specsDirectory,
+          }),
       }),
       prdFilePath: pathService.join(".lalph", "prd.yml"),
     }),
