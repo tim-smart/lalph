@@ -5,7 +5,7 @@ import { Prompt } from "effect/unstable/cli"
 import { GithubIssueSource, resetGithub } from "./Github.ts"
 import { IssueSource } from "./IssueSource.ts"
 import { PlatformServices } from "./shared/platform.ts"
-import { makeAtomRuntime as atomRuntime } from "./shared/runtime.ts"
+import { atomRuntime } from "./shared/runtime.ts"
 import { Atom, Reactivity } from "effect/unstable/reactivity"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
 
@@ -22,7 +22,7 @@ const issueSources: ReadonlyArray<typeof CurrentIssueSource.Service> = [
     name: "GitHub Issues",
     layer: GithubIssueSource,
     reset: resetGithub,
-    githubPrInstructions: `At the start of your PR description, include a line that closes the issue, like: Closes {task id}.`,
+    githubPrInstructions: `At the start of your PR description, include a line that closes the issue: Closes {task id}`,
   },
 ]
 
@@ -92,10 +92,12 @@ export const currentIssuesAtom = pipe(
   issueSourceRuntime.atom(
     Effect.fnUntraced(function* (get) {
       const source = yield* IssueSource
-      const issues = yield* source.issues
+      const issues = yield* source.issues.pipe(
+        Effect.withSpan("currentIssuesAtom.refresh"),
+      )
       const handle = setTimeout(() => {
         get.refreshSelf()
-      }, 30000)
+      }, 30_000)
       get.addFinalizer(() => clearTimeout(handle))
       return issues
     }),
