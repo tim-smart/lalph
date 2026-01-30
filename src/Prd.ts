@@ -37,6 +37,7 @@ export class Prd extends ServiceMap.Service<
       PlatformError.PlatformError | IssueSourceError
     >
     readonly setChosenIssueId: (issueId: string | null) => Effect.Effect<void>
+    readonly setAutoMerge: (enabled: boolean) => Effect.Effect<void>
   }
 >()("lalph/Prd", {
   make: Effect.gen(function* () {
@@ -46,7 +47,9 @@ export class Prd extends ServiceMap.Service<
     const reactivity = yield* Reactivity.Reactivity
     const source = yield* IssueSource
     const registry = yield* AtomRegistry.AtomRegistry
+
     let chosenIssueId: string | null = null
+    let shouldAddAutoMerge = false
 
     const lalphDir = pathService.join(worktree.directory, `.lalph`)
     const prdFile = pathService.join(worktree.directory, `.lalph`, `prd.yml`)
@@ -98,6 +101,16 @@ export class Prd extends ServiceMap.Service<
       })
     })
 
+    const setChosenIssueId = (issueId: string | null) =>
+      Effect.sync(() => {
+        chosenIssueId = issueId
+      })
+
+    const setAutoMerge = (enabled: boolean) =>
+      Effect.sync(() => {
+        shouldAddAutoMerge = enabled
+      })
+
     if (worktree.inExisting) {
       const initialPrdIssues = yield* readPrd
       return {
@@ -120,10 +133,8 @@ export class Prd extends ServiceMap.Service<
           const prdIssues = yield* readPrd
           return prdIssues.find((i) => i.id === issueId) ?? null
         }),
-        setChosenIssueId: (issueId: string | null) =>
-          Effect.sync(() => {
-            chosenIssueId = issueId
-          }),
+        setChosenIssueId,
+        setAutoMerge,
       }
     }
 
@@ -152,7 +163,9 @@ export class Prd extends ServiceMap.Service<
         toRemove.delete(issue.id!)
 
         if (issue.id === null) {
-          yield* source.createIssue(issue)
+          yield* source.createIssue(
+            shouldAddAutoMerge ? issue.withAutoMerge(true) : issue,
+          )
           continue
         }
 
@@ -166,6 +179,7 @@ export class Prd extends ServiceMap.Service<
           description: issue.description,
           state: issue.state,
           blockedBy: issue.blockedBy,
+          autoMerge: issue.autoMerge,
         })
 
         updatedIssues.set(issue.id, issue)
@@ -244,10 +258,8 @@ export class Prd extends ServiceMap.Service<
       ),
       flagUnmergable,
       findById,
-      setChosenIssueId: (issueId: string | null) =>
-        Effect.sync(() => {
-          chosenIssueId = issueId
-        }),
+      setChosenIssueId,
+      setAutoMerge,
     }
   }).pipe(Effect.withSpan("Prd.build")),
 }) {

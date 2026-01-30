@@ -61,10 +61,18 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
       this.title !== issue.title ||
       this.description !== issue.description ||
       this.state !== issue.state ||
+      this.autoMerge !== issue.autoMerge ||
       !Array.makeEquivalence(Equal.asEquivalence())(
         this.blockedBy,
         issue.blockedBy,
       )
     )
+  }
+
+  withAutoMerge(autoMerge: boolean): PrdIssue {
+    return new PrdIssue({
+      ...this,
+      autoMerge,
+    })
   }
 }

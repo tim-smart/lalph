@@ -269,7 +269,10 @@ export const LinearIssueSource = Layer.effect(
               teamId,
               projectId: project.id,
               assigneeId: linear.viewer.id,
-              labelIds: Option.toArray(labelId),
+              labelIds: [
+                ...Option.toArray(labelId),
+                ...(issue.autoMerge ? Option.toArray(autoMergeLabelId) : []),
+              ],
               title: issue.title,
               description: issue.description,
               priority: issue.priority,
@@ -311,11 +314,15 @@ export const LinearIssueSource = Layer.effect(
       updateIssue: Effect.fnUntraced(
         function* (options) {
           const issueId = identifierMap.get(options.issueId)!
+          const linearIssue = yield* linear.issueById(issueId)
           const update: {
             title?: string
             description?: string
             stateId?: string
-          } = {}
+            labelIds: Array<string>
+          } = {
+            labelIds: linearIssue.labelIds.slice(),
+          }
           if (options.title) {
             update.title = options.title
           }
@@ -325,6 +332,19 @@ export const LinearIssueSource = Layer.effect(
           if (options.state) {
             update.stateId = prdStateToLinearStateId(options.state)
           }
+          if (
+            options.autoMerge !== undefined &&
+            Option.isSome(autoMergeLabelId)
+          ) {
+            const hasLabel = update.labelIds.includes(autoMergeLabelId.value)
+            if (options.autoMerge && !hasLabel) {
+              update.labelIds.push(autoMergeLabelId.value)
+            } else if (!options.autoMerge && hasLabel) {
+              update.labelIds = update.labelIds.filter(
+                (id) => id !== autoMergeLabelId.value,
+              )
+            }
+          }
           yield* linear.use((c) => c.updateIssue(issueId, update))
           if (!options.blockedBy) return
 
@@ -333,7 +353,6 @@ export const LinearIssueSource = Layer.effect(
             return blockerIssueId ? [blockerIssueId] : []
           })
 
-          const linearIssue = yield* linear.issueById(issueId)
           const existingBlockers = linearIssue.blockedBy
 
           const toAdd = blockedBy.filter(

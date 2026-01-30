@@ -245,6 +245,10 @@ export const GithubIssueSource = Layer.effect(
             repo: cli.repo,
             title: issue.title,
             body: issue.description,
+            labels: [
+              ...Option.toArray(labelFilter),
+              ...(issue.autoMerge ? Option.toArray(autoMergeLabelName) : []),
+            ],
           })
 
           const blockedByNumbers = Array.from(
@@ -307,6 +311,11 @@ export const GithubIssueSource = Layer.effect(
               update.labels.push("in-review")
             } else if (options.state === "in-progress") {
               update.labels.push("in-progress")
+            }
+          }
+          if (options.autoMerge !== undefined) {
+            if (options.autoMerge) {
+              update.labels.push(...Option.toArray(autoMergeLabelName))
             }
           }
 

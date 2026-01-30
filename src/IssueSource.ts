@@ -17,6 +17,7 @@ export class IssueSource extends ServiceMap.Service<
       readonly description?: string
       readonly state?: PrdIssue["state"]
       readonly blockedBy?: ReadonlyArray<string>
+      readonly autoMerge?: boolean
     }) => Effect.Effect<void, IssueSourceError>
 
     readonly cancelIssue: (

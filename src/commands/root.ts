@@ -121,8 +121,10 @@ const run = Effect.fnUntraced(
       commandPrefix: options.commandPrefix,
       cliAgent,
     }).pipe(Effect.withSpan("Main.agentChooser"))
+
     taskId = chosenTask.id
     yield* prd.setChosenIssueId(taskId)
+    yield* prd.setAutoMerge(chosenTask.prd.autoMerge)
 
     yield* source.ensureInProgress(taskId).pipe(
       Effect.timeoutOrElse({
