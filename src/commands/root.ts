@@ -74,7 +74,7 @@ const run = Effect.fnUntraced(
       }
     }
     if (gitFlow.branch) {
-      yield* worktree.exec`git branch -D ${gitFlow.branch}`.pipe(Effect.ignore)
+      yield* worktree.exec`git branch -D ${gitFlow.branch}`
       yield* worktree.exec`git checkout -b ${gitFlow.branch}`
     }
 
