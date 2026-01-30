@@ -74,6 +74,11 @@ const run = Effect.fnUntraced(
       }
     }
     if (gitFlow.branch) {
+      const branchExists =
+        yield* worktree.exec`git show-ref --verify refs/heads/${gitFlow.branch}`
+      if (branchExists === 0) {
+        yield* worktree.exec`git branch -D ${gitFlow.branch}`
+      }
       yield* worktree.exec`git checkout -b ${gitFlow.branch}`
     }
 
