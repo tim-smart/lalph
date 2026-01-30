@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.112
+
+### Patch Changes
+
+- [`64644d1`](https://github.com/tim-smart/lalph/commit/64644d1085846942faf08f8e0015f7c8b2a05933) Thanks [@tim-smart](https://github.com/tim-smart)! - disable opencode question tool
+
 ## 0.1.111
 
 ### Patch Changes
