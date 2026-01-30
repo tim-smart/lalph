@@ -293,7 +293,7 @@ const verbose = Flag.boolean("verbose").pipe(
 
 const review = Flag.boolean("review").pipe(
   Flag.withDescription(
-    "Enabled the AI peer-review step. Will use LALPH_REVIEW.md if present.",
+    "Enable the AI peer-review step. Will use LALPH_REVIEW.md if present.",
   ),
 )
 
