@@ -1,5 +1,11 @@
 # lalph
 
+## 0.1.114
+
+### Patch Changes
+
+- [#216](https://github.com/tim-smart/lalph/pull/216) [`6d98d9a`](https://github.com/tim-smart/lalph/commit/6d98d9a0a915de33d4de06a35b2695d3852c41f2) Thanks [@tim-smart](https://github.com/tim-smart)! - Add a dedicated source status command definition.
+
 ## 0.1.113
 
 ### Patch Changes
