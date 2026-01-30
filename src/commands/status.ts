@@ -5,7 +5,7 @@ import {
 } from "../IssueSources.ts"
 import { Settings } from "../Settings.ts"
 
-export const commandSourceStatus = Command.make("status").pipe(
+export const commandStatus = Command.make("status").pipe(
   Command.withDescription("Show the selected issue source options"),
   Command.withHandler(() => statusCurrentIssueSource),
   Command.provide(Settings.layer),

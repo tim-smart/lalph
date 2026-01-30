@@ -10,7 +10,7 @@ import { commandIssue } from "./commands/issue.ts"
 import { commandEdit } from "./commands/edit.ts"
 import { commandShell } from "./commands/shell.ts"
 import { commandSource } from "./commands/source.ts"
-import { commandSourceStatus } from "./commands/sourceStatus.ts"
+import { commandStatus } from "./commands/status.ts"
 import { commandAgent } from "./commands/agent.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { resetCurrentIssueSource } from "./IssueSources.ts"
@@ -26,7 +26,7 @@ commandRoot.pipe(
     commandEdit,
     commandShell,
     commandSource,
-    commandSourceStatus,
+    commandStatus,
     commandAgent,
   ]),
   // Common flags are handled here
