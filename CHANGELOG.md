@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.113
+
+### Patch Changes
+
+- [#215](https://github.com/tim-smart/lalph/pull/215) [`baceb6f`](https://github.com/tim-smart/lalph/commit/baceb6f5dd70c08c8fa08f14f62f387a549add8b) Thanks [@tim-smart](https://github.com/tim-smart)! - force-delete existing gitflow branch before checkout
+
+- [`48bf3c8`](https://github.com/tim-smart/lalph/commit/48bf3c8b3784bb06093b29c4376a004be94fcc23) Thanks [@tim-smart](https://github.com/tim-smart)! - add tracing to currentIssuesAtom
+
 ## 0.1.112
 
 ### Patch Changes
