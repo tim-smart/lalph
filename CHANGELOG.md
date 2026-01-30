@@ -1,5 +1,13 @@
 # lalph
 
+## 0.1.109
+
+### Patch Changes
+
+- [`d2ee743`](https://github.com/tim-smart/lalph/commit/d2ee74325c63edef3dc303e358cfd93e9b7629ad) Thanks [@tim-smart](https://github.com/tim-smart)! - improve instructions prompt
+
+- [`ace3d97`](https://github.com/tim-smart/lalph/commit/ace3d97a92f2e2552b6991fd29aa0d1b3020bc12) Thanks [@tim-smart](https://github.com/tim-smart)! - remove instruction generation
+
 ## 0.1.108
 
 ### Patch Changes
