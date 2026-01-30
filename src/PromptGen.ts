@@ -143,14 +143,14 @@ ${prdNotes(options)}`
         readonly specsDirectory: string
         readonly githubPrNumber: number | undefined
         readonly gitFlow: GitFlow["Service"]
-      }) => `You are to read all of the following sections, and then output
-step by step instructions for another AI agent to fullfil the task. Make sure to
-do some quick research to understand the task before writing the instructions.
+      }) => `You are to read all of the following sections, and then produce clear,
+step by step instructions for another engineer to fullfil the task. Make sure to
+do some research to understand the task before writing the instructions.
 
 Save the instructions in a markdown file called ".lalph/instructions.md".
 
 **DO NOT** start working on the task yet, only output the instructions.
-Do everything you can to help the agent succeed.
+Do everything you can to help the engineer succeed.
 
 "Help others achieve their dreams and you will achieve yours."
 
