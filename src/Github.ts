@@ -382,6 +382,22 @@ export const GithubIssueSource = Layer.effect(
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
+      status: Effect.sync(() => {
+        console.log(`Issue source: GitHub Issues`)
+        console.log(`Repository: ${cli.owner}/${cli.repo}`)
+        console.log(
+          `Label filter: ${Option.match(labelFilter, {
+            onNone: () => "None",
+            onSome: (value) => value,
+          })}`,
+        )
+        console.log(
+          `Auto-merge label: ${Option.match(autoMergeLabelName, {
+            onNone: () => "Disabled",
+            onSome: (value) => value,
+          })}`,
+        )
+      }),
       ensureInProgress: Effect.fnUntraced(
         function* (issueId: string) {
           const issueNumber = Number(issueId.slice(1))

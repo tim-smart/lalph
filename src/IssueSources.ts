@@ -57,6 +57,11 @@ export const resetCurrentIssueSource = Effect.gen(function* () {
   yield* source.reset
 })
 
+export const statusCurrentIssueSource = Effect.gen(function* () {
+  const service = yield* IssueSource
+  yield* service.status
+})
+
 export class CurrentIssueSource extends ServiceMap.Service<
   CurrentIssueSource,
   {

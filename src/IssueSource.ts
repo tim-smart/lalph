@@ -24,6 +24,8 @@ export class IssueSource extends ServiceMap.Service<
       issueId: string,
     ) => Effect.Effect<void, IssueSourceError>
 
+    readonly status: Effect.Effect<void, IssueSourceError>
+
     readonly ensureInProgress: (
       issueId: string,
     ) => Effect.Effect<void, IssueSourceError>

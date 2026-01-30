@@ -403,6 +403,33 @@ export const LinearIssueSource = Layer.effect(
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
+      status: Effect.gen(function* () {
+        const label = labelId
+        const autoMergeLabel = autoMergeLabelId
+        const teams = yield* Stream.runCollect(
+          linear.stream(() => project.teams()),
+        )
+        const labels = yield* Stream.runCollect(linear.labels)
+        const teamName =
+          teams.find((team) => team.id === teamId)?.name ?? teamId
+        const resolveLabel = (value: Option.Option<string>) =>
+          Option.match(value, {
+            onNone: () => "None",
+            onSome: (id) => labels.find((label) => label.id === id)?.name ?? id,
+          })
+        const resolveAutoMergeLabel = (value: Option.Option<string>) =>
+          Option.match(value, {
+            onNone: () => "Disabled",
+            onSome: (id) => labels.find((label) => label.id === id)?.name ?? id,
+          })
+        console.log(`Issue source: Linear`)
+        console.log(`Project: ${project.name}`)
+        console.log(`Team: ${teamName}`)
+        console.log(`Label filter: ${resolveLabel(label)}`)
+        console.log(
+          `Auto-merge label: ${resolveAutoMergeLabel(autoMergeLabel)}`,
+        )
+      }).pipe(Effect.mapError((cause) => new IssueSourceError({ cause }))),
       // linear api writes and reflected immediately in reads, so no-op
       ensureInProgress: () => Effect.void,
     })
