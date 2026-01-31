@@ -1,5 +1,17 @@
 # lalph
 
+## 0.2.0
+
+### Minor Changes
+
+- [#220](https://github.com/tim-smart/lalph/pull/220) [`216af66`](https://github.com/tim-smart/lalph/commit/216af66a8a579a1c37b203f8127e1d7b292942ec) Thanks [@tim-smart](https://github.com/tim-smart)! - Add projects commands
+
+  Each project represents a sub-source of issues with its own configuration.
+
+### Patch Changes
+
+- [#220](https://github.com/tim-smart/lalph/pull/220) [`216af66`](https://github.com/tim-smart/lalph/commit/216af66a8a579a1c37b203f8127e1d7b292942ec) Thanks [@tim-smart](https://github.com/tim-smart)! - add command aliases
+
 ## 0.1.114
 
 ### Patch Changes
