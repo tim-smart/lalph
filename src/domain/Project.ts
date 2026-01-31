@@ -1,4 +1,4 @@
-import { Option, Schema } from "effect"
+import { Schema } from "effect"
 
 export const ProjectId = Schema.String.pipe(Schema.brand("lalph/ProjectId"))
 export type ProjectId = typeof ProjectId.Type
@@ -10,13 +10,4 @@ export class Project extends Schema.Class<Project>("lalph/Project")({
   concurrency: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
   gitFlow: Schema.Literals(["pr", "commit"]),
   reviewAgent: Schema.Boolean,
-}) {
-  static defaultProject = new Project({
-    id: ProjectId.makeUnsafe("default"),
-    enabled: true,
-    targetBranch: Option.none(),
-    concurrency: 1,
-    gitFlow: "pr",
-    reviewAgent: true,
-  })
-}
+}) {}

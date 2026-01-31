@@ -9,6 +9,9 @@ export const commandProjectsToggle = Command.make("toggle").pipe(
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const projects = yield* getAllProjects
+      if (projects.length === 0) {
+        return yield* Effect.log("No projects available to toggle.")
+      }
       const enabled = yield* Prompt.multiSelect({
         message: "Select projects to enable",
         choices: projects.map((project) => ({

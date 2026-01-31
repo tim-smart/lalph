@@ -16,6 +16,12 @@ export const commandProjectsLs = Command.make("ls").pipe(
 
       const projects = yield* getAllProjects
 
+      if (projects.length === 0) {
+        console.log(
+          "No projects configured yet. Run 'lalph projects add' to get started.",
+        )
+        return
+      }
       for (const project of projects) {
         console.log(`Project: ${project.id}`)
         console.log(`  Enabled: ${project.enabled ? "Yes" : "No"}`)

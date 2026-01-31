@@ -385,6 +385,11 @@ export const commandRoot = Command.make("lalph", {
         const commandPrefix = yield* getCommandPrefix
         yield* getOrSelectCliAgent
         const projects = (yield* getAllProjects).filter((p) => p.enabled)
+        if (projects.length === 0) {
+          return yield* Effect.log(
+            "No enabled projects found. Run 'lalph projects add' to set one up.",
+          )
+        }
         yield* Effect.forEach(
           projects,
           (project) =>

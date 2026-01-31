@@ -94,7 +94,9 @@ const handler = flow(
     }, Effect.scoped),
   ),
   Command.provide(
-    Layer.mergeAll(CurrentIssueSource.layer, layerProjectIdPrompt),
+    Layer.mergeAll(CurrentIssueSource.layer).pipe(
+      Layer.provideMerge(layerProjectIdPrompt),
+    ),
   ),
 )
 

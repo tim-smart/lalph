@@ -11,6 +11,9 @@ export const commandProjectsEdit = Command.make("edit").pipe(
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const projects = yield* getAllProjects
+      if (projects.length === 0) {
+        return yield* Effect.log("No projects available to edit.")
+      }
       const project = yield* selectProject
       const concurrency = yield* Prompt.integer({
         message: "Concurrency",
