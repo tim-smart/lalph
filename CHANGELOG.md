@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.2
+
+### Patch Changes
+
+- [#223](https://github.com/tim-smart/lalph/pull/223) [`8d6e8a1`](https://github.com/tim-smart/lalph/commit/8d6e8a15e059391a955a4adf83ef63c95a0c975c) Thanks [@tim-smart](https://github.com/tim-smart)! - Allow projects to be empty and guide users through first-time setup.
+
 ## 0.2.1
 
 ### Patch Changes
