@@ -5,13 +5,20 @@ import { commandProjectsRm } from "./projects/rm.ts"
 import { commandProjectsEdit } from "./projects/edit.ts"
 import { commandProjectsToggle } from "./projects/toggle.ts"
 
+const subcommands = Command.withSubcommands([
+  commandProjectsLs,
+  commandProjectsAdd,
+  commandProjectsEdit,
+  commandProjectsToggle,
+  commandProjectsRm,
+])
+
 export const commandProjects = Command.make("projects").pipe(
   Command.withDescription("Manage projects"),
-  Command.withSubcommands([
-    commandProjectsLs,
-    commandProjectsAdd,
-    commandProjectsEdit,
-    commandProjectsToggle,
-    commandProjectsRm,
-  ]),
+  subcommands,
+)
+
+export const commandProjectsAlias = Command.make("p").pipe(
+  Command.withDescription("Alias for 'projects' command"),
+  subcommands,
 )
