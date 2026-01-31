@@ -446,7 +446,7 @@ export const LinearIssueSource = Layer.effect(
       }),
       settings: (projectId) =>
         Effect.asVoid(Cache.get(projectSettings, projectId)),
-      status: Effect.fnUntraced(
+      info: Effect.fnUntraced(
         function* (lalphProjectId) {
           const { teamId, labelId, autoMergeLabelId, project } =
             yield* Cache.get(projectSettings, lalphProjectId)
@@ -470,7 +470,7 @@ export const LinearIssueSource = Layer.effect(
               onSome: (id) =>
                 labels.find((label) => label.id === id)?.name ?? id,
             })
-          console.log(`  Project: ${project.name}`)
+          console.log(`  Linear project: ${project.name}`)
           console.log(`  Team: ${teamName}`)
           console.log(`  Label filter: ${resolveLabel(label)}`)
           console.log(

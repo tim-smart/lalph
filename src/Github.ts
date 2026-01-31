@@ -418,7 +418,7 @@ export const GithubIssueSource = Layer.effect(
       }),
       settings: (projectId) =>
         Effect.asVoid(Cache.get(projectSettings, projectId)),
-      status: Effect.fnUntraced(function* (projectId) {
+      info: Effect.fnUntraced(function* (projectId) {
         const { labelFilter, autoMergeLabelName } = yield* Cache.get(
           projectSettings,
           projectId,

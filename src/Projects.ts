@@ -120,6 +120,9 @@ export class ProjectNotFound extends Data.TaggedError("ProjectNotFound")<{
 
 export const selectProject = Effect.gen(function* () {
   const projects = yield* getAllProjects
+  if (projects.length === 1) {
+    return projects[0]
+  }
   return yield* Prompt.autoComplete({
     message: "Select a project:",
     choices: projects.map((p) => ({

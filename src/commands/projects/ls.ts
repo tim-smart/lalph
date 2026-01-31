@@ -1,12 +1,12 @@
-import { Command } from "effect/unstable/cli"
-import { CurrentIssueSource } from "../IssueSources.ts"
-import { Settings } from "../Settings.ts"
 import { Effect, Option } from "effect"
-import { getAllProjects } from "../Projects.ts"
-import { IssueSource } from "../IssueSource.ts"
+import { Command } from "effect/unstable/cli"
+import { IssueSource } from "../../IssueSource.ts"
+import { CurrentIssueSource } from "../../IssueSources.ts"
+import { getAllProjects } from "../../Projects.ts"
+import { Settings } from "../../Settings.ts"
 
-export const commandStatus = Command.make("status").pipe(
-  Command.withDescription("Show the selected issue source options"),
+export const commandProjectsLs = Command.make("ls").pipe(
+  Command.withDescription("List all configured projects and their settings"),
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const meta = yield* CurrentIssueSource
@@ -15,12 +15,10 @@ export const commandStatus = Command.make("status").pipe(
       console.log("")
 
       const projects = yield* getAllProjects
-      for (const project of projects) {
-        yield* source.settings(project.id)
-      }
 
       for (const project of projects) {
         console.log(`Project: ${project.id}`)
+        yield* source.info(project.id)
         console.log(`  Concurrency: ${project.concurrency}`)
         if (Option.isSome(project.targetBranch)) {
           console.log(`  Target Branch: ${project.targetBranch.value}`)
@@ -31,7 +29,7 @@ export const commandStatus = Command.make("status").pipe(
         console.log(
           `  Review mode: ${project.reviewMode ? "Enabled" : "Disabled"}`,
         )
-        yield* source.status(project.id)
+        console.log("")
       }
     }),
   ),

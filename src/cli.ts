@@ -10,13 +10,13 @@ import { commandIssue } from "./commands/issue.ts"
 import { commandEdit } from "./commands/edit.ts"
 import { commandShell } from "./commands/shell.ts"
 import { commandSource } from "./commands/source.ts"
-import { commandStatus } from "./commands/status.ts"
 import { commandAgent } from "./commands/agent.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { TracingLayer } from "./Tracing.ts"
 import { MinimumLogLevel } from "effect/References"
 import { atomRuntime, lalphMemoMap } from "./shared/runtime.ts"
 import { PlatformServices } from "./shared/platform.ts"
+import { commandProjects } from "./commands/projects.ts"
 
 commandRoot.pipe(
   Command.withSubcommands([
@@ -25,8 +25,8 @@ commandRoot.pipe(
     commandEdit,
     commandShell,
     commandSource,
-    commandStatus,
     commandAgent,
+    commandProjects,
   ]),
   Command.provide(Settings.layer),
   Command.provide(TracingLayer),

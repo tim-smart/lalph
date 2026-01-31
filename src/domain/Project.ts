@@ -5,6 +5,7 @@ export type ProjectId = typeof ProjectId.Type
 
 export class Project extends Schema.Class<Project>("lalph/Project")({
   id: ProjectId,
+  enabled: Schema.Boolean,
   targetBranch: Schema.Option(Schema.String),
   concurrency: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
   gitFlow: Schema.Literals(["pr", "commit"]),
@@ -12,6 +13,7 @@ export class Project extends Schema.Class<Project>("lalph/Project")({
 }) {
   static defaultProject = new Project({
     id: ProjectId.makeUnsafe("default"),
+    enabled: true,
     targetBranch: Option.none(),
     concurrency: 1,
     gitFlow: "pr",

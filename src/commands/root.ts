@@ -384,7 +384,7 @@ export const commandRoot = Command.make("lalph", {
       }) {
         const commandPrefix = yield* getCommandPrefix
         yield* getOrSelectCliAgent
-        const projects = yield* getAllProjects
+        const projects = (yield* getAllProjects).filter((p) => p.enabled)
         yield* Effect.forEach(
           projects,
           (project) =>

@@ -32,16 +32,16 @@ export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
     })
 
     const projectCache = yield* Cache.make({
-      lookup: Effect.fnUntraced(function* (
-        setting: ProjectSetting<string, Schema.Codec<any, any>>,
-      ) {
-        const projectId = yield* CurrentProjectId
-        const services = yield* projectKvs.services(projectId)
+      lookup: Effect.fnUntraced(function* (options: {
+        readonly projectId: ProjectId
+        readonly setting: ProjectSetting<string, Schema.Codec<any, any>>
+      }) {
+        const services = yield* projectKvs.services(options.projectId)
         const store = KeyValueStore.toSchemaStore(
           ServiceMap.get(services, KeyValueStore.KeyValueStore),
-          setting.schema,
+          options.setting.schema,
         )
-        return yield* Effect.orDie(store.get(setting.name))
+        return yield* Effect.orDie(store.get(options.setting.name))
       }, Effect.scoped),
       capacity: Number.MAX_SAFE_INTEGER,
       requireServicesAt: "lookup",
@@ -74,7 +74,13 @@ export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
       Option.Option<S["Type"]>,
       never,
       S["DecodingServices"] | CurrentProjectId
-    > => Cache.get(projectCache, setting)
+    > =>
+      CurrentProjectId.use((projectId) =>
+        Cache.get(projectCache, {
+          projectId,
+          setting,
+        }),
+      )
 
     const setProject: <S extends Schema.Codec<any, any>>(
       setting: ProjectSetting<string, S>,
@@ -90,7 +96,14 @@ export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
           ServiceMap.get(services, KeyValueStore.KeyValueStore),
           setting.schema,
         )
-        const setCache = Cache.set(projectCache, setting, value)
+        const setCache = Cache.set(
+          projectCache,
+          {
+            projectId,
+            setting,
+          },
+          value,
+        )
         const update = Option.match(value, {
           onNone: () => Effect.ignore(s.remove(setting.name)),
           onSome: (v) => Effect.orDie(s.set(setting.name, v)),

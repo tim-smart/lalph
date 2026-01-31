@@ -39,7 +39,7 @@ export class IssueSource extends ServiceMap.Service<
     readonly settings: (
       projectId: ProjectId,
     ) => Effect.Effect<void, IssueSourceError>
-    readonly status: (
+    readonly info: (
       projectId: ProjectId,
     ) => Effect.Effect<void, IssueSourceError>
 
