@@ -116,9 +116,10 @@ export const selectProject = Effect.gen(function* () {
       " |^()^|  lalph",
       "  '--'",
       "",
-      "Welcome! Let's add your first project. Projects let you configure how lalph runs",
-      "tasks and integrations (like issue sources, concurrency,",
-      "and git flow) for a specific workflow.",
+      "Welcome! Let's add your first project.",
+      "Projects let you configure how lalph runs tasks and integrations",
+      "(like issue sources, concurrency, and git flow) for a specific",
+      "workflow.",
       "",
     ].join("\n")
     yield* Effect.log(welcome)
