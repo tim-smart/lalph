@@ -116,7 +116,7 @@ export const GitFlowCommit = Layer.effect(
 
     return GitFlow.of({
       requiresGithubPr: false,
-      branch: `lalph/worker-${workerState.iteration}`,
+      branch: `lalph/worker-${workerState.id}`,
 
       setupInstructions: () =>
         `You are already on a new branch for this task. You do not need to checkout any other branches.`,

@@ -9,7 +9,7 @@ export class Project extends Schema.Class<Project>("lalph/Project")({
   targetBranch: Schema.Option(Schema.String),
   concurrency: Schema.Int.check(Schema.isGreaterThanOrEqualTo(1)),
   gitFlow: Schema.Literals(["pr", "commit"]),
-  reviewMode: Schema.Boolean,
+  reviewAgent: Schema.Boolean,
 }) {
   static defaultProject = new Project({
     id: ProjectId.makeUnsafe("default"),
@@ -17,6 +17,6 @@ export class Project extends Schema.Class<Project>("lalph/Project")({
     targetBranch: Option.none(),
     concurrency: 1,
     gitFlow: "pr",
-    reviewMode: true,
+    reviewAgent: true,
   })
 }

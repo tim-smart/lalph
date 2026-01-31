@@ -1,28 +1,17 @@
-import { Effect, Option, pipe, String } from "effect"
+import { Array, Effect, Option, pipe, String } from "effect"
 import { Command, Prompt } from "effect/unstable/cli"
-import { allProjects, getAllProjects } from "../../Projects.ts"
-import { Settings } from "../../Settings.ts"
-import { Project, ProjectId } from "../../domain/Project.ts"
+import { allProjects, getAllProjects, selectProject } from "../../Projects.ts"
+import { CurrentProjectId, Settings } from "../../Settings.ts"
+import { Project } from "../../domain/Project.ts"
 import { IssueSource } from "../../IssueSource.ts"
 import { CurrentIssueSource } from "../../IssueSources.ts"
 
-export const commandProjectsAdd = Command.make("add").pipe(
-  Command.withDescription("Add a new project"),
+export const commandProjectsEdit = Command.make("edit").pipe(
+  Command.withDescription("Modify a project"),
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const projects = yield* getAllProjects
-      const id = yield* Prompt.text({
-        message: "Name",
-        validate(input) {
-          input = input.trim()
-          if (input.length === 0) {
-            return Effect.fail("Project name cannot be empty")
-          } else if (projects.some((p) => p.id === input)) {
-            return Effect.fail(`Project already exists`)
-          }
-          return Effect.succeed(input)
-        },
-      })
+      const project = yield* selectProject
       const concurrency = yield* Prompt.integer({
         message: "Concurrency",
         min: 1,
@@ -45,17 +34,26 @@ export const commandProjectsAdd = Command.make("add").pipe(
         message: "Enable review agent?",
       })
 
-      const project = new Project({
-        id: ProjectId.makeUnsafe(id),
-        enabled: true,
+      const nextProject = new Project({
+        ...project,
         concurrency,
         targetBranch,
         gitFlow,
         reviewAgent,
       })
-      yield* Settings.set(allProjects, Option.some([...projects, project]))
+      yield* Settings.set(
+        allProjects,
+        Option.some(
+          Array.map(projects, (p) =>
+            p.id === nextProject.id ? nextProject : p,
+          ),
+        ),
+      )
 
       const source = yield* IssueSource
+      yield* source.reset.pipe(
+        Effect.provideService(CurrentProjectId, nextProject.id),
+      )
       yield* source.settings(project.id)
     }),
   ),

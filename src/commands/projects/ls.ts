@@ -27,7 +27,7 @@ export const commandProjectsLs = Command.make("ls").pipe(
           `  Git flow: ${project.gitFlow === "pr" ? "Pull Request" : "Commit"}`,
         )
         console.log(
-          `  Review mode: ${project.reviewMode ? "Enabled" : "Disabled"}`,
+          `  Review agent: ${project.reviewAgent ? "Enabled" : "Disabled"}`,
         )
         console.log("")
       }

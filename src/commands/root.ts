@@ -271,13 +271,13 @@ const runProject = Effect.fnUntraced(
             stallTimeout: options.stallTimeout,
             runTimeout: options.runTimeout,
             commandPrefix: options.commandPrefix,
-            review: options.project.reviewMode,
+            review: options.project.reviewAgent,
           }).pipe(
             Effect.provide(
               options.project.gitFlow === "commit" ? GitFlowCommit : GitFlowPR,
               { local: true },
             ),
-            withWorkerState(currentIteration),
+            withWorkerState(options.project.id),
           ),
         ),
         Effect.catchFilter(
@@ -285,7 +285,10 @@ const runProject = Effect.fnUntraced(
             e._tag === "NoMoreWork" || e._tag === "QuitError"
               ? Filter.fail(e)
               : e,
-          (e) => Effect.logWarning(Cause.fail(e)),
+          (e) =>
+            Effect.logWarning(Cause.fail(e)).pipe(
+              Effect.andThen(Effect.sleep(Duration.seconds(10))),
+            ),
         ),
         Effect.catchTags({
           NoMoreWork(_) {
@@ -307,9 +310,6 @@ const runProject = Effect.fnUntraced(
             quit = true
             return Effect.void
           },
-        }),
-        Effect.annotateLogs({
-          iteration: currentIteration,
         }),
         Effect.ensuring(semaphore.release(1)),
         Effect.ensuring(Deferred.completeWith(startedDeferred, Effect.void)),
