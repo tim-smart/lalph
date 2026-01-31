@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.1
+
+### Patch Changes
+
+- [`35a380d`](https://github.com/tim-smart/lalph/commit/35a380d0ac34ff47a0a0d0ee2b5eb5bcf35345e9) Thanks [@tim-smart](https://github.com/tim-smart)! - show enabled in project list
+
 ## 0.2.0
 
 ### Minor Changes
