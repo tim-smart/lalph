@@ -1,8 +1,9 @@
 import { Command } from "effect/unstable/cli"
-import { Effect, FileSystem, Path } from "effect"
+import { Effect, FileSystem, Layer, Path } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { Prd } from "../Prd.ts"
 import { Worktree } from "../Worktree.ts"
+import { layerProjectIdPrompt } from "../Projects.ts"
 
 export const commandShell = Command.make("shell").pipe(
   Command.withDescription("Enter an interactive shell in the worktree"),
@@ -27,7 +28,9 @@ export const commandShell = Command.make("shell").pipe(
         }).pipe(ChildProcess.exitCode)
       },
       Effect.scoped,
-      Effect.provide(Prd.layerProvided),
+      Effect.provide(
+        Prd.layerProvided.pipe(Layer.provideMerge(layerProjectIdPrompt)),
+      ),
     ),
   ),
 )

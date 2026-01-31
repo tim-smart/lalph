@@ -11,9 +11,9 @@ export class ProjectsKvs extends LayerMap.Service<ProjectsKvs>()(
   "lalph/ProjectsKvs",
   {
     lookup: (projectId: ProjectId) =>
-      KeyValueStore.layerFileSystem(`.lalph/projects/${projectId}`).pipe(
-        Layer.orDie,
-      ),
+      KeyValueStore.layerFileSystem(
+        `.lalph/projects/${encodeURIComponent(projectId)}`,
+      ).pipe(Layer.orDie),
     dependencies: [PlatformServices],
   },
 ) {}

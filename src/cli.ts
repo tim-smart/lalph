@@ -13,7 +13,6 @@ import { commandSource } from "./commands/source.ts"
 import { commandStatus } from "./commands/status.ts"
 import { commandAgent } from "./commands/agent.ts"
 import PackageJson from "../package.json" with { type: "json" }
-import { resetCurrentIssueSource } from "./IssueSources.ts"
 import { TracingLayer } from "./Tracing.ts"
 import { MinimumLogLevel } from "effect/References"
 import { atomRuntime, lalphMemoMap } from "./shared/runtime.ts"
@@ -29,14 +28,6 @@ commandRoot.pipe(
     commandStatus,
     commandAgent,
   ]),
-  // Common flags are handled here
-  Command.provideEffectDiscard(
-    Effect.fnUntraced(function* (options) {
-      if (options.reset) {
-        yield* resetCurrentIssueSource
-      }
-    }),
-  ),
   Command.provide(Settings.layer),
   Command.provide(TracingLayer),
   Command.provide(({ verbose }) => {

@@ -9,16 +9,17 @@ import {
   DateTime,
   pipe,
   Array,
+  Cache,
 } from "effect"
 import {
   Connection,
   IssueRelationType,
   LinearClient,
-  Project,
+  Project as LinearProject,
 } from "@linear/sdk"
 import { TokenManager } from "./Linear/TokenManager.ts"
 import { Prompt } from "effect/unstable/cli"
-import { Setting, Settings } from "./Settings.ts"
+import { CurrentProjectId, ProjectSetting, Settings } from "./Settings.ts"
 import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
 import {
@@ -27,6 +28,7 @@ import {
   State,
 } from "./domain/LinearIssues.ts"
 import { Reactivity } from "effect/unstable/reactivity"
+import type { ProjectId } from "./domain/Project.ts"
 
 class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
   make: Effect.gen(function* () {
@@ -156,10 +158,21 @@ export const LinearIssueSource = Layer.effect(
   Effect.gen(function* () {
     const linear = yield* Linear
 
-    const project = yield* getOrSelectProject
-    const teamId = yield* getOrSelectTeamId(project)
-    const labelId = yield* getOrSelectLabel
-    const autoMergeLabelId = yield* getOrSelectAutoMergeLabel
+    const projectSettings = yield* Cache.make({
+      lookup: Effect.fnUntraced(
+        function* (_projectId: ProjectId) {
+          const project = yield* getOrSelectProject
+          const teamId = yield* getOrSelectTeamId(project)
+          const labelId = yield* getOrSelectLabel
+          const autoMergeLabelId = yield* getOrSelectAutoMergeLabel
+          return { project, teamId, labelId, autoMergeLabelId } as const
+        },
+        Effect.orDie,
+        (effect, projectId) =>
+          Effect.provideService(effect, CurrentProjectId, projectId),
+      ),
+      capacity: Number.POSITIVE_INFINITY,
+    })
 
     // Map of linear identifier to issue id
     const identifierMap = new Map<string, string>()
@@ -227,47 +240,63 @@ export const LinearIssueSource = Layer.effect(
       }
     }
 
-    const issues = linear.issues({ labelId, projectId: project.id }).pipe(
-      Effect.mapError((cause) => new IssueSourceError({ cause })),
-      Effect.map((issues) => {
-        const threeDaysAgo = DateTime.nowUnsafe().pipe(
-          DateTime.subtract({ days: 3 }),
-        )
-        return pipe(
-          Array.filter(issues, (issue) => {
-            identifierMap.set(issue.identifier, issue.id)
-            const completedAt = issue.completedAt
-            if (!completedAt) return true
-            return DateTime.isGreaterThanOrEqualTo(completedAt, threeDaysAgo)
-          }),
-          Array.map(
-            (issue) =>
-              new PrdIssue({
-                id: issue.identifier,
-                title: issue.title,
-                description: issue.description ?? "",
-                priority: issue.priority,
-                estimate: issue.estimate ?? null,
-                state: linearStateToPrdState(issue.state),
-                blockedBy: issue.blockedBy.map((r) => r.issue.identifier),
-                autoMerge: autoMergeLabelId.pipe(
-                  Option.map((labelId) => issue.labelIds.includes(labelId)),
-                  Option.getOrElse(() => false),
-                ),
-              }),
-          ),
-        )
-      }),
-    )
+    const issues = ({
+      labelId,
+      project,
+      autoMergeLabelId,
+    }: {
+      readonly labelId: Option.Option<string>
+      readonly project: LinearProject
+      readonly autoMergeLabelId: Option.Option<string>
+    }) =>
+      linear.issues({ labelId, projectId: project.id }).pipe(
+        Effect.mapError((cause) => new IssueSourceError({ cause })),
+        Effect.map((issues) => {
+          const threeDaysAgo = DateTime.nowUnsafe().pipe(
+            DateTime.subtract({ days: 3 }),
+          )
+          return pipe(
+            Array.filter(issues, (issue) => {
+              identifierMap.set(issue.identifier, issue.id)
+              const completedAt = issue.completedAt
+              if (!completedAt) return true
+              return DateTime.isGreaterThanOrEqualTo(completedAt, threeDaysAgo)
+            }),
+            Array.map(
+              (issue) =>
+                new PrdIssue({
+                  id: issue.identifier,
+                  title: issue.title,
+                  description: issue.description ?? "",
+                  priority: issue.priority,
+                  estimate: issue.estimate ?? null,
+                  state: linearStateToPrdState(issue.state),
+                  blockedBy: issue.blockedBy.map((r) => r.issue.identifier),
+                  autoMerge: autoMergeLabelId.pipe(
+                    Option.map((labelId) => issue.labelIds.includes(labelId)),
+                    Option.getOrElse(() => false),
+                  ),
+                }),
+            ),
+          )
+        }),
+      )
 
     return yield* IssueSource.make({
-      issues,
+      issues: Effect.fnUntraced(function* (projectId) {
+        const settings = yield* Cache.get(projectSettings, projectId)
+        return yield* issues(settings)
+      }),
       createIssue: Effect.fnUntraced(
-        function* (issue: PrdIssue) {
+        function* (projectId, issue) {
+          const { teamId, labelId, autoMergeLabelId } = yield* Cache.get(
+            projectSettings,
+            projectId,
+          )
           const created = yield* linear.use((c) =>
             c.createIssue({
               teamId,
-              projectId: project.id,
+              projectId,
               assigneeId: linear.viewer.id,
               labelIds: [
                 ...Option.toArray(labelId),
@@ -313,6 +342,10 @@ export const LinearIssueSource = Layer.effect(
       ),
       updateIssue: Effect.fnUntraced(
         function* (options) {
+          const { autoMergeLabelId } = yield* Cache.get(
+            projectSettings,
+            options.projectId,
+          )
           const issueId = identifierMap.get(options.issueId)!
           const linearIssue = yield* linear.issueById(issueId)
           const update: {
@@ -393,7 +426,7 @@ export const LinearIssueSource = Layer.effect(
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
       cancelIssue: Effect.fnUntraced(
-        function* (issueId: string) {
+        function* (_project, issueId) {
           const linearIssueId = identifierMap.get(issueId)!
           yield* linear.use((c) =>
             c.updateIssue(linearIssueId, {
@@ -403,45 +436,54 @@ export const LinearIssueSource = Layer.effect(
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
-      status: Effect.gen(function* () {
-        const label = labelId
-        const autoMergeLabel = autoMergeLabelId
-        const teams = yield* Stream.runCollect(
-          linear.stream(() => project.teams()),
-        )
-        const labels = yield* Stream.runCollect(linear.labels)
-        const teamName =
-          teams.find((team) => team.id === teamId)?.name ?? teamId
-        const resolveLabel = (value: Option.Option<string>) =>
-          Option.match(value, {
-            onNone: () => "None",
-            onSome: (id) => labels.find((label) => label.id === id)?.name ?? id,
-          })
-        const resolveAutoMergeLabel = (value: Option.Option<string>) =>
-          Option.match(value, {
-            onNone: () => "Disabled",
-            onSome: (id) => labels.find((label) => label.id === id)?.name ?? id,
-          })
-        console.log(`Issue source: Linear`)
-        console.log(`Project: ${project.name}`)
-        console.log(`Team: ${teamName}`)
-        console.log(`Label filter: ${resolveLabel(label)}`)
-        console.log(
-          `Auto-merge label: ${resolveAutoMergeLabel(autoMergeLabel)}`,
-        )
-      }).pipe(Effect.mapError((cause) => new IssueSourceError({ cause }))),
+      reset: Effect.gen(function* () {
+        const projectId = yield* CurrentProjectId
+        yield* Settings.setProject(selectedProjectId, Option.none())
+        yield* Settings.setProject(selectedTeamId, Option.none())
+        yield* Settings.setProject(selectedLabelId, Option.none())
+        yield* Settings.setProject(selectedAutoMergeLabelId, Option.none())
+        yield* Cache.invalidate(projectSettings, projectId)
+      }),
+      settings: (projectId) =>
+        Effect.asVoid(Cache.get(projectSettings, projectId)),
+      status: Effect.fnUntraced(
+        function* (lalphProjectId) {
+          const { teamId, labelId, autoMergeLabelId, project } =
+            yield* Cache.get(projectSettings, lalphProjectId)
+          const label = labelId
+          const autoMergeLabel = autoMergeLabelId
+          const teams = yield* Stream.runCollect(
+            linear.stream(() => project.teams()),
+          )
+          const labels = yield* Stream.runCollect(linear.labels)
+          const teamName =
+            teams.find((team) => team.id === teamId)?.name ?? teamId
+          const resolveLabel = (value: Option.Option<string>) =>
+            Option.match(value, {
+              onNone: () => "None",
+              onSome: (id) =>
+                labels.find((label) => label.id === id)?.name ?? id,
+            })
+          const resolveAutoMergeLabel = (value: Option.Option<string>) =>
+            Option.match(value, {
+              onNone: () => "Disabled",
+              onSome: (id) =>
+                labels.find((label) => label.id === id)?.name ?? id,
+            })
+          console.log(`  Project: ${project.name}`)
+          console.log(`  Team: ${teamName}`)
+          console.log(`  Label filter: ${resolveLabel(label)}`)
+          console.log(
+            `  Auto-merge label: ${resolveAutoMergeLabel(autoMergeLabel)}`,
+          )
+        },
+        Effect.mapError((cause) => new IssueSourceError({ cause })),
+      ),
       // linear api writes and reflected immediately in reads, so no-op
       ensureInProgress: () => Effect.void,
     })
   }),
 ).pipe(Layer.provide([Linear.layer, Reactivity.layer]))
-
-export const resetLinear = Effect.gen(function* () {
-  yield* Settings.set(selectedProjectId, Option.none())
-  yield* Settings.set(selectedTeamId, Option.none())
-  yield* Settings.set(selectedLabelId, Option.none())
-  yield* Settings.set(selectedAutoMergeLabelId, Option.none())
-})
 
 export class LinearError extends Schema.ErrorClass("lalph/LinearError")({
   _tag: Schema.tag("LinearError"),
@@ -450,7 +492,10 @@ export class LinearError extends Schema.ErrorClass("lalph/LinearError")({
 
 // Project selection
 
-const selectedProjectId = new Setting("linear.selectedProjectId", Schema.String)
+const selectedProjectId = new ProjectSetting(
+  "linear.selectedProjectId",
+  Schema.String,
+)
 const selectProject = Effect.gen(function* () {
   const linear = yield* Linear
 
@@ -464,13 +509,13 @@ const selectProject = Effect.gen(function* () {
     })),
   })
 
-  yield* Settings.set(selectedProjectId, Option.some(project.id))
+  yield* Settings.setProject(selectedProjectId, Option.some(project.id))
 
   return project
 })
 const getOrSelectProject = Effect.gen(function* () {
   const linear = yield* Linear
-  return yield* Settings.get(selectedProjectId).pipe(
+  return yield* Settings.getProject(selectedProjectId).pipe(
     Effect.flatMap((o) => o.asEffect()),
     Effect.flatMap((projectId) => linear.use((c) => c.project(projectId))),
     Effect.catch(() => selectProject),
@@ -479,8 +524,11 @@ const getOrSelectProject = Effect.gen(function* () {
 
 // Team selection
 
-const selectedTeamId = new Setting("linear.selectedTeamId", Schema.String)
-const teamSelect = Effect.fnUntraced(function* (project: Project) {
+const selectedTeamId = new ProjectSetting(
+  "linear.selectedTeamId",
+  Schema.String,
+)
+const teamSelect = Effect.fnUntraced(function* (project: LinearProject) {
   const linear = yield* Linear
   const teams = yield* Stream.runCollect(linear.stream(() => project.teams()))
   const teamId = yield* Prompt.autoComplete({
@@ -490,11 +538,11 @@ const teamSelect = Effect.fnUntraced(function* (project: Project) {
       value: team.id,
     })),
   })
-  yield* Settings.set(selectedTeamId, Option.some(teamId))
+  yield* Settings.setProject(selectedTeamId, Option.some(teamId))
   return teamId
 })
-const getOrSelectTeamId = Effect.fnUntraced(function* (project: Project) {
-  const teamIdOption = yield* Settings.get(selectedTeamId)
+const getOrSelectTeamId = Effect.fnUntraced(function* (project: LinearProject) {
+  const teamIdOption = yield* Settings.getProject(selectedTeamId)
   if (Option.isSome(teamIdOption)) {
     return teamIdOption.value
   }
@@ -503,7 +551,7 @@ const getOrSelectTeamId = Effect.fnUntraced(function* (project: Project) {
 
 // Label filter selection
 
-const selectedLabelId = new Setting(
+const selectedLabelId = new ProjectSetting(
   "linear.selectedLabelId",
   Schema.Option(Schema.String),
 )
@@ -524,11 +572,11 @@ const labelIdSelect = Effect.gen(function* () {
       })),
     ),
   })
-  yield* Settings.set(selectedLabelId, Option.some(labelId))
+  yield* Settings.setProject(selectedLabelId, Option.some(labelId))
   return labelId
 })
 const getOrSelectLabel = Effect.gen(function* () {
-  const labelId = yield* Settings.get(selectedLabelId)
+  const labelId = yield* Settings.getProject(selectedLabelId)
   if (Option.isSome(labelId)) {
     return labelId.value
   }
@@ -537,7 +585,7 @@ const getOrSelectLabel = Effect.gen(function* () {
 
 // Auto merge label selection
 
-const selectedAutoMergeLabelId = new Setting(
+const selectedAutoMergeLabelId = new ProjectSetting(
   "linear.selectedAutoMergeLabelId",
   Schema.Option(Schema.String),
 )
@@ -558,11 +606,11 @@ const autoMergeLabelIdSelect = Effect.gen(function* () {
       })),
     ),
   })
-  yield* Settings.set(selectedAutoMergeLabelId, Option.some(labelId))
+  yield* Settings.setProject(selectedAutoMergeLabelId, Option.some(labelId))
   return labelId
 })
 const getOrSelectAutoMergeLabel = Effect.gen(function* () {
-  const labelId = yield* Settings.get(selectedAutoMergeLabelId)
+  const labelId = yield* Settings.getProject(selectedAutoMergeLabelId)
   if (Option.isSome(labelId)) {
     return labelId.value
   }

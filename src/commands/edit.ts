@@ -1,8 +1,9 @@
 import { Command } from "effect/unstable/cli"
-import { Effect } from "effect"
+import { Effect, Layer } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { Prd } from "../Prd.ts"
 import { configEditor } from "../shared/config.ts"
+import { layerProjectIdPrompt } from "../Projects.ts"
 
 export const commandEdit = Command.make("edit").pipe(
   Command.withDescription("Open the prd.yml file in your editor"),
@@ -20,7 +21,9 @@ export const commandEdit = Command.make("edit").pipe(
         }).pipe(ChildProcess.exitCode)
       },
       Effect.scoped,
-      Effect.provide(Prd.layerLocalProvided),
+      Effect.provide(
+        Prd.layerLocalProvided.pipe(Layer.provideMerge(layerProjectIdPrompt)),
+      ),
     ),
   ),
 )
