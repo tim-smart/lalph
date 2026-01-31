@@ -18,7 +18,7 @@ import {
 } from "@linear/sdk"
 import { TokenManager } from "./Linear/TokenManager.ts"
 import { Prompt } from "effect/unstable/cli"
-import { Setting } from "./Settings.ts"
+import { Setting, Settings } from "./Settings.ts"
 import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
 import {
@@ -437,10 +437,10 @@ export const LinearIssueSource = Layer.effect(
 ).pipe(Layer.provide([Linear.layer, Reactivity.layer]))
 
 export const resetLinear = Effect.gen(function* () {
-  yield* selectedProjectId.set(Option.none())
-  yield* selectedTeamId.set(Option.none())
-  yield* selectedLabelId.set(Option.none())
-  yield* selectedAutoMergeLabelId.set(Option.none())
+  yield* Settings.set(selectedProjectId, Option.none())
+  yield* Settings.set(selectedTeamId, Option.none())
+  yield* Settings.set(selectedLabelId, Option.none())
+  yield* Settings.set(selectedAutoMergeLabelId, Option.none())
 })
 
 export class LinearError extends Schema.ErrorClass("lalph/LinearError")({
@@ -464,13 +464,13 @@ const selectProject = Effect.gen(function* () {
     })),
   })
 
-  yield* selectedProjectId.set(Option.some(project.id))
+  yield* Settings.set(selectedProjectId, Option.some(project.id))
 
   return project
 })
 const getOrSelectProject = Effect.gen(function* () {
   const linear = yield* Linear
-  return yield* selectedProjectId.get.pipe(
+  return yield* Settings.get(selectedProjectId).pipe(
     Effect.flatMap((o) => o.asEffect()),
     Effect.flatMap((projectId) => linear.use((c) => c.project(projectId))),
     Effect.catch(() => selectProject),
@@ -490,11 +490,11 @@ const teamSelect = Effect.fnUntraced(function* (project: Project) {
       value: team.id,
     })),
   })
-  yield* selectedTeamId.set(Option.some(teamId))
+  yield* Settings.set(selectedTeamId, Option.some(teamId))
   return teamId
 })
 const getOrSelectTeamId = Effect.fnUntraced(function* (project: Project) {
-  const teamIdOption = yield* selectedTeamId.get
+  const teamIdOption = yield* Settings.get(selectedTeamId)
   if (Option.isSome(teamIdOption)) {
     return teamIdOption.value
   }
@@ -524,11 +524,11 @@ const labelIdSelect = Effect.gen(function* () {
       })),
     ),
   })
-  yield* selectedLabelId.set(Option.some(labelId))
+  yield* Settings.set(selectedLabelId, Option.some(labelId))
   return labelId
 })
 const getOrSelectLabel = Effect.gen(function* () {
-  const labelId = yield* selectedLabelId.get
+  const labelId = yield* Settings.get(selectedLabelId)
   if (Option.isSome(labelId)) {
     return labelId.value
   }
@@ -558,11 +558,11 @@ const autoMergeLabelIdSelect = Effect.gen(function* () {
       })),
     ),
   })
-  yield* selectedAutoMergeLabelId.set(Option.some(labelId))
+  yield* Settings.set(selectedAutoMergeLabelId, Option.some(labelId))
   return labelId
 })
 const getOrSelectAutoMergeLabel = Effect.gen(function* () {
-  const labelId = yield* selectedAutoMergeLabelId.get
+  const labelId = yield* Settings.get(selectedAutoMergeLabelId)
   if (Option.isSome(labelId)) {
     return labelId.value
   }

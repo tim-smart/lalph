@@ -25,12 +25,12 @@ export const promptForCommandPrefix = Effect.gen(function* () {
     message: "Command prefix for agent commands? (leave empty for none)",
   })
   const prefixOption = normalizePrefix(prefix)
-  yield* commandPrefixSetting.set(Option.some(prefixOption))
+  yield* Settings.set(commandPrefixSetting, Option.some(prefixOption))
   return prefixOption
 })
 
 export const getCommandPrefix = Effect.gen(function* () {
-  const stored = yield* commandPrefixSetting.get
+  const stored = yield* Settings.get(commandPrefixSetting)
   return Option.match(Option.flatten(stored), {
     onNone: () => identity<ChildProcess.Command>,
     onSome: parseCommandPrefix,
@@ -45,13 +45,13 @@ export const selectCliAgent = Effect.gen(function* () {
       value: agent,
     })),
   })
-  yield* selectedCliAgentId.set(Option.some(agent.id))
+  yield* Settings.set(selectedCliAgentId, Option.some(agent.id))
   yield* promptForCommandPrefix
   return agent
 })
 
 export const getOrSelectCliAgent = Effect.gen(function* () {
-  const selectedAgent = (yield* selectedCliAgentId.get).pipe(
+  const selectedAgent = (yield* Settings.get(selectedCliAgentId)).pipe(
     Option.filterMap((id) =>
       Array.findFirst(allCliAgents, (agent) => agent.id === id),
     ),

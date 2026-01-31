@@ -17,7 +17,7 @@ import {
 import { Octokit } from "octokit"
 import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
-import { Setting } from "./Settings.ts"
+import { Setting, Settings } from "./Settings.ts"
 import { Prompt } from "effect/unstable/cli"
 import { TokenManager } from "./Github/TokenManager.ts"
 import { GithubCli } from "./Github/Cli.ts"
@@ -115,8 +115,8 @@ export const GithubIssueSource = Layer.effect(
       label.some((l) => (typeof l === "string" ? l === name : l.name === name))
 
     const listOpenBlockedBy = (issueId: number) =>
-      github
-        .stream((rest, page) =>
+      pipe(
+        github.stream((rest, page) =>
           rest.issues.listDependenciesBlockedBy({
             owner: cli.owner,
             repo: cli.repo,
@@ -124,11 +124,12 @@ export const GithubIssueSource = Layer.effect(
             per_page: 100,
             page,
           }),
-        )
-        .pipe(Stream.filter((issue) => issue.state === "open"))
+        ),
+        Stream.filter((issue) => issue.state === "open"),
+      )
 
-    const recentlyClosed = github
-      .stream((rest, page) =>
+    const recentlyClosed = pipe(
+      github.stream((rest, page) =>
         rest.issues.listForRepo({
           owner: cli.owner,
           repo: cli.repo,
@@ -141,11 +142,12 @@ export const GithubIssueSource = Layer.effect(
             DateTime.formatIso,
           ),
         }),
-      )
-      .pipe(Stream.filter((issue) => issue.state_reason !== "not_planned"))
+      ),
+      Stream.filter((issue) => issue.state_reason !== "not_planned"),
+    )
 
-    const issues = github
-      .stream((rest, page) =>
+    const issues = pipe(
+      github.stream((rest, page) =>
         rest.issues.listForRepo({
           owner: cli.owner,
           repo: cli.repo,
@@ -154,42 +156,41 @@ export const GithubIssueSource = Layer.effect(
           page,
           labels: Option.getOrUndefined(labelFilter),
         }),
-      )
-      .pipe(
-        Stream.merge(recentlyClosed),
-        Stream.filter((issue) => issue.pull_request === undefined),
-        Stream.mapEffect(
-          Effect.fnUntraced(function* (issue) {
-            const dependencies = yield* listOpenBlockedBy(issue.number).pipe(
-              Stream.runCollect,
-            )
-            const state: PrdIssue["state"] =
-              issue.state === "closed"
-                ? "done"
-                : hasLabel(issue.labels, "in-progress")
-                  ? "in-progress"
-                  : hasLabel(issue.labels, "in-review")
-                    ? "in-review"
-                    : "todo"
-            return new PrdIssue({
-              id: `#${issue.number}`,
-              title: issue.title,
-              description: issue.body ?? "",
-              priority: 0,
-              estimate: null,
-              state,
-              blockedBy: dependencies.map((dep) => `#${dep.number}`),
-              autoMerge: autoMergeLabelName.pipe(
-                Option.map((labelName) => hasLabel(issue.labels, labelName)),
-                Option.getOrElse(() => false),
-              ),
-            })
-          }),
-          { concurrency: 10 },
-        ),
-        Stream.runCollect,
-        Effect.mapError((cause) => new IssueSourceError({ cause })),
-      )
+      ),
+      Stream.merge(recentlyClosed),
+      Stream.filter((issue) => issue.pull_request === undefined),
+      Stream.mapEffect(
+        Effect.fnUntraced(function* (issue) {
+          const dependencies = yield* listOpenBlockedBy(issue.number).pipe(
+            Stream.runCollect,
+          )
+          const state: PrdIssue["state"] =
+            issue.state === "closed"
+              ? "done"
+              : hasLabel(issue.labels, "in-progress")
+                ? "in-progress"
+                : hasLabel(issue.labels, "in-review")
+                  ? "in-review"
+                  : "todo"
+          return new PrdIssue({
+            id: `#${issue.number}`,
+            title: issue.title,
+            description: issue.body ?? "",
+            priority: 0,
+            estimate: null,
+            state,
+            blockedBy: dependencies.map((dep) => `#${dep.number}`),
+            autoMerge: autoMergeLabelName.pipe(
+              Option.map((labelName) => hasLabel(issue.labels, labelName)),
+              Option.getOrElse(() => false),
+            ),
+          })
+        }),
+        { concurrency: 10 },
+      ),
+      Stream.runCollect,
+      Effect.mapError((cause) => new IssueSourceError({ cause })),
+    )
 
     const createIssue = github.wrap((rest) => rest.issues.create)
     const updateIssue = github.wrap((rest) => rest.issues.update)
@@ -439,11 +440,11 @@ const labelSelect = Effect.gen(function* () {
   const labelOption = Option.some(label.trim()).pipe(
     Option.filter(String.isNonEmpty),
   )
-  yield* labelFilter.set(Option.some(labelOption))
+  yield* Settings.set(labelFilter, Option.some(labelOption))
   return labelOption
 })
 const getOrSelectLabel = Effect.gen(function* () {
-  const label = yield* labelFilter.get
+  const label = yield* Settings.get(labelFilter)
   if (Option.isSome(label)) {
     return label.value
   }
@@ -464,20 +465,21 @@ const autoMergeLabelSelect = Effect.gen(function* () {
   const labelOption = Option.some(label.trim()).pipe(
     Option.filter(String.isNonEmpty),
   )
-  yield* autoMergeLabel.set(Option.some(labelOption))
+  yield* Settings.set(autoMergeLabel, Option.some(labelOption))
   return labelOption
 })
 const getOrSelectAutoMergeLabel = Effect.gen(function* () {
-  const label = yield* autoMergeLabel.get
+  const label = yield* Settings.get(autoMergeLabel)
   if (Option.isSome(label)) {
     return label.value
   }
   return yield* autoMergeLabelSelect
 })
 
-export const resetGithub = labelFilter
-  .set(Option.none())
-  .pipe(Effect.andThen(autoMergeLabel.set(Option.none())))
+export const resetGithub = pipe(
+  Settings.set(labelFilter, Option.none()),
+  Effect.andThen(Settings.set(autoMergeLabel, Option.none())),
+)
 
 // == helpers
 

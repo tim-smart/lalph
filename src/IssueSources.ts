@@ -39,13 +39,13 @@ export const selectIssueSource = Effect.gen(function* () {
       value: s,
     })),
   })
-  yield* selectedIssueSource.set(Option.some(source.id))
+  yield* Settings.set(selectedIssueSource, Option.some(source.id))
   yield* source.reset
   return source
 })
 
 const getOrSelectIssueSource = Effect.gen(function* () {
-  const issueSource = yield* selectedIssueSource.get
+  const issueSource = yield* Settings.get(selectedIssueSource)
   if (Option.isSome(issueSource)) {
     return issueSources.find((s) => s.id === issueSource.value)!
   }
