@@ -7,7 +7,8 @@ import { getCommandPrefix, getOrSelectCliAgent } from "./agent.ts"
 import { Command, Flag } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../IssueSources.ts"
 import { commandRoot } from "./root.ts"
-import { Settings } from "../Settings.ts"
+import { CurrentProjectId, Settings } from "../Settings.ts"
+import { selectProject } from "../Projects.ts"
 
 const dangerous = Flag.boolean("dangerous").pipe(
   Flag.withAlias("d"),
@@ -20,14 +21,15 @@ export const commandPlan = Command.make("plan", { dangerous }).pipe(
   Command.withDescription("Iterate on an issue plan and create PRD tasks"),
   Command.withHandler(
     Effect.fnUntraced(function* ({ dangerous }) {
-      const { specsDirectory, targetBranch } = yield* commandRoot
+      const project = yield* selectProject
+      const { specsDirectory } = yield* commandRoot
       const commandPrefix = yield* getCommandPrefix
       yield* plan({
         specsDirectory,
-        targetBranch,
+        targetBranch: project.targetBranch,
         commandPrefix,
         dangerous,
-      })
+      }).pipe(Effect.provideService(CurrentProjectId, project.id))
     }, Effect.provide(Settings.layer)),
   ),
 )

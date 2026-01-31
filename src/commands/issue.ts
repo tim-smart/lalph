@@ -1,11 +1,13 @@
 import { Command } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../IssueSources.ts"
-import { Effect, FileSystem, Schema } from "effect"
+import { Effect, FileSystem, flow, Layer, Schema } from "effect"
 import { IssueSource } from "../IssueSource.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { PrdIssue } from "../domain/PrdIssue.ts"
 import * as Yaml from "yaml"
 import { configEditor } from "../shared/config.ts"
+import { CurrentProjectId } from "../Settings.ts"
+import { layerProjectIdPrompt } from "../Projects.ts"
 
 const issueTemplate = `---
 title: Issue Title
@@ -27,12 +29,12 @@ const FrontMatterSchema = Schema.toCodecJson(
   }),
 )
 
-export const commandIssue = Command.make("issue").pipe(
-  Command.withDescription("Create a new issue in the selected issue source"),
+const handler = flow(
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const source = yield* IssueSource
       const fs = yield* FileSystem.FileSystem
+      const projectId = yield* CurrentProjectId
       const tempFile = yield* fs.makeTempFileScoped({
         suffix: ".md",
       })
@@ -79,6 +81,7 @@ export const commandIssue = Command.make("issue").pipe(
       const description = lines.slice(descriptionStartIndex).join("\n").trim()
 
       const created = yield* source.createIssue(
+        projectId,
         new PrdIssue({
           id: null,
           ...frontMatter,
@@ -90,5 +93,17 @@ export const commandIssue = Command.make("issue").pipe(
       console.log(`URL: ${created.url}`)
     }, Effect.scoped),
   ),
-  Command.provide(CurrentIssueSource.layer),
+  Command.provide(
+    Layer.mergeAll(CurrentIssueSource.layer, layerProjectIdPrompt),
+  ),
+)
+
+export const commandIssue = Command.make("issue").pipe(
+  Command.withDescription("Create a new issue in the selected issue source"),
+  handler,
+)
+
+export const commandIssueAlias = Command.make("i").pipe(
+  Command.withDescription("Alias for 'issue' command"),
+  handler,
 )

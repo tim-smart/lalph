@@ -1,15 +1,27 @@
 // oxlint-disable typescript/no-explicit-any
-import { Cache, Effect, Layer, Option, Schema, ServiceMap } from "effect"
+import {
+  Cache,
+  Effect,
+  Layer,
+  Option,
+  pipe,
+  PlatformError,
+  Schema,
+  ServiceMap,
+} from "effect"
 import { KeyValueStore } from "effect/unstable/persistence"
-import { layerKvs } from "./Kvs.ts"
+import { layerKvs, ProjectsKvs } from "./Kvs.ts"
 import { allCliAgents } from "./domain/CliAgent.ts"
+import { ProjectId } from "./domain/Project.ts"
+import { atomRuntime } from "./shared/runtime.ts"
+import { AsyncResult, Atom, Reactivity } from "effect/unstable/reactivity"
 
 export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
   make: Effect.gen(function* () {
-    const store = KeyValueStore.prefix(
-      yield* KeyValueStore.KeyValueStore,
-      "settings.",
-    )
+    const kvs = yield* KeyValueStore.KeyValueStore
+    const projectKvs = yield* ProjectsKvs
+    const store = KeyValueStore.prefix(kvs, "settings.")
+    const reactivity = yield* Reactivity.Reactivity
 
     const cache = yield* Cache.make({
       lookup(setting: Setting<string, Schema.Codec<any, any>>) {
@@ -17,6 +29,22 @@ export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
         return Effect.orDie(s.get(setting.name))
       },
       capacity: Number.MAX_SAFE_INTEGER,
+    })
+
+    const projectCache = yield* Cache.make({
+      lookup: Effect.fnUntraced(function* (options: {
+        readonly projectId: ProjectId
+        readonly setting: ProjectSetting<string, Schema.Codec<any, any>>
+      }) {
+        const services = yield* projectKvs.services(options.projectId)
+        const store = KeyValueStore.toSchemaStore(
+          ServiceMap.get(services, KeyValueStore.KeyValueStore),
+          options.setting.schema,
+        )
+        return yield* Effect.orDie(store.get(options.setting.name))
+      }, Effect.scoped),
+      capacity: Number.MAX_SAFE_INTEGER,
+      requireServicesAt: "lookup",
     })
 
     const get = <S extends Schema.Codec<any, any>>(
@@ -34,30 +62,190 @@ export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
         onNone: () => Effect.ignore(s.remove(setting.name)),
         onSome: (v) => Effect.orDie(s.set(setting.name, v)),
       })
-      return Effect.andThen(update, setCache)
+      return reactivity.mutation(
+        [`settings.${setting.name}`],
+        Effect.andThen(update, setCache),
+      )
     }
 
-    return { get, set } as const
+    const getProject = <S extends Schema.Codec<any, any>>(
+      setting: ProjectSetting<string, S>,
+    ): Effect.Effect<
+      Option.Option<S["Type"]>,
+      never,
+      S["DecodingServices"] | CurrentProjectId
+    > =>
+      CurrentProjectId.use((projectId) =>
+        Cache.get(projectCache, {
+          projectId,
+          setting,
+        }),
+      )
+
+    const setProject: <S extends Schema.Codec<any, any>>(
+      setting: ProjectSetting<string, S>,
+      value: Option.Option<S["Type"]>,
+    ) => Effect.Effect<void, never, CurrentProjectId> = Effect.fnUntraced(
+      function* <S extends Schema.Codec<any, any>>(
+        setting: ProjectSetting<string, S>,
+        value: Option.Option<S["Type"]>,
+      ) {
+        const projectId = yield* CurrentProjectId
+        const services = yield* projectKvs.services(projectId)
+        const s = KeyValueStore.toSchemaStore(
+          ServiceMap.get(services, KeyValueStore.KeyValueStore),
+          setting.schema,
+        )
+        const setCache = Cache.set(
+          projectCache,
+          {
+            projectId,
+            setting,
+          },
+          value,
+        )
+        const update = Option.match(value, {
+          onNone: () => Effect.ignore(s.remove(setting.name)),
+          onSome: (v) => Effect.orDie(s.set(setting.name, v)),
+        })
+        yield* reactivity.mutation(
+          [`settings.${projectId}.${setting.name}`],
+          Effect.andThen(update, setCache),
+        )
+      },
+      Effect.scoped,
+    )
+
+    return { get, set, getProject, setProject } as const
   }).pipe(Effect.withSpan("Settings.build")),
 }) {
-  static layer = Layer.effect(this, this.make).pipe(Layer.provide(layerKvs))
+  static layer = Layer.effect(this, this.make).pipe(
+    Layer.provide([layerKvs, ProjectsKvs.layer, Reactivity.layer]),
+  )
+  static runtime = atomRuntime(this.layer)
+
+  static get<Name extends string, S extends Schema.Codec<any, any>>(
+    setting: Setting<Name, S>,
+  ) {
+    return Settings.use((_) => _.get(setting))
+  }
+  static set<Name extends string, S extends Schema.Codec<any, any>>(
+    setting: Setting<Name, S>,
+    value: Option.Option<S["Type"]>,
+  ) {
+    return Settings.use((_) => _.set(setting, value))
+  }
+
+  static getProject<Name extends string, S extends Schema.Codec<any, any>>(
+    setting: ProjectSetting<Name, S>,
+  ) {
+    return Settings.use((_) => _.getProject(setting))
+  }
+  static setProject<Name extends string, S extends Schema.Codec<any, any>>(
+    setting: ProjectSetting<Name, S>,
+    value: Option.Option<S["Type"]>,
+  ) {
+    return Settings.use((_) => _.setProject(setting, value))
+  }
+
+  static atom = Atom.family(function <
+    Name extends string,
+    S extends Schema.Codec<any, any>,
+  >(
+    setting: Setting<Name, S>,
+  ): Atom.Writable<
+    AsyncResult.AsyncResult<
+      Option.Option<S["Type"]>,
+      PlatformError.PlatformError
+    >,
+    Option.Option<S["Type"]>
+  > {
+    const read = pipe(
+      Settings.runtime.atom(Settings.get(setting)),
+      atomRuntime.withReactivity([`settings.${setting.name}`]),
+    )
+    const set = Settings.runtime.fn<Option.Option<S["Type"]>>()((value) =>
+      Settings.set(setting, value),
+    )
+    return Atom.writable(
+      (get) => {
+        get.mount(set)
+        return get(read)
+      },
+      (ctx, value: Option.Option<S["Type"]>) => {
+        ctx.set(set, value)
+      },
+      (r) => r(read),
+    )
+  })
+
+  static projectAtom = Atom.family(function <
+    Name extends string,
+    S extends Schema.Codec<any, any>,
+  >(options: {
+    readonly projectId: ProjectId
+    readonly setting: ProjectSetting<Name, S>
+  }): Atom.Writable<
+    AsyncResult.AsyncResult<
+      Option.Option<S["Type"]>,
+      PlatformError.PlatformError
+    >,
+    Option.Option<S["Type"]>
+  > {
+    const read = pipe(
+      Settings.runtime.atom(
+        Settings.getProject(options.setting).pipe(
+          Effect.provideService(CurrentProjectId, options.projectId),
+        ),
+      ),
+      atomRuntime.withReactivity([
+        `settings.${options.projectId}.${options.setting.name}`,
+      ]),
+    )
+    const set = Settings.runtime.fn<Option.Option<S["Type"]>>()((value) =>
+      Settings.setProject(options.setting, value).pipe(
+        Effect.provideService(CurrentProjectId, options.projectId),
+      ),
+    )
+    return Atom.writable(
+      (get) => {
+        get.mount(set)
+        return get(read)
+      },
+      (ctx, value: Option.Option<S["Type"]>) => {
+        ctx.set(set, value)
+      },
+    )
+  })
 }
+
+export class CurrentProjectId extends ServiceMap.Service<
+  CurrentProjectId,
+  ProjectId
+>()("lalph/CurrentProjectId") {}
 
 export class Setting<
   const Name extends string,
   S extends Schema.Codec<any, any>,
 > {
+  readonly _tag = "Setting"
   readonly name: Name
   readonly schema: S
   constructor(name: Name, schema: S) {
     this.name = name
     this.schema = schema
   }
-
-  get = Settings.use((s) => s.get(this))
-
-  set(value: Option.Option<S["Type"]>) {
-    return Settings.use((s) => s.set(this, value))
+}
+export class ProjectSetting<
+  const Name extends string,
+  S extends Schema.Codec<any, any>,
+> {
+  readonly _tag = "ProjectSetting"
+  readonly name: Name
+  readonly schema: S
+  constructor(name: Name, schema: S) {
+    this.name = name
+    this.schema = schema
   }
 }
 

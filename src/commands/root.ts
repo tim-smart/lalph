@@ -16,7 +16,7 @@ import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import { getCommandPrefix, getOrSelectCliAgent } from "./agent.ts"
-import { Flag, CliError, Command } from "effect/unstable/cli"
+import { Flag, Command } from "effect/unstable/cli"
 import { IssueSource } from "../IssueSource.ts"
 import {
   checkForWork,
@@ -29,7 +29,7 @@ import { agentChooser } from "../Agents/chooser.ts"
 import { RunnerStalled } from "../domain/Errors.ts"
 import { agentReviewer } from "../Agents/reviewer.ts"
 import { agentTimeout } from "../Agents/timeout.ts"
-import { Settings } from "../Settings.ts"
+import { CurrentProjectId, Settings } from "../Settings.ts"
 import { Atom, AtomRegistry, Reactivity } from "effect/unstable/reactivity"
 import {
   activeWorkerLoggingAtom,
@@ -39,6 +39,8 @@ import {
 import { WorkerStatus } from "../domain/WorkerState.ts"
 import { GitFlow, GitFlowCommit, GitFlowPR } from "../GitFlow.ts"
 import { parseBranch } from "../shared/git.ts"
+import { getAllProjects } from "../Projects.ts"
+import type { Project } from "../domain/Project.ts"
 
 // Main iteration run logic
 
@@ -54,6 +56,7 @@ const run = Effect.fnUntraced(
     ) => ChildProcess.Command
     readonly review: boolean
   }) {
+    const projectId = yield* CurrentProjectId
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
     const worktree = yield* Worktree
@@ -127,7 +130,7 @@ const run = Effect.fnUntraced(
     yield* prd.setChosenIssueId(taskId)
     yield* prd.setAutoMerge(chosenTask.prd.autoMerge)
 
-    yield* source.ensureInProgress(taskId).pipe(
+    yield* source.ensureInProgress(projectId, taskId).pipe(
       Effect.timeoutOrElse({
         duration: "1 minute",
         onTimeout: () => Effect.fail(new RunnerStalled()),
@@ -221,43 +224,117 @@ const run = Effect.fnUntraced(
   Effect.provide(Prd.layer, { local: true }),
 )
 
+const runProject = Effect.fnUntraced(
+  function* (options: {
+    readonly iterations: number
+    readonly project: Project
+    readonly specsDirectory: string
+    readonly stallTimeout: Duration.Duration
+    readonly runTimeout: Duration.Duration
+    readonly commandPrefix: (
+      command: ChildProcess.Command,
+    ) => ChildProcess.Command
+  }) {
+    const isFinite = Number.isFinite(options.iterations)
+    const iterationsDisplay = isFinite ? options.iterations : "unlimited"
+    const semaphore = Effect.makeSemaphoreUnsafe(options.project.concurrency)
+    const fibers = yield* FiberSet.make()
+
+    yield* resetInProgress.pipe(Effect.withSpan("Main.resetInProgress"))
+
+    yield* Effect.log(
+      `Executing ${iterationsDisplay} iteration(s) with concurrency ${options.project.concurrency}`,
+    )
+
+    let iterations = options.iterations
+    let iteration = 0
+    let quit = false
+
+    yield* Atom.mount(activeWorkerLoggingAtom)
+
+    while (true) {
+      yield* semaphore.take(1)
+      if (quit || (isFinite && iteration >= iterations)) {
+        break
+      }
+
+      const currentIteration = iteration
+
+      const startedDeferred = yield* Deferred.make<void>()
+
+      yield* checkForWork.pipe(
+        Effect.andThen(
+          run({
+            startedDeferred,
+            targetBranch: options.project.targetBranch,
+            specsDirectory: options.specsDirectory,
+            stallTimeout: options.stallTimeout,
+            runTimeout: options.runTimeout,
+            commandPrefix: options.commandPrefix,
+            review: options.project.reviewAgent,
+          }).pipe(
+            Effect.provide(
+              options.project.gitFlow === "commit" ? GitFlowCommit : GitFlowPR,
+              { local: true },
+            ),
+            withWorkerState(options.project.id),
+          ),
+        ),
+        Effect.catchFilter(
+          (e) =>
+            e._tag === "NoMoreWork" || e._tag === "QuitError"
+              ? Filter.fail(e)
+              : e,
+          (e) =>
+            Effect.logWarning(Cause.fail(e)).pipe(
+              Effect.andThen(Effect.sleep(Duration.seconds(10))),
+            ),
+        ),
+        Effect.catchTags({
+          NoMoreWork(_) {
+            if (isFinite) {
+              // If we have a finite number of iterations, we exit when no more
+              // work is found
+              iterations = currentIteration
+              return Effect.log(
+                `No more work to process, ending after ${currentIteration} iteration(s).`,
+              )
+            }
+            const log =
+              Iterable.size(fibers) <= 1
+                ? Effect.log("No more work to process, waiting 30 seconds...")
+                : Effect.void
+            return Effect.andThen(log, Effect.sleep(Duration.seconds(30)))
+          },
+          QuitError(_) {
+            quit = true
+            return Effect.void
+          },
+        }),
+        Effect.ensuring(semaphore.release(1)),
+        Effect.ensuring(Deferred.completeWith(startedDeferred, Effect.void)),
+        FiberSet.run(fibers),
+      )
+
+      yield* Deferred.await(startedDeferred)
+
+      iteration++
+    }
+
+    yield* FiberSet.awaitEmpty(fibers)
+  },
+  (effect, options) =>
+    Effect.annotateLogs(effect, {
+      project: options.project.id,
+    }),
+)
+
 // Command
 
 const iterations = Flag.integer("iterations").pipe(
   Flag.withDescription("Number of iterations to run, defaults to unlimited"),
   Flag.withAlias("i"),
   Flag.withDefault(Number.POSITIVE_INFINITY),
-)
-
-const concurrency = Flag.integer("concurrency").pipe(
-  Flag.withDescription("Number of concurrent agents, defaults to 1"),
-  Flag.withAlias("c"),
-  Flag.withDefault(1),
-)
-
-const targetBranch = Flag.string("target-branch").pipe(
-  Flag.withDescription(
-    "Target branch for PRs. Defaults to current branch. Env variable: LALPH_TARGET_BRANCH",
-  ),
-  Flag.withAlias("b"),
-  Flag.withFallbackConfig(Config.string("LALPH_TARGET_BRANCH")),
-  Flag.withDefault(
-    ChildProcess.make`git branch --show-current`.pipe(
-      ChildProcess.string,
-      Effect.orDie,
-      Effect.flatMap((output) => {
-        const branch = output.trim()
-        return branch === ""
-          ? Effect.fail(
-              new CliError.MissingOption({
-                option: "--target-branch",
-              }),
-            )
-          : Effect.succeed(branch)
-      }),
-    ),
-  ),
-  Flag.optional,
 )
 
 const maxIterationMinutes = Flag.integer("max-minutes").pipe(
@@ -285,36 +362,15 @@ const specsDirectory = Flag.directory("specs").pipe(
   Flag.withDefault(".specs"),
 )
 
-const commitMode = Flag.boolean("commit").pipe(
-  Flag.withDescription("Commit to the target branch instead of creating PRs"),
-)
-
 const verbose = Flag.boolean("verbose").pipe(
   Flag.withDescription("Enable verbose logging"),
   Flag.withAlias("v"),
 )
 
-const review = Flag.boolean("review").pipe(
-  Flag.withDescription(
-    "Enable the AI peer-review step. Will use LALPH_REVIEW.md if present.",
-  ),
-)
-
-// handled in cli.ts
-const reset = Flag.boolean("reset").pipe(
-  Flag.withDescription("Reset the current issue source before running"),
-  Flag.withAlias("r"),
-)
-
 export const commandRoot = Command.make("lalph", {
   iterations,
-  concurrency,
-  targetBranch,
   maxIterationMinutes,
   stallMinutes,
-  commitMode,
-  reset,
-  review,
   specsDirectory,
   verbose,
 }).pipe(
@@ -322,110 +378,26 @@ export const commandRoot = Command.make("lalph", {
     Effect.fnUntraced(
       function* ({
         iterations,
-        concurrency,
-        targetBranch,
         maxIterationMinutes,
         stallMinutes,
         specsDirectory,
-        review,
-        commitMode,
       }) {
         const commandPrefix = yield* getCommandPrefix
         yield* getOrSelectCliAgent
-
-        const isFinite = Number.isFinite(iterations)
-        const iterationsDisplay = isFinite ? iterations : "unlimited"
-        const runConcurrency = Math.max(1, concurrency)
-        const semaphore = Effect.makeSemaphoreUnsafe(runConcurrency)
-        const fibers = yield* FiberSet.make()
-
-        yield* resetInProgress.pipe(Effect.withSpan("Main.resetInProgress"))
-
-        yield* Effect.log(
-          `Executing ${iterationsDisplay} iteration(s) with concurrency ${runConcurrency}`,
+        const projects = (yield* getAllProjects).filter((p) => p.enabled)
+        yield* Effect.forEach(
+          projects,
+          (project) =>
+            runProject({
+              iterations,
+              project,
+              specsDirectory,
+              stallTimeout: Duration.minutes(stallMinutes),
+              runTimeout: Duration.minutes(maxIterationMinutes),
+              commandPrefix,
+            }).pipe(Effect.provideService(CurrentProjectId, project.id)),
+          { concurrency: "unbounded", discard: true },
         )
-        if (Option.isSome(targetBranch)) {
-          yield* Effect.log(`Using target branch: ${targetBranch.value}`)
-        }
-
-        let iteration = 0
-        let quit = false
-
-        yield* Atom.mount(activeWorkerLoggingAtom)
-
-        while (true) {
-          yield* semaphore.take(1)
-          if (quit || (isFinite && iteration >= iterations)) {
-            break
-          }
-
-          const currentIteration = iteration
-
-          const startedDeferred = yield* Deferred.make<void>()
-
-          yield* checkForWork.pipe(
-            Effect.andThen(
-              run({
-                startedDeferred,
-                targetBranch,
-                specsDirectory,
-                stallTimeout: Duration.minutes(stallMinutes),
-                runTimeout: Duration.minutes(maxIterationMinutes),
-                commandPrefix,
-                review,
-              }).pipe(
-                Effect.provide(commitMode ? GitFlowCommit : GitFlowPR, {
-                  local: true,
-                }),
-                withWorkerState(currentIteration),
-              ),
-            ),
-            Effect.catchFilter(
-              (e) =>
-                e._tag === "NoMoreWork" || e._tag === "QuitError"
-                  ? Filter.fail(e)
-                  : e,
-              (e) => Effect.logWarning(Cause.fail(e)),
-            ),
-            Effect.catchTags({
-              NoMoreWork(_) {
-                if (isFinite) {
-                  // If we have a finite number of iterations, we exit when no more
-                  // work is found
-                  iterations = currentIteration
-                  return Effect.log(
-                    `No more work to process, ending after ${currentIteration} iteration(s).`,
-                  )
-                }
-                const log =
-                  Iterable.size(fibers) <= 1
-                    ? Effect.log(
-                        "No more work to process, waiting 30 seconds...",
-                      )
-                    : Effect.void
-                return Effect.andThen(log, Effect.sleep(Duration.seconds(30)))
-              },
-              QuitError(_) {
-                quit = true
-                return Effect.void
-              },
-            }),
-            Effect.annotateLogs({
-              iteration: currentIteration,
-            }),
-            Effect.ensuring(semaphore.release(1)),
-            Effect.ensuring(
-              Deferred.completeWith(startedDeferred, Effect.void),
-            ),
-            FiberSet.run(fibers),
-          )
-
-          yield* Deferred.await(startedDeferred)
-
-          iteration++
-        }
-
-        yield* FiberSet.awaitEmpty(fibers)
       },
       Effect.scoped,
       Effect.provide([

@@ -7,6 +7,7 @@ import { CurrentWorkerState } from "./Workers.ts"
 import { Atom } from "effect/unstable/reactivity"
 import { parseBranch } from "./shared/git.ts"
 import { AtomRegistry } from "effect/unstable/reactivity"
+import { CurrentProjectId } from "./Settings.ts"
 
 // @effect-diagnostics-next-line leakingRequirements:off
 export class GitFlow extends ServiceMap.Service<
@@ -30,7 +31,7 @@ export class GitFlow extends ServiceMap.Service<
     }) => Effect.Effect<
       void,
       IssueSourceError | PlatformError | GitFlowError,
-      Prd | IssueSource
+      Prd | IssueSource | CurrentProjectId
     >
     readonly autoMerge: (options: {
       readonly targetBranch: string | undefined
@@ -39,7 +40,7 @@ export class GitFlow extends ServiceMap.Service<
     }) => Effect.Effect<
       void,
       IssueSourceError | PlatformError | GitFlowError,
-      Prd | IssueSource
+      Prd | IssueSource | CurrentProjectId
     >
   }
 >()("lalph/GitFlow") {}
@@ -115,7 +116,7 @@ export const GitFlowCommit = Layer.effect(
 
     return GitFlow.of({
       requiresGithubPr: false,
-      branch: `lalph/worker-${workerState.iteration}`,
+      branch: `lalph/worker-${workerState.id}`,
 
       setupInstructions: () =>
         `You are already on a new branch for this task. You do not need to checkout any other branches.`,
@@ -161,12 +162,14 @@ After making any changes, commit them to the same branch. Do not git push your c
       }),
       autoMerge: Effect.fnUntraced(function* (options) {
         const prd = yield* Prd
+        const projectId = yield* CurrentProjectId
         const issue = yield* prd.findById(options.issueId)
         if (!issue || issue.state !== "in-review") {
           return
         }
         const source = yield* IssueSource
         yield* source.updateIssue({
+          projectId,
           issueId: options.issueId,
           state: "done",
         })

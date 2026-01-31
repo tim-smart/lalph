@@ -15,6 +15,7 @@ import { PrdIssue } from "./domain/PrdIssue.ts"
 import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 import { AtomRegistry, Reactivity } from "effect/unstable/reactivity"
 import { CurrentIssueSource, currentIssuesAtom } from "./IssueSources.ts"
+import { CurrentProjectId } from "./Settings.ts"
 
 export class Prd extends ServiceMap.Service<
   Prd,
@@ -47,6 +48,7 @@ export class Prd extends ServiceMap.Service<
     const reactivity = yield* Reactivity.Reactivity
     const source = yield* IssueSource
     const registry = yield* AtomRegistry.AtomRegistry
+    const projectId = yield* CurrentProjectId
 
     let chosenIssueId: string | null = null
     let shouldAddAutoMerge = false
@@ -59,7 +61,7 @@ export class Prd extends ServiceMap.Service<
     })
     const getCurrentIssues = AtomRegistry.getResult(
       registry,
-      currentIssuesAtom,
+      currentIssuesAtom(projectId),
       { suspendOnWaiting: true },
     )
 
@@ -72,6 +74,7 @@ export class Prd extends ServiceMap.Service<
       const issue = updated.find((i) => i.id === options.issueId)
       if (!issue || issue.state === "in-review") return
       yield* source.updateIssue({
+        projectId,
         issueId: issue.id!,
         state: "todo",
       })
@@ -95,6 +98,7 @@ export class Prd extends ServiceMap.Service<
         : `${mergeConflictInstruction}\n\n---\n\nPrevious description:\n\n${issue.description.trim()}`
 
       yield* source.updateIssue({
+        projectId,
         issueId: issue.id!,
         description: nextDescription,
         state: "todo",
@@ -123,6 +127,7 @@ export class Prd extends ServiceMap.Service<
             const prevIssue = initialPrdIssues.find((i) => i.id === issue.id)
             if (!prevIssue || prevIssue.state === "in-progress") continue
             yield* source.updateIssue({
+              projectId,
               issueId: issue.id!,
               state: prevIssue.state,
             })
@@ -164,6 +169,7 @@ export class Prd extends ServiceMap.Service<
 
         if (issue.id === null) {
           yield* source.createIssue(
+            projectId,
             shouldAddAutoMerge ? issue.withAutoMerge(true) : issue,
           )
           continue
@@ -174,6 +180,7 @@ export class Prd extends ServiceMap.Service<
         if (chosenIssueId && existing.id !== chosenIssueId) continue
 
         yield* source.updateIssue({
+          projectId,
           issueId: issue.id,
           title: issue.title,
           description: issue.description,
@@ -187,7 +194,7 @@ export class Prd extends ServiceMap.Service<
 
       yield* Effect.forEach(
         toRemove,
-        (issueId) => source.cancelIssue(issueId),
+        (issueId) => source.cancelIssue(projectId, issueId),
         { concurrency: "unbounded" },
       )
     }).pipe(
@@ -232,10 +239,10 @@ export class Prd extends ServiceMap.Service<
       Effect.forkScoped,
     )
 
-    yield* AtomRegistry.toStreamResult(registry, currentIssuesAtom).pipe(
-      Stream.runForEach(updateSync),
-      Effect.forkScoped,
-    )
+    yield* AtomRegistry.toStreamResult(
+      registry,
+      currentIssuesAtom(projectId),
+    ).pipe(Stream.runForEach(updateSync), Effect.forkScoped)
 
     const findById = Effect.fnUntraced(function* (issueId: string) {
       const current = yield* getCurrentIssues
@@ -250,6 +257,7 @@ export class Prd extends ServiceMap.Service<
           for (const issue of updatedIssues.values()) {
             if (issue.state === "done") continue
             yield* source.updateIssue({
+              projectId,
               issueId: issue.id!,
               state: "todo",
             })

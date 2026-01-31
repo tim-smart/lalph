@@ -1,17 +1,23 @@
 import { Effect, Schema, ServiceMap } from "effect"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
 import { Reactivity } from "effect/unstable/reactivity"
+import type { ProjectId } from "./domain/Project.ts"
+import type { CurrentProjectId, Settings } from "./Settings.ts"
 
 export class IssueSource extends ServiceMap.Service<
   IssueSource,
   {
-    readonly issues: Effect.Effect<ReadonlyArray<PrdIssue>, IssueSourceError>
+    readonly issues: (
+      projectId: ProjectId,
+    ) => Effect.Effect<ReadonlyArray<PrdIssue>, IssueSourceError>
 
     readonly createIssue: (
+      projectId: ProjectId,
       issue: PrdIssue,
     ) => Effect.Effect<{ id: string; url: string }, IssueSourceError>
 
     readonly updateIssue: (options: {
+      readonly projectId: ProjectId
       readonly issueId: string
       readonly title?: string
       readonly description?: string
@@ -21,12 +27,24 @@ export class IssueSource extends ServiceMap.Service<
     }) => Effect.Effect<void, IssueSourceError>
 
     readonly cancelIssue: (
+      projectId: ProjectId,
       issueId: string,
     ) => Effect.Effect<void, IssueSourceError>
 
-    readonly status: Effect.Effect<void, IssueSourceError>
+    readonly reset: Effect.Effect<
+      void,
+      IssueSourceError,
+      CurrentProjectId | Settings
+    >
+    readonly settings: (
+      projectId: ProjectId,
+    ) => Effect.Effect<void, IssueSourceError>
+    readonly info: (
+      projectId: ProjectId,
+    ) => Effect.Effect<void, IssueSourceError>
 
     readonly ensureInProgress: (
+      projectId: ProjectId,
       issueId: string,
     ) => Effect.Effect<void, IssueSourceError>
   }
@@ -36,12 +54,27 @@ export class IssueSource extends ServiceMap.Service<
       const reactivity = yield* Reactivity.Reactivity
       return IssueSource.of({
         ...impl,
-        createIssue: (issue) =>
-          reactivity.mutation(["issues"], impl.createIssue(issue)),
+        createIssue: (projectId, issue) =>
+          reactivity.mutation(
+            {
+              issues: [projectId],
+            },
+            impl.createIssue(projectId, issue),
+          ),
         updateIssue: (options) =>
-          reactivity.mutation(["issues"], impl.updateIssue(options)),
-        cancelIssue: (issueId) =>
-          reactivity.mutation(["issues"], impl.cancelIssue(issueId)),
+          reactivity.mutation(
+            {
+              issues: [options.projectId],
+            },
+            impl.updateIssue(options),
+          ),
+        cancelIssue: (projectId, issueId) =>
+          reactivity.mutation(
+            {
+              issues: [projectId],
+            },
+            impl.cancelIssue(projectId, issueId),
+          ),
       })
     })
   }

@@ -1,6 +1,7 @@
 import type { Api } from "@octokit/plugin-rest-endpoint-methods"
 import type { OctokitResponse } from "@octokit/types"
 import {
+  Cache,
   Data,
   DateTime,
   Effect,
@@ -17,11 +18,12 @@ import {
 import { Octokit } from "octokit"
 import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
-import { Setting } from "./Settings.ts"
+import { CurrentProjectId, ProjectSetting, Settings } from "./Settings.ts"
 import { Prompt } from "effect/unstable/cli"
 import { TokenManager } from "./Github/TokenManager.ts"
 import { GithubCli } from "./Github/Cli.ts"
 import { Reactivity } from "effect/unstable/reactivity"
+import type { ProjectId } from "./domain/Project.ts"
 
 export class GithubError extends Data.TaggedError("GithubError")<{
   readonly cause: unknown
@@ -100,8 +102,19 @@ export const GithubIssueSource = Layer.effect(
   Effect.gen(function* () {
     const github = yield* Github
     const cli = yield* GithubCli
-    const labelFilter = yield* getOrSelectLabel
-    const autoMergeLabelName = yield* getOrSelectAutoMergeLabel
+    const projectSettings = yield* Cache.make({
+      lookup: Effect.fnUntraced(
+        function* (_projectId: ProjectId) {
+          const labelFilter = yield* getOrSelectLabel
+          const autoMergeLabelName = yield* getOrSelectAutoMergeLabel
+          return { labelFilter, autoMergeLabelName } as const
+        },
+        Effect.orDie,
+        (effect, projectId) =>
+          Effect.provideService(effect, CurrentProjectId, projectId),
+      ),
+      capacity: Number.POSITIVE_INFINITY,
+    })
 
     const hasLabel = (
       label: ReadonlyArray<
@@ -115,8 +128,8 @@ export const GithubIssueSource = Layer.effect(
       label.some((l) => (typeof l === "string" ? l === name : l.name === name))
 
     const listOpenBlockedBy = (issueId: number) =>
-      github
-        .stream((rest, page) =>
+      pipe(
+        github.stream((rest, page) =>
           rest.issues.listDependenciesBlockedBy({
             owner: cli.owner,
             repo: cli.repo,
@@ -124,38 +137,42 @@ export const GithubIssueSource = Layer.effect(
             per_page: 100,
             page,
           }),
-        )
-        .pipe(Stream.filter((issue) => issue.state === "open"))
+        ),
+        Stream.filter((issue) => issue.state === "open"),
+      )
 
-    const recentlyClosed = github
-      .stream((rest, page) =>
+    const recentlyClosed = pipe(
+      github.stream((rest, page) =>
         rest.issues.listForRepo({
           owner: cli.owner,
           repo: cli.repo,
           state: "closed",
           per_page: 100,
           page,
-          labels: Option.getOrUndefined(labelFilter),
           since: DateTime.nowUnsafe().pipe(
             DateTime.subtract({ days: 3 }),
             DateTime.formatIso,
           ),
         }),
-      )
-      .pipe(Stream.filter((issue) => issue.state_reason !== "not_planned"))
+      ),
+      Stream.filter((issue) => issue.state_reason !== "not_planned"),
+    )
 
-    const issues = github
-      .stream((rest, page) =>
-        rest.issues.listForRepo({
-          owner: cli.owner,
-          repo: cli.repo,
-          state: "open",
-          per_page: 100,
-          page,
-          labels: Option.getOrUndefined(labelFilter),
-        }),
-      )
-      .pipe(
+    const issues = (options: {
+      readonly labelFilter: Option.Option<string>
+      readonly autoMergeLabelName: Option.Option<string>
+    }) =>
+      pipe(
+        github.stream((rest, page) =>
+          rest.issues.listForRepo({
+            owner: cli.owner,
+            repo: cli.repo,
+            state: "open",
+            per_page: 100,
+            page,
+            labels: Option.getOrUndefined(options.labelFilter),
+          }),
+        ),
         Stream.merge(recentlyClosed),
         Stream.filter((issue) => issue.pull_request === undefined),
         Stream.mapEffect(
@@ -179,7 +196,7 @@ export const GithubIssueSource = Layer.effect(
               estimate: null,
               state,
               blockedBy: dependencies.map((dep) => `#${dep.number}`),
-              autoMerge: autoMergeLabelName.pipe(
+              autoMerge: options.autoMergeLabelName.pipe(
                 Option.map((labelName) => hasLabel(issue.labels, labelName)),
                 Option.getOrElse(() => false),
               ),
@@ -237,9 +254,16 @@ export const GithubIssueSource = Layer.effect(
     })
 
     return yield* IssueSource.make({
-      issues,
+      issues: Effect.fnUntraced(function* (projectId) {
+        const settings = yield* Cache.get(projectSettings, projectId)
+        return yield* issues(settings)
+      }),
       createIssue: Effect.fnUntraced(
-        function* (issue: PrdIssue) {
+        function* (projectId, issue) {
+          const { labelFilter, autoMergeLabelName } = yield* Cache.get(
+            projectSettings,
+            projectId,
+          )
           const created = yield* createIssue({
             owner: cli.owner,
             repo: cli.repo,
@@ -282,6 +306,10 @@ export const GithubIssueSource = Layer.effect(
       ),
       updateIssue: Effect.fnUntraced(
         function* (options) {
+          const { labelFilter, autoMergeLabelName } = yield* Cache.get(
+            projectSettings,
+            options.projectId,
+          )
           const issueNumber = Number(options.issueId.slice(1))
           const update: {
             owner: string
@@ -372,7 +400,7 @@ export const GithubIssueSource = Layer.effect(
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
       cancelIssue: Effect.fnUntraced(
-        function* (issueId: string) {
+        function* (_project, issueId) {
           yield* updateIssue({
             owner: cli.owner,
             repo: cli.repo,
@@ -382,24 +410,34 @@ export const GithubIssueSource = Layer.effect(
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
-      status: Effect.sync(() => {
-        console.log(`Issue source: GitHub Issues`)
-        console.log(`Repository: ${cli.owner}/${cli.repo}`)
+      reset: Effect.gen(function* () {
+        const projectId = yield* CurrentProjectId
+        yield* Settings.setProject(labelFilter, Option.none())
+        yield* Settings.setProject(autoMergeLabel, Option.none())
+        yield* Cache.invalidate(projectSettings, projectId)
+      }),
+      settings: (projectId) =>
+        Effect.asVoid(Cache.get(projectSettings, projectId)),
+      info: Effect.fnUntraced(function* (projectId) {
+        const { labelFilter, autoMergeLabelName } = yield* Cache.get(
+          projectSettings,
+          projectId,
+        )
         console.log(
-          `Label filter: ${Option.match(labelFilter, {
+          `  Label filter: ${Option.match(labelFilter, {
             onNone: () => "None",
             onSome: (value) => value,
           })}`,
         )
         console.log(
-          `Auto-merge label: ${Option.match(autoMergeLabelName, {
+          `  Auto-merge label: ${Option.match(autoMergeLabelName, {
             onNone: () => "Disabled",
             onSome: (value) => value,
           })}`,
         )
       }),
       ensureInProgress: Effect.fnUntraced(
-        function* (issueId: string) {
+        function* (_project, issueId) {
           const issueNumber = Number(issueId.slice(1))
           yield* pipe(
             github.request((rest) =>
@@ -419,7 +457,14 @@ export const GithubIssueSource = Layer.effect(
       ),
     })
   }),
-).pipe(Layer.provide([Github.layer, GithubCli.layer, Reactivity.layer]))
+).pipe(
+  Layer.provide([
+    Github.layer,
+    GithubCli.layer,
+    Reactivity.layer,
+    Settings.layer,
+  ]),
+)
 
 export class GithubRepoNotFound extends Data.TaggedError("GithubRepoNotFound") {
   readonly message = "GitHub repository not found"
@@ -427,7 +472,7 @@ export class GithubRepoNotFound extends Data.TaggedError("GithubRepoNotFound") {
 
 // == label filter
 
-const labelFilter = new Setting(
+const labelFilter = new ProjectSetting(
   "github.labelFilter",
   Schema.Option(Schema.String),
 )
@@ -439,11 +484,11 @@ const labelSelect = Effect.gen(function* () {
   const labelOption = Option.some(label.trim()).pipe(
     Option.filter(String.isNonEmpty),
   )
-  yield* labelFilter.set(Option.some(labelOption))
+  yield* Settings.setProject(labelFilter, Option.some(labelOption))
   return labelOption
 })
 const getOrSelectLabel = Effect.gen(function* () {
-  const label = yield* labelFilter.get
+  const label = yield* Settings.getProject(labelFilter)
   if (Option.isSome(label)) {
     return label.value
   }
@@ -452,7 +497,7 @@ const getOrSelectLabel = Effect.gen(function* () {
 
 // == auto merge label
 
-const autoMergeLabel = new Setting(
+const autoMergeLabel = new ProjectSetting(
   "github.autoMergeLabel",
   Schema.Option(Schema.String),
 )
@@ -464,20 +509,16 @@ const autoMergeLabelSelect = Effect.gen(function* () {
   const labelOption = Option.some(label.trim()).pipe(
     Option.filter(String.isNonEmpty),
   )
-  yield* autoMergeLabel.set(Option.some(labelOption))
+  yield* Settings.setProject(autoMergeLabel, Option.some(labelOption))
   return labelOption
 })
 const getOrSelectAutoMergeLabel = Effect.gen(function* () {
-  const label = yield* autoMergeLabel.get
+  const label = yield* Settings.getProject(autoMergeLabel)
   if (Option.isSome(label)) {
     return label.value
   }
   return yield* autoMergeLabelSelect
 })
-
-export const resetGithub = labelFilter
-  .set(Option.none())
-  .pipe(Effect.andThen(autoMergeLabel.set(Option.none())))
 
 // == helpers
 
