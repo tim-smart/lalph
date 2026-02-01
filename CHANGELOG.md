@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.3
+
+### Patch Changes
+
+- [`89203d0`](https://github.com/tim-smart/lalph/commit/89203d091ba676eeba0cc03e3a9797977c5e6371) Thanks [@tim-smart](https://github.com/tim-smart)! - improve add wizard
+
 ## 0.2.2
 
 ### Patch Changes
