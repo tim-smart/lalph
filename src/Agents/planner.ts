@@ -19,7 +19,7 @@ export const agentPlanner = Effect.fnUntraced(function* (options: {
   yield* pipe(
     options.cliAgent.commandPlan({
       prompt: promptGen.planPrompt(options),
-      prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
+      prdFilePath: pathService.join(".lalph", "prd.yml"),
       dangerous: options.dangerous,
     }),
     ChildProcess.setCwd(worktree.directory),
