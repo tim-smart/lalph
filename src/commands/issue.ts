@@ -93,11 +93,7 @@ const handler = flow(
       console.log(`URL: ${created.url}`)
     }, Effect.scoped),
   ),
-  Command.provide(
-    Layer.mergeAll(CurrentIssueSource.layer).pipe(
-      Layer.provideMerge(layerProjectIdPrompt),
-    ),
-  ),
+  Command.provide(Layer.merge(layerProjectIdPrompt, CurrentIssueSource.layer)),
 )
 
 export const commandIssue = Command.make("issue").pipe(

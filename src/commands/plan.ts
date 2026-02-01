@@ -20,17 +20,20 @@ const dangerous = Flag.boolean("dangerous").pipe(
 export const commandPlan = Command.make("plan", { dangerous }).pipe(
   Command.withDescription("Iterate on an issue plan and create PRD tasks"),
   Command.withHandler(
-    Effect.fnUntraced(function* ({ dangerous }) {
-      const project = yield* selectProject
-      const { specsDirectory } = yield* commandRoot
-      const commandPrefix = yield* getCommandPrefix
-      yield* plan({
-        specsDirectory,
-        targetBranch: project.targetBranch,
-        commandPrefix,
-        dangerous,
-      }).pipe(Effect.provideService(CurrentProjectId, project.id))
-    }, Effect.provide(Settings.layer)),
+    Effect.fnUntraced(
+      function* ({ dangerous }) {
+        const project = yield* selectProject
+        const { specsDirectory } = yield* commandRoot
+        const commandPrefix = yield* getCommandPrefix
+        yield* plan({
+          specsDirectory,
+          targetBranch: project.targetBranch,
+          commandPrefix,
+          dangerous,
+        }).pipe(Effect.provideService(CurrentProjectId, project.id))
+      },
+      Effect.provide([Settings.layer, CurrentIssueSource.layer]),
+    ),
   ),
 )
 const plan = Effect.fnUntraced(

@@ -13,6 +13,8 @@ import { Project, ProjectId } from "./domain/Project.ts"
 import { AsyncResult, Atom } from "effect/unstable/reactivity"
 import { CurrentProjectId, Setting, Settings } from "./Settings.ts"
 import { Prompt } from "effect/unstable/cli"
+import { IssueSource } from "./IssueSource.ts"
+import { CurrentIssueSource } from "./IssueSources.ts"
 
 export const layerProjectIdPrompt = Layer.effect(
   CurrentProjectId,
@@ -20,7 +22,7 @@ export const layerProjectIdPrompt = Layer.effect(
     const project = yield* selectProject
     return project.id
   }),
-).pipe(Layer.provide(Settings.layer))
+).pipe(Layer.provide(Settings.layer), Layer.provide(CurrentIssueSource.layer))
 
 export const allProjects = new Setting("projects", Schema.Array(Project))
 
@@ -134,30 +136,33 @@ export const welcomeWizard = Effect.gen(function* () {
     "  '--'",
     "",
     "Welcome! Let's add your first project.",
-    "Projects let you configure how lalph runs tasks and integrations",
-    "(like issue filters, concurrency, and git flow).",
+    "Projects let you configure how lalph runs tasks.",
     "",
   ].join("\n")
   console.log(welcome)
-  return yield* addProject
+  return yield* addOrUpdateProject()
 })
 
-export const addProject = Effect.gen(function* () {
+export const addOrUpdateProject = Effect.fnUntraced(function* (
+  existing?: Project,
+) {
   const projects = yield* getAllProjects
-  const id = yield* Prompt.text({
-    message: "Name",
-    validate(input) {
-      input = input.trim()
-      if (input.length === 0) {
-        return Effect.fail("Project name cannot be empty")
-      } else if (projects.some((p) => p.id === input)) {
-        return Effect.fail("Project already exists")
-      }
-      return Effect.succeed(input)
-    },
-  })
+  const id = existing
+    ? existing.id
+    : yield* Prompt.text({
+        message: "Project name",
+        validate(input) {
+          input = input.trim()
+          if (input.length === 0) {
+            return Effect.fail("Project name cannot be empty")
+          } else if (projects.some((p) => p.id === input)) {
+            return Effect.fail("Project already exists")
+          }
+          return Effect.succeed(input)
+        },
+      })
   const concurrency = yield* Prompt.integer({
-    message: "Concurrency",
+    message: "Concurrency (number of tasks to run in parallel)",
     min: 1,
   })
   const targetBranch = pipe(
@@ -170,8 +175,16 @@ export const addProject = Effect.gen(function* () {
   const gitFlow = yield* Prompt.select({
     message: "Git flow",
     choices: [
-      { title: "Pull Request", value: "pr" },
-      { title: "Commit", value: "commit" },
+      {
+        title: "Pull Request",
+        description: "Create a pull request for each task",
+        value: "pr",
+      },
+      {
+        title: "Commit",
+        description: "Tasks are committed directly to the target branch",
+        value: "commit",
+      },
     ] as const,
   })
   const reviewAgent = yield* Prompt.toggle({
@@ -180,12 +193,24 @@ export const addProject = Effect.gen(function* () {
 
   const project = new Project({
     id: ProjectId.makeUnsafe(id),
-    enabled: true,
+    enabled: existing ? existing.enabled : true,
     concurrency,
     targetBranch,
     gitFlow,
     reviewAgent,
   })
-  yield* Settings.set(allProjects, Option.some([...projects, project]))
+  yield* Settings.set(
+    allProjects,
+    Option.some(
+      existing
+        ? projects.map((p) => (p.id === project.id ? project : p))
+        : [...projects, project],
+    ),
+  )
+
+  const source = yield* IssueSource
+  yield* source.reset.pipe(Effect.provideService(CurrentProjectId, project.id))
+  yield* source.settings(project.id)
+
   return project
 })

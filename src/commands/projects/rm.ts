@@ -2,6 +2,7 @@ import { Effect, Option } from "effect"
 import { Command } from "effect/unstable/cli"
 import { allProjects, getAllProjects, selectProject } from "../../Projects.ts"
 import { Settings } from "../../Settings.ts"
+import { CurrentIssueSource } from "../../IssueSources.ts"
 
 export const commandProjectsRm = Command.make("rm").pipe(
   Command.withDescription("Remove a project"),
@@ -17,4 +18,5 @@ export const commandProjectsRm = Command.make("rm").pipe(
     }),
   ),
   Command.provide(Settings.layer),
+  Command.provide(CurrentIssueSource.layer),
 )
