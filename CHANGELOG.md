@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.4
+
+### Patch Changes
+
+- [`b34795a`](https://github.com/tim-smart/lalph/commit/b34795a1d0b70404c75e1751b2d3933db621c8e7) Thanks [@tim-smart](https://github.com/tim-smart)! - add --new flag to plan mode
+
 ## 0.2.3
 
 ### Patch Changes
