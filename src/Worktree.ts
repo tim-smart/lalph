@@ -172,6 +172,25 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
       provide,
     )
 
+  const execWithOutput = (options: { readonly cliAgent: CliAgent }) =>
+    Effect.fnUntraced(function* (command: ChildProcess.Command) {
+      const handle = yield* provide(command.asEffect())
+
+      yield* handle.all.pipe(
+        Stream.decodeText(),
+        options.cliAgent.outputTransformer
+          ? options.cliAgent.outputTransformer
+          : identity,
+        Stream.runForEachArray((output) => {
+          for (const chunk of output) {
+            process.stdout.write(chunk)
+          }
+          return Effect.void
+        }),
+      )
+      return yield* handle.exitCode
+    }, Effect.scoped)
+
   const execWithWorkerOutput = (options: { readonly cliAgent: CliAgent }) =>
     Effect.fnUntraced(function* (command: ChildProcess.Command) {
       const registry = yield* AtomRegistry.AtomRegistry
@@ -270,6 +289,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
     exec,
     execString,
     viewPrState,
+    execWithOutput,
     execWithStallTimeout,
     execWithWorkerOutput,
     currentBranch,

@@ -1,4 +1,4 @@
-import { Effect, FileSystem, Option, Path, pipe } from "effect"
+import { Data, Effect, FileSystem, Option, Path, pipe, Schema } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
@@ -9,6 +9,9 @@ import { CurrentIssueSource } from "../CurrentIssueSource.ts"
 import { commandRoot } from "./root.ts"
 import { CurrentProjectId, Settings } from "../Settings.ts"
 import { addOrUpdateProject, selectProject } from "../Projects.ts"
+import { agentPlanner } from "../Agents/planner.ts"
+import { agentTasker } from "../Agents/tasker.ts"
+import { commandPlanTasks } from "./plan/tasks.ts"
 
 const dangerous = Flag.boolean("dangerous").pipe(
   Flag.withAlias("d"),
@@ -45,6 +48,7 @@ export const commandPlan = Command.make("plan", {
       Effect.provide([Settings.layer, CurrentIssueSource.layer]),
     ),
   ),
+  Command.withSubcommands([commandPlanTasks]),
 )
 const plan = Effect.fnUntraced(
   function* (options: {
@@ -58,7 +62,6 @@ const plan = Effect.fnUntraced(
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
     const worktree = yield* Worktree
-    const promptGen = yield* PromptGen
     const cliAgent = yield* getOrSelectCliAgent
 
     const exec = (
@@ -79,18 +82,27 @@ const plan = Effect.fnUntraced(
       yield* exec`git checkout ${targetWithRemote}`
     }
 
-    const exitCode = yield* pipe(
-      cliAgent.commandPlan({
-        prompt: promptGen.planPrompt(options),
-        prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
-        dangerous: options.dangerous,
-      }),
-      ChildProcess.setCwd(worktree.directory),
-      options.commandPrefix,
-      ChildProcess.exitCode,
+    yield* agentPlanner({
+      specsDirectory: options.specsDirectory,
+      commandPrefix: options.commandPrefix,
+      dangerous: options.dangerous,
+      cliAgent,
+    })
+
+    yield* Effect.log("Converting specification into tasks")
+    const planDetails = yield* pipe(
+      fs.readFileString(
+        pathService.join(worktree.directory, ".lalph", "plan.json"),
+      ),
+      Effect.flatMap(Schema.decodeEffect(PlanDetails)),
     )
 
-    yield* Effect.log(`Agent exited with code: ${exitCode}`)
+    yield* agentTasker({
+      specificationPath: planDetails.specification,
+      specsDirectory: options.specsDirectory,
+      commandPrefix: options.commandPrefix,
+      cliAgent,
+    })
 
     if (!worktree.inExisting) {
       yield* pipe(
@@ -111,4 +123,14 @@ const plan = Effect.fnUntraced(
     Settings.layer,
     CurrentIssueSource.layer,
   ]),
+)
+
+export class SpecNotFound extends Data.TaggedError("SpecNotFound") {
+  readonly message = "The AI agent failed to produce a specification."
+}
+
+const PlanDetails = Schema.fromJsonString(
+  Schema.Struct({
+    specification: Schema.String,
+  }),
 )

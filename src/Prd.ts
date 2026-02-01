@@ -164,33 +164,37 @@ export class Prd extends ServiceMap.Service<
         current.filter((i) => i.id !== null).map((i) => i.id!),
       )
 
-      for (const issue of updated) {
-        toRemove.delete(issue.id!)
+      yield* Effect.forEach(
+        updated,
+        Effect.fnUntraced(function* (issue) {
+          toRemove.delete(issue.id!)
 
-        if (issue.id === null) {
-          yield* source.createIssue(
+          if (issue.id === null) {
+            yield* source.createIssue(
+              projectId,
+              shouldAddAutoMerge ? issue.withAutoMerge(true) : issue,
+            )
+            return
+          }
+
+          const existing = current.find((i) => i.id === issue.id)
+          if (!existing || !existing.isChangedComparedTo(issue)) return
+          if (chosenIssueId && existing.id !== chosenIssueId) return
+
+          yield* source.updateIssue({
             projectId,
-            shouldAddAutoMerge ? issue.withAutoMerge(true) : issue,
-          )
-          continue
-        }
+            issueId: issue.id,
+            title: issue.title,
+            description: issue.description,
+            state: issue.state,
+            blockedBy: issue.blockedBy,
+            autoMerge: issue.autoMerge,
+          })
 
-        const existing = current.find((i) => i.id === issue.id)
-        if (!existing || !existing.isChangedComparedTo(issue)) continue
-        if (chosenIssueId && existing.id !== chosenIssueId) continue
-
-        yield* source.updateIssue({
-          projectId,
-          issueId: issue.id,
-          title: issue.title,
-          description: issue.description,
-          state: issue.state,
-          blockedBy: issue.blockedBy,
-          autoMerge: issue.autoMerge,
-        })
-
-        updatedIssues.set(issue.id, issue)
-      }
+          updatedIssues.set(issue.id, issue)
+        }),
+        { concurrency: "unbounded", discard: true },
+      )
 
       yield* Effect.forEach(
         toRemove,

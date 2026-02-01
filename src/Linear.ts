@@ -289,14 +289,12 @@ export const LinearIssueSource = Layer.effect(
       }),
       createIssue: Effect.fnUntraced(
         function* (projectId, issue) {
-          const { teamId, labelId, autoMergeLabelId } = yield* Cache.get(
-            projectSettings,
-            projectId,
-          )
+          const { teamId, labelId, autoMergeLabelId, project } =
+            yield* Cache.get(projectSettings, projectId)
           const created = yield* linear.use((c) =>
             c.createIssue({
               teamId,
-              projectId,
+              projectId: project.id,
               assigneeId: linear.viewer.id,
               labelIds: [
                 ...Option.toArray(labelId),

@@ -14,6 +14,8 @@ export class PromptGen extends ServiceMap.Service<PromptGen>()(
       }) => `## prd.yml file
 
 **Important:** Wait 5 seconds between edits to allow the system to update the prd.yml file.
+If adding more than 10 tasks, wait 10 seconds.
+You only need to wait if working with the prd.yml file directly, not any other files.
 
 Each item in the prd.yml file represents a task for the current project.
 
@@ -50,9 +52,10 @@ smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mec
           ? `
 
 If you need to add a research task, mention in the description that it needs to:
-- add a specification file in the \`${options.specsDirectory}\` directory.
-- add follow up tasks in the prd.yml file based on the new specification. The tasks
- should reference the specification file in their description.
+- add a specification file in the \`${options.specsDirectory}\` directory with
+  an implementation plan based on the research findings.
+- once the specification file is added, turn the implementation plan into tasks
+  in the prd.yml file.
 - make sure the follow up tasks include a dependency on the research task.`
           : ""
       }
@@ -181,9 +184,17 @@ ${keyInformation(options)}`
       const promptReview = (options: {
         readonly prompt: string
         readonly gitFlow: GitFlow["Service"]
-      }) => `A previous AI agent has completed a task from the instructions below.
+      }) => `A previous engineer has completed a task from the instructions below.
 
-You job is to review their work, and make any necessary improvements or corrections if needed.
+You job is to meticulously review their work to ensure it meets the task requirements,
+follows best practices, and maintains high code quality. You should be extremely thorough
+in your review, looking for any potential issues or improvements.
+
+Once you have completed your review, you should:
+
+- Make any code changes needed to fix issues you find.
+- Add follow-up tasks to the prd.yml file for any work that could not be done,
+  or for remaining issues that need addressing.
 
 ${options.gitFlow.reviewInstructions}
 
@@ -228,14 +239,18 @@ ${prdNotes(options)}`
    - If the user asks you to update an existing specification, find the relevant
      specification file in the \`${options.specsDirectory}\` directory and update it
      accordingly.
-2. Once you have saved the specification, your next job is to create or update an
-   implementation plan by breaking down the specification into smaller, manageable tasks and add
-   them to the prd.yml file.
-   For each task include in the description where to find the plan specification.
-   Read the "### Adding tasks" section below **extremely carefully** for guidelines on creating tasks.
-   - **Important**: If updating an existing plan, make sure not to duplicate any existing tasks.
-3. Wait until the tasks are saved, then setup task dependencies using the \`blockedBy\` field.
-4. Start a subagent with a copy of this prompt, to review the plan and provide feedback or improvements.
+2. Add a detailed implementation plan to the specification, breaking down the work into
+   smaller, manageable tasks.
+3. Start two subagents with a copy of this prompt.
+   - The first subagent will review the plan and provide feedback or improvements.
+   - The second subagent will look over the implementation plan, and ensure each task is
+     small, atomic and independently shippable without failing validation checks (typechecks, linting, tests).
+4. Write the specification details to a \`.lalph/plan.json\` file using the following format:
+   \`\`\`json
+   {
+     "specification": "path/to/specification/file.md"
+   }
+   \`\`\`
 5. Present the saved specification for review (include the full text in your response).
    If any corrections are needed, update the specification and adjust the plan tasks accordingly.
 
@@ -247,7 +262,26 @@ ${prdNotes(options)}`
   project name.
 - When adding a new specification, add a link to it in the README.md file in the
   \`${options.specsDirectory}\` directory, along with a brief overview of the specification.
-  If the README.md file does not exist, create it.
+  If the README.md file does not exist, create it.`
+
+      const promptPlanTasks = (options: {
+        readonly specsDirectory: string
+        readonly specificationPath: string
+      }) => `Your job is to convert the implementation plan in the specification file at
+\`${options.specificationPath}\` into tasks in the prd.yml file. Read the "### Adding tasks"
+section below extremely carefully for guidelines on creating tasks.
+
+Before starting, read the entire prd.yml file to understand the context of existing tasks
+and to ensure you do not create duplicate tasks.
+
+Make sure each task is small, atomic and independently shippable without failing
+validation checks (typechecks, linting, tests).
+Each task should include a reference to the specification file in its description.
+
+Once you have added all the tasks from the implementation plan into the prd.yml file,
+setup dependencies between the tasks using the \`blockedBy\` field.
+
+**Important:** You are only creating or updating a plan, not implementing any tasks yet.
  
 ${prdNotes(options)}`
 
@@ -258,6 +292,7 @@ ${prdNotes(options)}`
         promptReviewCustom,
         promptTimeout,
         planPrompt,
+        promptPlanTasks,
       } as const
     }),
   },
