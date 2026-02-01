@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.6
+
+### Patch Changes
+
+- [`256ba4b`](https://github.com/tim-smart/lalph/commit/256ba4bb3151f240d5dfbad267f1bd4d9e6f7163) Thanks [@tim-smart](https://github.com/tim-smart)! - improve plan mode
+
 ## 0.2.5
 
 ### Patch Changes
