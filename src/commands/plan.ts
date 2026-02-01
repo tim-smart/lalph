@@ -8,7 +8,7 @@ import { Command, Flag } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../IssueSources.ts"
 import { commandRoot } from "./root.ts"
 import { CurrentProjectId, Settings } from "../Settings.ts"
-import { selectProject } from "../Projects.ts"
+import { addOrUpdateProject, selectProject } from "../Projects.ts"
 
 const dangerous = Flag.boolean("dangerous").pipe(
   Flag.withAlias("d"),
@@ -17,12 +17,22 @@ const dangerous = Flag.boolean("dangerous").pipe(
   ),
 )
 
-export const commandPlan = Command.make("plan", { dangerous }).pipe(
+const withNewProject = Flag.boolean("new").pipe(
+  Flag.withAlias("n"),
+  Flag.withDescription("Create a new project before starting plan mode"),
+)
+
+export const commandPlan = Command.make("plan", {
+  dangerous,
+  withNewProject,
+}).pipe(
   Command.withDescription("Iterate on an issue plan and create PRD tasks"),
   Command.withHandler(
     Effect.fnUntraced(
-      function* ({ dangerous }) {
-        const project = yield* selectProject
+      function* ({ dangerous, withNewProject }) {
+        const project = withNewProject
+          ? yield* addOrUpdateProject()
+          : yield* selectProject
         const { specsDirectory } = yield* commandRoot
         const commandPrefix = yield* getCommandPrefix
         yield* plan({
