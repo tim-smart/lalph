@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.5
+
+### Patch Changes
+
+- [`2c24b26`](https://github.com/tim-smart/lalph/commit/2c24b267f41269c34643db1766683f61f187d531) Thanks [@tim-smart](https://github.com/tim-smart)! - rebuild issue source on error
+
 ## 0.2.4
 
 ### Patch Changes
