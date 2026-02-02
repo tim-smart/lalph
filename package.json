@@ -34,12 +34,15 @@
     "@linear/sdk": "^72.0.0",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@octokit/types": "^16.0.0",
+    "@opentui/solid": "^0.1.77",
     "effect": "https://pkg.pr.new/Effect-TS/effect-smol/effect@48538de",
     "husky": "^9.1.7",
     "lint-staged": "^16.2.7",
     "octokit": "^5.0.5",
     "oxlint": "^1.42.0",
     "prettier": "^3.8.1",
+    "rolldown-plugin-solid": "^0.2.1",
+    "solid-js": "^1.9.11",
     "tsdown": "^0.20.1",
     "typescript": "^5.9.3",
     "yaml": "^2.8.2"
@@ -52,5 +55,8 @@
     "*.{json,md,yml,yaml}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "@opentui/core": "^0.1.77"
   }
 }
