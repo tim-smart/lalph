@@ -1,18 +1,24 @@
-import { AsyncResult, Atom } from "effect/unstable/reactivity"
 import { createAtomValue } from "@effect/atom-solid"
-import { Effect, Schedule, Stream } from "effect"
-
-const count = Atom.make(Stream.fromSchedule(Schedule.spaced(1000)))
+import { allProjectsAtom } from "./Projects.ts"
+import { For } from "solid-js"
+import { AsyncResult } from "effect/unstable/reactivity"
 
 export function App() {
-  const value = createAtomValue(count)
+  const projects = createAtomValue(allProjectsAtom)
 
   return (
-    <text>
-      Hello, World!{" "}
-      {AsyncResult.builder(value())
-        .onSuccess((n) => n)
+    <>
+      {AsyncResult.builder(projects())
+        .onSuccess((projects) => (
+          <For each={projects}>
+            {(project) => (
+              <box>
+                <text>{project.id}</text>
+              </box>
+            )}
+          </For>
+        ))
         .render()}
-    </text>
+    </>
   )
 }
