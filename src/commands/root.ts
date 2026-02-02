@@ -86,12 +86,14 @@ const run = Effect.fnUntraced(
     yield* Effect.addFinalizer(
       Effect.fnUntraced(function* (exit) {
         if (exit._tag === "Success") return
-        const prd = yield* Prd
         if (taskId) {
-          yield* prd.maybeRevertIssue({
+          yield* source.updateIssue({
+            projectId,
             issueId: taskId,
+            state: "todo",
           })
         } else {
+          const prd = yield* Prd
           yield* prd.revertUpdatedIssues
         }
       }, Effect.ignore()),
