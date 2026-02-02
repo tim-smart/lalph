@@ -79,7 +79,11 @@ const run = Effect.fnUntraced(
       yield* worktree.exec`git checkout -b ${gitFlow.branch}`
     }
 
-    const checkoutScript = pathService.resolve("scripts", "checkout-setup.sh")
+    const checkoutScript = pathService.join(
+      worktree.directory,
+      "scripts",
+      "checkout-setup.sh",
+    )
     if (yield* fs.exists(checkoutScript)) {
       yield* worktree.exec`${checkoutScript}`
     }
