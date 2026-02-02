@@ -9,6 +9,7 @@ import {
   Layer,
   Option,
   Path,
+  PlatformError,
   Schema,
   ServiceMap,
   Stream,
@@ -18,6 +19,9 @@ import { RunnerStalled } from "./domain/Errors.ts"
 import type { CliAgent } from "./domain/CliAgent.ts"
 import { constWorkerMaxOutputChunks, CurrentWorkerState } from "./Workers.ts"
 import { AtomRegistry } from "effect/unstable/reactivity"
+import { CurrentProjectId } from "./Settings.ts"
+import { getAllProjects } from "./Projects.ts"
+import { parseBranch } from "./shared/git.ts"
 
 export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   make: Effect.gen(function* () {
@@ -27,10 +31,11 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     const inExisting = yield* fs.exists(pathService.join(".lalph", "prd.yml"))
     if (inExisting) {
       const directory = pathService.resolve(".")
+      const execHelpers = yield* makeExecHelpers({ directory })
       return {
         directory,
         inExisting,
-        ...(yield* makeExecHelpers({ directory })),
+        ...execHelpers,
       } as const
     }
 
@@ -52,22 +57,17 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
       recursive: true,
     })
 
-    const setupPath = pathService.resolve("scripts", "worktree-setup.sh")
-    yield* seedSetupScript(setupPath)
-    yield* seedCheckoutScript(
-      pathService.resolve("scripts", "checkout-setup.sh"),
-    )
-    if (yield* fs.exists(setupPath)) {
-      yield* ChildProcess.make({
-        cwd: directory,
-        shell: process.env.SHELL ?? true,
-      })`${setupPath}`.pipe(ChildProcess.exitCode)
-    }
+    const execHelpers = yield* makeExecHelpers({ directory })
+    yield* setupWorktree({
+      directory,
+      exec: execHelpers.exec,
+      pathService,
+    })
 
     return {
       directory,
       inExisting,
-      ...(yield* makeExecHelpers({ directory })),
+      ...execHelpers,
     } as const
   }).pipe(Effect.withSpan("Worktree.build")),
 }) {
@@ -107,13 +107,51 @@ const seedSetupScript = Effect.fnUntraced(function* (setupPath: string) {
   yield* fs.chmod(setupPath, 0o755)
 })
 
-const seedCheckoutScript = Effect.fnUntraced(function* (setupPath: string) {
+const setupWorktree = Effect.fnUntraced(function* (options: {
+  readonly directory: string
+  readonly exec: (
+    template: TemplateStringsArray,
+    ...args: Array<string | number | boolean>
+  ) => Effect.Effect<ChildProcessSpawner.ExitCode, PlatformError.PlatformError>
+  readonly pathService: Path.Path
+}) {
   const fs = yield* FileSystem.FileSystem
+  const targetBranch = yield* getTargetBranch
+  const shouldUseWorktree = Option.isSome(targetBranch)
 
-  if (yield* fs.exists(setupPath)) return
+  if (shouldUseWorktree) {
+    const parsed = parseBranch(targetBranch.value)
+    const code = yield* options.exec`git checkout ${parsed.branchWithRemote}`
+    if (code !== 0) {
+      yield* options.exec`git checkout -b ${parsed.branch}`
+      yield* options.exec`git push -u ${parsed.remote} ${parsed.branch}`
+    }
+  }
 
-  yield* fs.writeFileString(setupPath, checkoutScriptTemplate)
-  yield* fs.chmod(setupPath, 0o755)
+  const setupPath = shouldUseWorktree
+    ? options.pathService.join(
+        options.directory,
+        "scripts",
+        "worktree-setup.sh",
+      )
+    : options.pathService.resolve("scripts", "worktree-setup.sh")
+  yield* seedSetupScript(setupPath)
+  if (yield* fs.exists(setupPath)) {
+    const setupCwd = shouldUseWorktree
+      ? options.directory
+      : options.pathService.resolve(".")
+    yield* ChildProcess.make({
+      cwd: setupCwd,
+      shell: process.env.SHELL ?? true,
+    })`${setupPath}`.pipe(ChildProcess.exitCode)
+  }
+})
+
+const getTargetBranch = Effect.gen(function* () {
+  const projectId = yield* CurrentProjectId
+  const projects = yield* getAllProjects
+  const project = projects.find((entry) => entry.id === projectId)
+  return project?.targetBranch ?? Option.none()
 })
 
 const discoverBaseBranch = Effect.gen(function* () {
@@ -148,14 +186,6 @@ git checkout origin/${baseBranch}
 
 # Seeded by lalph. Customize this to prepare new worktrees.
 `
-const checkoutScriptTemplate = `#!/usr/bin/env bash
-set -euo pipefail
-
-pnpm install || true
-
-# Seeded by lalph. Customize this to prepare branches after checkout.
-`
-
 const makeExecHelpers = Effect.fnUntraced(function* (options: {
   readonly directory: string
 }) {

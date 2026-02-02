@@ -1,4 +1,13 @@
-import { Data, Effect, FileSystem, Option, Path, pipe, Schema } from "effect"
+import {
+  Data,
+  Effect,
+  FileSystem,
+  Layer,
+  Option,
+  Path,
+  pipe,
+  Schema,
+} from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
@@ -8,7 +17,11 @@ import { Command, Flag } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../CurrentIssueSource.ts"
 import { commandRoot } from "./root.ts"
 import { CurrentProjectId, Settings } from "../Settings.ts"
-import { addOrUpdateProject, selectProject } from "../Projects.ts"
+import {
+  addOrUpdateProject,
+  layerProjectIdPrompt,
+  selectProject,
+} from "../Projects.ts"
 import { agentPlanner } from "../Agents/planner.ts"
 import { agentTasker } from "../Agents/tasker.ts"
 import { commandPlanTasks } from "./plan/tasks.ts"
@@ -119,7 +132,7 @@ const plan = Effect.fnUntraced(
   Effect.provide([
     PromptGen.layer,
     Prd.layerProvided,
-    Worktree.layer,
+    Worktree.layer.pipe(Layer.provide(layerProjectIdPrompt)),
     Settings.layer,
     CurrentIssueSource.layer,
   ]),

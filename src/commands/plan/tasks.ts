@@ -54,7 +54,7 @@ export const commandPlanTasks = Command.make("tasks", {
         Settings.layer,
         PromptGen.layer,
         Prd.layerProvided.pipe(Layer.provide(layerProjectIdPrompt)),
-        Worktree.layer,
+        Worktree.layer.pipe(Layer.provide(layerProjectIdPrompt)),
       ]),
     ),
   ),
