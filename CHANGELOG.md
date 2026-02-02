@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.10
+
+### Patch Changes
+
+- [`82afb15`](https://github.com/tim-smart/lalph/commit/82afb15a8a435eba79f21931527de0b73175c698) Thanks [@tim-smart](https://github.com/tim-smart)! - tweak review prompt
+
 ## 0.2.9
 
 ### Patch Changes
