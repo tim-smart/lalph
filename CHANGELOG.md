@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.17
+
+### Patch Changes
+
+- fix version
+
 ## 0.2.16
 
 ### Patch Changes
