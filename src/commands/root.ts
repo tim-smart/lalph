@@ -65,11 +65,6 @@ const run = Effect.fnUntraced(
     const currentWorker = yield* CurrentWorkerState
     const registry = yield* AtomRegistry.AtomRegistry
 
-    if (gitFlow.branch) {
-      yield* worktree.exec`git branch -D ${gitFlow.branch}`
-      yield* worktree.exec`git checkout -b ${gitFlow.branch}`
-    }
-
     // ensure cleanup of branch after run
     yield* Effect.addFinalizer(
       Effect.fnUntraced(function* () {

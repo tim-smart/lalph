@@ -20,7 +20,7 @@ import type { CliAgent } from "./domain/CliAgent.ts"
 import { constWorkerMaxOutputChunks, CurrentWorkerState } from "./Workers.ts"
 import { AtomRegistry } from "effect/unstable/reactivity"
 import { CurrentProjectId } from "./Settings.ts"
-import { getAllProjects } from "./Projects.ts"
+import { projectById } from "./Projects.ts"
 import { parseBranch } from "./shared/git.ts"
 
 export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
@@ -31,16 +31,10 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     const inExisting = yield* fs.exists(pathService.join(".lalph", "prd.yml"))
     if (inExisting) {
       const directory = pathService.resolve(".")
-      const execHelpers = yield* makeExecHelpers({ directory })
-      yield* setupWorktree({
-        directory,
-        exec: execHelpers.exec,
-        pathService,
-      })
       return {
         directory,
         inExisting,
-        ...execHelpers,
+        ...(yield* makeExecHelpers({ directory })),
       } as const
     }
 
@@ -154,9 +148,11 @@ const setupWorktree = Effect.fnUntraced(function* (options: {
 
 const getTargetBranch = Effect.gen(function* () {
   const projectId = yield* CurrentProjectId
-  const projects = yield* getAllProjects
-  const project = projects.find((entry) => entry.id === projectId)
-  return project?.targetBranch ?? Option.none()
+  const project = yield* projectById(projectId)
+  if (Option.isNone(project)) {
+    return Option.none<string>()
+  }
+  return project.value.targetBranch
 })
 
 const discoverBaseBranch = Effect.gen(function* () {
