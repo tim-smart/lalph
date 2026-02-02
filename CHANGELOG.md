@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.9
+
+### Patch Changes
+
+- [`574c26e`](https://github.com/tim-smart/lalph/commit/574c26e5c8d1b01c45f590bccf3b4286de872525) Thanks [@tim-smart](https://github.com/tim-smart)! - add checkout script
+
 ## 0.2.8
 
 ### Patch Changes
