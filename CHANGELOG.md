@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.11
+
+### Patch Changes
+
+- [#235](https://github.com/tim-smart/lalph/pull/235) [`8724f89`](https://github.com/tim-smart/lalph/commit/8724f898e3efb75ca63a884273d5e050d2057555) Thanks [@tim-smart](https://github.com/tim-smart)! - Move target branch checkout and setup script handling into Worktree.
+
 ## 0.2.10
 
 ### Patch Changes
