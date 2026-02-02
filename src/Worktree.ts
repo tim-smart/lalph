@@ -60,7 +60,6 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     yield* setupWorktree({
       directory,
       exec: execHelpers.exec,
-      pathService,
     })
 
     return {
@@ -97,12 +96,10 @@ const seedSetupScript = Effect.fnUntraced(function* (setupPath: string) {
     return
   }
 
-  const baseBranch = yield* discoverBaseBranch
-
   yield* fs.makeDirectory(pathService.dirname(setupPath), {
     recursive: true,
   })
-  yield* fs.writeFileString(setupPath, setupScriptTemplate(baseBranch))
+  yield* fs.writeFileString(setupPath, setupScriptTemplate)
   yield* fs.chmod(setupPath, 0o755)
 })
 
@@ -112,13 +109,12 @@ const setupWorktree = Effect.fnUntraced(function* (options: {
     template: TemplateStringsArray,
     ...args: Array<string | number | boolean>
   ) => Effect.Effect<ChildProcessSpawner.ExitCode, PlatformError.PlatformError>
-  readonly pathService: Path.Path
 }) {
   const fs = yield* FileSystem.FileSystem
+  const pathService = yield* Path.Path
   const targetBranch = yield* getTargetBranch
-  const shouldUseWorktree = Option.isSome(targetBranch)
 
-  if (shouldUseWorktree) {
+  if (Option.isSome(targetBranch)) {
     const parsed = parseBranch(targetBranch.value)
     yield* options.exec`git fetch ${parsed.remote}`
     const code = yield* options.exec`git checkout ${parsed.branchWithRemote}`
@@ -128,23 +124,24 @@ const setupWorktree = Effect.fnUntraced(function* (options: {
     }
   }
 
-  const setupPath = shouldUseWorktree
-    ? options.pathService.join(
-        options.directory,
-        "scripts",
-        "worktree-setup.sh",
-      )
-    : options.pathService.resolve("scripts", "worktree-setup.sh")
-  yield* seedSetupScript(setupPath)
-  if (yield* fs.exists(setupPath)) {
-    const setupCwd = shouldUseWorktree
-      ? options.directory
-      : options.pathService.resolve(".")
-    yield* ChildProcess.make({
-      cwd: setupCwd,
-      shell: process.env.SHELL ?? true,
-    })`${setupPath}`.pipe(ChildProcess.exitCode)
-  }
+  const cwdSetupPath = pathService.resolve(".lalph", "worktree-setup.sh")
+  const worktreeSetupPath = pathService.join(
+    options.directory,
+    ".lalph",
+    "worktree-setup.sh",
+  )
+
+  yield* seedSetupScript(cwdSetupPath)
+
+  // worktree setup script takes precedence
+  const setupPath = (yield* fs.exists(worktreeSetupPath))
+    ? worktreeSetupPath
+    : cwdSetupPath
+
+  yield* ChildProcess.make({
+    cwd: options.directory,
+    shell: process.env.SHELL ?? true,
+  })`${setupPath}`.pipe(ChildProcess.exitCode)
 })
 
 const getTargetBranch = Effect.gen(function* () {
@@ -156,35 +153,10 @@ const getTargetBranch = Effect.gen(function* () {
   return project.value.targetBranch
 })
 
-const discoverBaseBranch = Effect.gen(function* () {
-  const originHead =
-    yield* ChildProcess.make`git symbolic-ref --short refs/remotes/origin/HEAD`.pipe(
-      ChildProcess.string,
-      Effect.catch((_) => Effect.succeed("")),
-      Effect.map((output) => output.trim()),
-    )
-
-  if (originHead !== "") {
-    return originHead.startsWith("origin/")
-      ? originHead.slice("origin/".length)
-      : originHead
-  }
-
-  const currentBranch =
-    yield* ChildProcess.make`git branch --show-current`.pipe(
-      ChildProcess.string,
-      Effect.catch((_) => Effect.succeed("")),
-      Effect.map((output) => output.trim()),
-    )
-
-  return currentBranch === "" ? "main" : currentBranch
-})
-
-const setupScriptTemplate = (baseBranch: string) => `#!/usr/bin/env bash
+const setupScriptTemplate = `#!/usr/bin/env bash
 set -euo pipefail
 
-git fetch origin
-git checkout origin/${baseBranch}
+pnpm install
 
 # Seeded by lalph. Customize this to prepare new worktrees.
 `
