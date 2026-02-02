@@ -1,8 +1,5 @@
 #!/bin/bash
 
-git fetch origin
-git checkout origin/master
-
 direnv allow
 corepack install
 pnpm install
