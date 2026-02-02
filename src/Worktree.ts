@@ -54,10 +54,12 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
 
     const setupPath = pathService.resolve("scripts", "worktree-setup.sh")
     yield* seedSetupScript(setupPath)
+    yield* seedCheckoutScript(
+      pathService.resolve("scripts", "checkout-setup.sh"),
+    )
     if (yield* fs.exists(setupPath)) {
       yield* ChildProcess.make({
         cwd: directory,
-        extendEnv: true,
         shell: process.env.SHELL ?? true,
       })`${setupPath}`.pipe(ChildProcess.exitCode)
     }
@@ -105,6 +107,15 @@ const seedSetupScript = Effect.fnUntraced(function* (setupPath: string) {
   yield* fs.chmod(setupPath, 0o755)
 })
 
+const seedCheckoutScript = Effect.fnUntraced(function* (setupPath: string) {
+  const fs = yield* FileSystem.FileSystem
+
+  if (yield* fs.exists(setupPath)) return
+
+  yield* fs.writeFileString(setupPath, checkoutScriptTemplate)
+  yield* fs.chmod(setupPath, 0o755)
+})
+
 const discoverBaseBranch = Effect.gen(function* () {
   const originHead =
     yield* ChildProcess.make`git symbolic-ref --short refs/remotes/origin/HEAD`.pipe(
@@ -134,6 +145,13 @@ set -euo pipefail
 
 git fetch origin
 git checkout origin/${baseBranch}
+
+# Seeded by lalph. Customize this to prepare new worktrees.
+`
+const checkoutScriptTemplate = `#!/usr/bin/env bash
+set -euo pipefail
+
+pnpm install || true
 
 # Seeded by lalph. Customize this to prepare new worktrees.
 `

@@ -79,6 +79,14 @@ const run = Effect.fnUntraced(
       yield* worktree.exec`git checkout -b ${gitFlow.branch}`
     }
 
+    const checkoutScript = pathService.resolve("scripts", "checkout-setup.sh")
+    if (yield* fs.exists(checkoutScript)) {
+      yield* ChildProcess.make({
+        cwd: worktree.directory,
+        shell: process.env.SHELL ?? true,
+      })`${checkoutScript}`.pipe(ChildProcess.exitCode)
+    }
+
     // ensure cleanup of branch after run
     yield* Effect.addFinalizer(
       Effect.fnUntraced(function* () {
