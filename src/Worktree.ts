@@ -32,6 +32,11 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     if (inExisting) {
       const directory = pathService.resolve(".")
       const execHelpers = yield* makeExecHelpers({ directory })
+      yield* setupWorktree({
+        directory,
+        exec: execHelpers.exec,
+        pathService,
+      })
       return {
         directory,
         inExisting,
