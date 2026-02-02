@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.14
+
+### Patch Changes
+
+- [`dae4390`](https://github.com/tim-smart/lalph/commit/dae43906415109764f9a60b4ff747a35b93117d7) Thanks [@tim-smart](https://github.com/tim-smart)! - improve worktree setup
+
 ## 0.2.13
 
 ### Patch Changes
