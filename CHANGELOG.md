@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.8
+
+### Patch Changes
+
+- [`b2b6de6`](https://github.com/tim-smart/lalph/commit/b2b6de6e063a5355c6d603362ebdf385f3d6de31) Thanks [@tim-smart](https://github.com/tim-smart)! - improve chosen task errors
+
 ## 0.2.7
 
 ### Patch Changes
