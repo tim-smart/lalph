@@ -11,7 +11,8 @@
   "scripts": {
     "prepare": "husky && effect-language-service patch",
     "check": "tsc --noEmit && oxlint -c .oxlintrc.json",
-    "build": "tsdown"
+    "build": "tsdown",
+    "prepublishOnly": "pnpm build"
   },
   "files": [
     "dist",
