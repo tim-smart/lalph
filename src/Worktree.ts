@@ -120,6 +120,7 @@ const setupWorktree = Effect.fnUntraced(function* (options: {
 
   if (shouldUseWorktree) {
     const parsed = parseBranch(targetBranch.value)
+    yield* options.exec`git fetch ${parsed.remote}`
     const code = yield* options.exec`git checkout ${parsed.branchWithRemote}`
     if (code !== 0) {
       yield* options.exec`git checkout -b ${parsed.branch}`
