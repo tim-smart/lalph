@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.13
+
+### Patch Changes
+
+- [#239](https://github.com/tim-smart/lalph/pull/239) [`eb4008e`](https://github.com/tim-smart/lalph/commit/eb4008eaf8d2987f6fe3b3c9dc8907dc8f4c2538) Thanks [@tim-smart](https://github.com/tim-smart)! - Fetch the target branch remote before checkout in worktree setup.
+
 ## 0.2.12
 
 ### Patch Changes
