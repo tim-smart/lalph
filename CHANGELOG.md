@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.12
+
+### Patch Changes
+
+- [#237](https://github.com/tim-smart/lalph/pull/237) [`bf62303`](https://github.com/tim-smart/lalph/commit/bf6230352692bfa5d23790705f3d1f43dd265e19) Thanks [@tim-smart](https://github.com/tim-smart)! - Ensure failed runs always reset the task to todo.
+
 ## 0.2.11
 
 ### Patch Changes
