@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.7
+
+### Patch Changes
+
+- [`3cc4129`](https://github.com/tim-smart/lalph/commit/3cc4129d1f2a14016f600cd80a056e5956de6e84) Thanks [@tim-smart](https://github.com/tim-smart)! - clarify updating prd after pull request
+
 ## 0.2.6
 
 ### Patch Changes
