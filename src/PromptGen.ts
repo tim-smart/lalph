@@ -198,7 +198,9 @@ Once you have completed your review, you should:
 
 ${options.gitFlow.reviewInstructions}
 
-# Prevous instructions (only for context, do not repeat)
+**Everything should be done without interaction or asking for permission.**
+
+# Previous instructions (only for context, do not repeat)
 
 ${options.prompt}`
 
