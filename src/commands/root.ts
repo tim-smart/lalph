@@ -85,7 +85,10 @@ const run = Effect.fnUntraced(
       "checkout-setup.sh",
     )
     if (yield* fs.exists(checkoutScript)) {
-      yield* worktree.exec`${checkoutScript}`
+      yield* ChildProcess.make({
+        cwd: worktree.directory,
+        shell: process.env.SHELL ?? true,
+      })`${checkoutScript}`.pipe(ChildProcess.exitCode)
     }
 
     // ensure cleanup of branch after run
