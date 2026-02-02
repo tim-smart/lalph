@@ -153,7 +153,7 @@ set -euo pipefail
 
 pnpm install || true
 
-# Seeded by lalph. Customize this to prepare new worktrees.
+# Seeded by lalph. Customize this to prepare branches after checkout.
 `
 
 const makeExecHelpers = Effect.fnUntraced(function* (options: {
