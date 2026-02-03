@@ -1,5 +1,13 @@
 # lalph
 
+## 0.2.21
+
+### Patch Changes
+
+- [`b1b5d7b`](https://github.com/tim-smart/lalph/commit/b1b5d7b9d59b34da3dddeb7f7707fc2ea80035b0) Thanks [@tim-smart](https://github.com/tim-smart)! - speed up launching editor for issue command
+
+- [#247](https://github.com/tim-smart/lalph/pull/247) [`2cd68f0`](https://github.com/tim-smart/lalph/commit/2cd68f04defbc6c547161dd6b2b3ea15d002f38e) Thanks [@tim-smart](https://github.com/tim-smart)! - require commit flow instructions to add task references in commits
+
 ## 0.2.20
 
 ### Patch Changes
