@@ -172,6 +172,7 @@ ${options.task.description}
 5. ${options.gitFlow.commitInstructions({
         githubPrInstructions: sourceMeta.githubPrInstructions,
         githubPrNumber: options.githubPrNumber,
+        taskId: options.task.id ?? "unknown",
         targetBranch: options.targetBranch,
       })}
 6. **After ${options.gitFlow.requiresGithubPr ? "pushing" : "committing"}**

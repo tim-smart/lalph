@@ -22,6 +22,7 @@ export class GitFlow extends ServiceMap.Service<
       readonly githubPrNumber: number | undefined
       readonly githubPrInstructions: string
       readonly targetBranch: string | undefined
+      readonly taskId: string
     }) => string
     readonly reviewInstructions: string
     readonly postWork: (options: {
@@ -63,13 +64,11 @@ export const GitFlowPR = Layer.succeed(
    - Review feedback in the .lalph/feedback.md file (same folder as the prd.yml file).`
         : `Create a new branch for the task using the format \`{task id}/description\`, using the current HEAD as the base (don't checkout any other branches first).`,
 
-    commitInstructions: ({
-      githubPrInstructions,
-      githubPrNumber,
-      targetBranch,
-    }) => `${!githubPrNumber ? `Create a pull request for this task. If the target branch does not exist, create it first.` : "Commit and push your changes to the pull request."}
-   ${githubPrInstructions}
-   The PR description should include a summary of the changes made.${targetBranch ? `\n   - The target branch for the PR should be \`${targetBranch}\`.` : ""}
+    commitInstructions: (
+      options,
+    ) => `${!options.githubPrNumber ? `Create a pull request for this task. If the target branch does not exist, create it first.` : "Commit and push your changes to the pull request."}
+   ${options.githubPrInstructions}
+   The PR description should include a summary of the changes made.${options.targetBranch ? `\n   - The target branch for the PR should be \`${options.targetBranch}\`.` : ""}
    - **DO NOT** commit any of the files in the \`.lalph\` directory.
    - You have full permission to push branches, create PRs or create git commits.`,
 
@@ -124,15 +123,18 @@ export const GitFlowCommit = Layer.effect(
       setupInstructions: () =>
         `You are already on a new branch for this task. You do not need to checkout any other branches.`,
 
-      commitInstructions:
-        () => `When you have completed your changes, **you must** commit them to the current local branch. Do not git push your changes or switch branches.
+      commitInstructions: (
+        options,
+      ) => `When you have completed your changes, **you must** commit them to the current local branch. Do not git push your changes or switch branches.
+   - Include \`References ${options.taskId}\` in each commit message.
    - **DO NOT** commit any of the files in the \`.lalph\` directory.`,
 
       reviewInstructions: `You are already on the branch with their changes.
 After making any changes, commit them to the same branch. Do not git push your changes or switch branches.
 
-- **DO NOT** commit any of the files in the \`.lalph\` directory.
-- You have full permission to create git commits.`,
+ - Include \`References {task id}\` in each commit message.
+ - **DO NOT** commit any of the files in the \`.lalph\` directory.
+ - You have full permission to create git commits.`,
 
       postWork: Effect.fnUntraced(function* ({
         worktree,
