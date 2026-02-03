@@ -29,6 +29,8 @@ import {
 } from "./domain/LinearIssues.ts"
 import { Reactivity } from "effect/unstable/reactivity"
 import type { ProjectId } from "./domain/Project.ts"
+import { getPresetsWithMetadata } from "./Presets.ts"
+import type { CliAgentPreset } from "./domain/CliAgentPreset.ts"
 
 class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
   make: Effect.gen(function* () {
@@ -174,8 +176,11 @@ export const LinearIssueSource = Layer.effect(
       capacity: Number.POSITIVE_INFINITY,
     })
 
+    const presets = yield* getPresetsWithMetadata("linear", PresetMetadata)
+
     // Map of linear identifier to issue id
     const identifierMap = new Map<string, string>()
+    const presetMap = new Map<string, CliAgentPreset>()
 
     const backlogState =
       linear.states.find(
@@ -258,6 +263,13 @@ export const LinearIssueSource = Layer.effect(
           return pipe(
             Array.filter(issues, (issue) => {
               identifierMap.set(issue.identifier, issue.id)
+              const preset = presets.find((p) =>
+                issue.labelIds.includes(p.metadata.labelId),
+              )
+              if (preset) {
+                presetMap.set(issue.identifier, preset.preset)
+              }
+
               const completedAt = issue.completedAt
               if (!completedAt) return true
               return DateTime.isGreaterThanOrEqualTo(completedAt, threeDaysAgo)
@@ -444,6 +456,23 @@ export const LinearIssueSource = Layer.effect(
       }),
       settings: (projectId) =>
         Effect.asVoid(Cache.get(projectSettings, projectId)),
+      issueCliAgentPreset: (_issue) =>
+        Effect.sync(() => Option.fromUndefinedOr(presetMap.get(_issue.id!))),
+      updateCliAgentPreset: Effect.fnUntraced(function* (preset) {
+        const labels = yield* Stream.runCollect(linear.labels).pipe(
+          Effect.mapError((cause) => new IssueSourceError({ cause })),
+        )
+        const labelId = yield* Prompt.autoComplete({
+          message: "Select a label for this preset",
+          choices: labels.map((label) => ({
+            title: label.name,
+            value: label.id,
+          })),
+        })
+        return yield* preset.addMetadata("linear", PresetMetadata, {
+          labelId,
+        })
+      }),
       info: Effect.fnUntraced(
         function* (lalphProjectId) {
           const { teamId, labelId, autoMergeLabelId, project } =
@@ -481,7 +510,7 @@ export const LinearIssueSource = Layer.effect(
       ensureInProgress: () => Effect.void,
     })
   }),
-).pipe(Layer.provide([Linear.layer, Reactivity.layer]))
+).pipe(Layer.provide([Linear.layer, Reactivity.layer, Settings.layer]))
 
 export class LinearError extends Schema.ErrorClass("lalph/LinearError")({
   _tag: Schema.tag("LinearError"),
@@ -613,6 +642,12 @@ const getOrSelectAutoMergeLabel = Effect.gen(function* () {
     return labelId.value
   }
   return yield* autoMergeLabelIdSelect
+})
+
+// preset metadata schema
+
+const PresetMetadata = Schema.Struct({
+  labelId: Schema.String,
 })
 
 // graphql queries

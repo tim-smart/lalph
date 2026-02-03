@@ -2,8 +2,6 @@ import { Data, Effect, FileSystem, Option, Path, pipe, Schema } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { Worktree } from "../Worktree.ts"
-import type { ChildProcess } from "effect/unstable/process"
-import { getCommandPrefix, getOrSelectCliAgent } from "./agent.ts"
 import { Command, Flag } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../CurrentIssueSource.ts"
 import { commandRoot } from "./root.ts"
@@ -13,6 +11,7 @@ import { agentPlanner } from "../Agents/planner.ts"
 import { agentTasker } from "../Agents/tasker.ts"
 import { commandPlanTasks } from "./plan/tasks.ts"
 import { Editor } from "../Editor.ts"
+import { getDefaultCliAgentPreset } from "../Presets.ts"
 
 const dangerous = Flag.boolean("dangerous").pipe(
   Flag.withAlias("d"),
@@ -45,13 +44,11 @@ export const commandPlan = Command.make("plan", {
           ? yield* addOrUpdateProject()
           : yield* selectProject
         const { specsDirectory } = yield* commandRoot
-        const commandPrefix = yield* getCommandPrefix
 
         yield* plan({
           plan: thePlan.value,
           specsDirectory,
           targetBranch: project.targetBranch,
-          commandPrefix,
           dangerous,
         }).pipe(Effect.provideService(CurrentProjectId, project.id))
       },
@@ -66,23 +63,18 @@ const plan = Effect.fnUntraced(
     readonly plan: string
     readonly specsDirectory: string
     readonly targetBranch: Option.Option<string>
-    readonly commandPrefix: (
-      command: ChildProcess.Command,
-    ) => ChildProcess.Command
     readonly dangerous: boolean
   }) {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
     const worktree = yield* Worktree
-
-    const cliAgent = yield* getOrSelectCliAgent
+    const preset = yield* getDefaultCliAgentPreset
 
     yield* agentPlanner({
       plan: options.plan,
       specsDirectory: options.specsDirectory,
-      commandPrefix: options.commandPrefix,
       dangerous: options.dangerous,
-      cliAgent,
+      preset,
     })
 
     const planDetails = yield* pipe(
@@ -98,8 +90,7 @@ const plan = Effect.fnUntraced(
     yield* agentTasker({
       specificationPath: planDetails.specification,
       specsDirectory: options.specsDirectory,
-      commandPrefix: options.commandPrefix,
-      cliAgent,
+      preset,
     })
 
     if (!worktree.inExisting) {

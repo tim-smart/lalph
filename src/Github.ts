@@ -24,6 +24,8 @@ import { TokenManager } from "./Github/TokenManager.ts"
 import { GithubCli } from "./Github/Cli.ts"
 import { Reactivity } from "effect/unstable/reactivity"
 import type { ProjectId } from "./domain/Project.ts"
+import type { CliAgentPreset } from "./domain/CliAgentPreset.ts"
+import { getPresetsWithMetadata } from "./Presets.ts"
 
 export class GithubError extends Data.TaggedError("GithubError")<{
   readonly cause: unknown
@@ -158,6 +160,9 @@ export const GithubIssueSource = Layer.effect(
       Stream.filter((issue) => issue.state_reason !== "not_planned"),
     )
 
+    const presets = yield* getPresetsWithMetadata("github", PresetMetadata)
+    const issuePresetMap = new Map<string, CliAgentPreset>()
+
     const issues = (options: {
       readonly labelFilter: Option.Option<string>
       readonly autoMergeLabelName: Option.Option<string>
@@ -177,6 +182,7 @@ export const GithubIssueSource = Layer.effect(
         Stream.filter((issue) => issue.pull_request === undefined),
         Stream.mapEffect(
           Effect.fnUntraced(function* (issue) {
+            const id = `#${issue.number}`
             const dependencies = yield* listOpenBlockedBy(issue.number).pipe(
               Stream.runCollect,
             )
@@ -188,8 +194,16 @@ export const GithubIssueSource = Layer.effect(
                   : hasLabel(issue.labels, "in-review")
                     ? "in-review"
                     : "todo"
+
+            const preset = presets.find(({ metadata }) =>
+              hasLabel(issue.labels, metadata.label),
+            )
+            if (preset) {
+              issuePresetMap.set(id, preset.preset)
+            }
+
             return new PrdIssue({
-              id: `#${issue.number}`,
+              id,
               title: issue.title,
               description: issue.body ?? "",
               priority: 0,
@@ -436,6 +450,23 @@ export const GithubIssueSource = Layer.effect(
           })}`,
         )
       }),
+      issueCliAgentPreset: (issue) =>
+        Effect.sync(() =>
+          Option.fromUndefinedOr(issuePresetMap.get(issue.id!)),
+        ),
+      updateCliAgentPreset: Effect.fnUntraced(function* (preset) {
+        const label = yield* Prompt.text({
+          message: "Enter a label for this preset",
+          validate(value) {
+            value = value.trim()
+            if (value.length === 0) {
+              return Effect.fail("Label cannot be empty")
+            }
+            return Effect.succeed(value)
+          },
+        })
+        return yield* preset.addMetadata("github", PresetMetadata, { label })
+      }),
       ensureInProgress: Effect.fnUntraced(
         function* (_project, issueId) {
           const issueNumber = Number(issueId.slice(1))
@@ -518,6 +549,12 @@ const getOrSelectAutoMergeLabel = Effect.gen(function* () {
     return label.value
   }
   return yield* autoMergeLabelSelect
+})
+
+// == preset metadata
+
+const PresetMetadata = Schema.Struct({
+  label: Schema.NonEmptyString,
 })
 
 // == helpers

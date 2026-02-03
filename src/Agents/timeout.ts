@@ -9,9 +9,6 @@ export const agentTimeout = Effect.fnUntraced(function* (options: {
   readonly specsDirectory: string
   readonly stallTimeout: Duration.Duration
   readonly preset: CliAgentPreset
-  readonly commandPrefix: (
-    command: ChildProcess.Command,
-  ) => ChildProcess.Command
   readonly task: PrdIssue
 }) {
   const pathService = yield* Path.Path
@@ -28,7 +25,7 @@ export const agentTimeout = Effect.fnUntraced(function* (options: {
       extraArgs: options.preset.extraArgs,
     }),
     ChildProcess.setCwd(worktree.directory),
-    options.commandPrefix,
+    options.preset.withCommandPrefix,
   )
   return yield* timeoutCommand.pipe(
     worktree.execWithStallTimeout({

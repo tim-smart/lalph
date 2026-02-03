@@ -7,9 +7,6 @@ import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 export const agentTasker = Effect.fnUntraced(function* (options: {
   readonly specsDirectory: string
   readonly specificationPath: string
-  readonly commandPrefix: (
-    command: ChildProcess.Command,
-  ) => ChildProcess.Command
   readonly preset: CliAgentPreset
 }) {
   const pathService = yield* Path.Path
@@ -26,7 +23,7 @@ export const agentTasker = Effect.fnUntraced(function* (options: {
       extraArgs: options.preset.extraArgs,
     }),
     ChildProcess.setCwd(worktree.directory),
-    options.commandPrefix,
+    options.preset.withCommandPrefix,
     worktree.execWithOutput({ cliAgent: options.preset.cliAgent }),
   )
 })

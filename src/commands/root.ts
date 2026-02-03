@@ -11,9 +11,7 @@ import {
 } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
-import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
-import { getCommandPrefix, getOrSelectCliAgent } from "./agent.ts"
 import { Flag, Command } from "effect/unstable/cli"
 import { IssueSource } from "../IssueSource.ts"
 import {
@@ -38,6 +36,7 @@ import { WorkerStatus } from "../domain/WorkerState.ts"
 import { GitFlow, GitFlowCommit, GitFlowPR } from "../GitFlow.ts"
 import { getAllProjects, welcomeWizard } from "../Projects.ts"
 import type { Project } from "../domain/Project.ts"
+import { getDefaultCliAgentPreset } from "../Presets.ts"
 
 // Main iteration run logic
 
@@ -48,9 +47,6 @@ const run = Effect.fnUntraced(
     readonly specsDirectory: string
     readonly stallTimeout: Duration.Duration
     readonly runTimeout: Duration.Duration
-    readonly commandPrefix: (
-      command: ChildProcess.Command,
-    ) => ChildProcess.Command
     readonly review: boolean
   }) {
     const projectId = yield* CurrentProjectId
@@ -58,12 +54,13 @@ const run = Effect.fnUntraced(
     const pathService = yield* Path.Path
     const worktree = yield* Worktree
     const gh = yield* GithubCli
-    const cliAgent = yield* getOrSelectCliAgent
     const prd = yield* Prd
     const source = yield* IssueSource
     const gitFlow = yield* GitFlow
     const currentWorker = yield* CurrentWorkerState
     const registry = yield* AtomRegistry.AtomRegistry
+
+    const preset = yield* getDefaultCliAgentPreset
 
     // ensure cleanup of branch after run
     yield* Effect.addFinalizer(
@@ -108,8 +105,7 @@ const run = Effect.fnUntraced(
 
     const chosenTask = yield* agentChooser({
       stallTimeout: options.stallTimeout,
-      commandPrefix: options.commandPrefix,
-      cliAgent,
+      preset,
     }).pipe(Effect.withSpan("Main.agentChooser"))
 
     taskId = chosenTask.id
@@ -134,6 +130,11 @@ const run = Effect.fnUntraced(
       )
     }
 
+    const taskPreset = Option.getOrElse(
+      yield* source.issueCliAgentPreset(chosenTask.prd),
+      () => preset,
+    )
+
     yield* Effect.gen(function* () {
       //
       // 2. Work on task
@@ -154,8 +155,7 @@ const run = Effect.fnUntraced(
 
       const exitCode = yield* agentWorker({
         stallTimeout: options.stallTimeout,
-        cliAgent,
-        commandPrefix: options.commandPrefix,
+        preset: taskPreset,
         prompt: instructions,
       }).pipe(Effect.withSpan("Main.agentWorker"))
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
@@ -171,8 +171,7 @@ const run = Effect.fnUntraced(
         yield* agentReviewer({
           specsDirectory: options.specsDirectory,
           stallTimeout: options.stallTimeout,
-          cliAgent,
-          commandPrefix: options.commandPrefix,
+          preset: taskPreset,
           instructions,
         }).pipe(Effect.withSpan("Main.agentReviewer"))
       }
@@ -182,8 +181,7 @@ const run = Effect.fnUntraced(
         agentTimeout({
           specsDirectory: options.specsDirectory,
           stallTimeout: options.stallTimeout,
-          cliAgent,
-          commandPrefix: options.commandPrefix,
+          preset: taskPreset,
           task: chosenTask.prd,
         }),
       ),
@@ -217,9 +215,6 @@ const runProject = Effect.fnUntraced(
     readonly specsDirectory: string
     readonly stallTimeout: Duration.Duration
     readonly runTimeout: Duration.Duration
-    readonly commandPrefix: (
-      command: ChildProcess.Command,
-    ) => ChildProcess.Command
   }) {
     const isFinite = Number.isFinite(options.iterations)
     const iterationsDisplay = isFinite ? options.iterations : "unlimited"
@@ -256,7 +251,6 @@ const runProject = Effect.fnUntraced(
             specsDirectory: options.specsDirectory,
             stallTimeout: options.stallTimeout,
             runTimeout: options.runTimeout,
-            commandPrefix: options.commandPrefix,
             review: options.project.reviewAgent,
           }).pipe(
             Effect.provide(
@@ -363,8 +357,7 @@ export const commandRoot = Command.make("lalph", {
         stallMinutes,
         specsDirectory,
       }) {
-        const commandPrefix = yield* getCommandPrefix
-        yield* getOrSelectCliAgent
+        yield* getDefaultCliAgentPreset
 
         let allProjects = yield* getAllProjects
         if (allProjects.length === 0) {
@@ -387,7 +380,6 @@ export const commandRoot = Command.make("lalph", {
               specsDirectory,
               stallTimeout: Duration.minutes(stallMinutes),
               runTimeout: Duration.minutes(maxIterationMinutes),
-              commandPrefix,
             }).pipe(Effect.provideService(CurrentProjectId, project.id)),
           { concurrency: "unbounded", discard: true },
         )

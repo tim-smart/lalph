@@ -9,7 +9,6 @@ import { commandPlan } from "./commands/plan.ts"
 import { commandIssue, commandIssueAlias } from "./commands/issue.ts"
 import { commandEdit, commandEditAlias } from "./commands/edit.ts"
 import { commandSource } from "./commands/source.ts"
-import { commandAgent } from "./commands/agent.ts"
 import PackageJson from "../package.json" with { type: "json" }
 import { TracingLayer } from "./Tracing.ts"
 import { MinimumLogLevel } from "effect/References"
@@ -25,7 +24,6 @@ commandRoot.pipe(
     commandEdit,
     commandSh,
     commandSource,
-    commandAgent,
     commandProjects,
     commandIssueAlias,
     commandEditAlias,

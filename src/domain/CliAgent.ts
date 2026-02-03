@@ -1,7 +1,5 @@
 import {
-  Array,
   Data,
-  Option,
   PlatformError,
   Schema,
   SchemaTransformation,
@@ -22,6 +20,7 @@ export class CliAgent<const Id extends string> extends Data.Class<{
   commandPlan: (options: {
     readonly prompt: string
     readonly prdFilePath: string
+    readonly extraArgs: ReadonlyArray<string>
     readonly dangerous: boolean
   }) => ChildProcess.Command
 }> {}
@@ -47,22 +46,30 @@ const opencode = new CliAgent({
         stdin: "inherit",
       },
     ),
-  commandPlan: ({ prompt, prdFilePath, dangerous }) =>
-    ChildProcess.make({
-      extendEnv: true,
-      ...(dangerous
-        ? {
-            env: {
-              OPENCODE_PERMISSION: '{"*":"allow"}',
-            },
-          }
-        : {}),
-      stdout: "inherit",
-      stderr: "inherit",
-      stdin: "inherit",
-    })`opencode --prompt ${`@${prdFilePath}
+  commandPlan: ({ prompt, prdFilePath, extraArgs, dangerous }) =>
+    ChildProcess.make(
+      "opencode",
+      [
+        ...extraArgs,
+        "--prompt",
+        `@${prdFilePath}
 
-${prompt}`}`,
+${prompt}`,
+      ],
+      {
+        extendEnv: true,
+        ...(dangerous
+          ? {
+              env: {
+                OPENCODE_PERMISSION: '{"*":"allow"}',
+              },
+            }
+          : {}),
+        stdout: "inherit",
+        stderr: "inherit",
+        stdin: "inherit",
+      },
+    ),
 })
 
 const claude = new CliAgent({
@@ -90,11 +97,12 @@ ${prompt}`,
       },
     ),
   outputTransformer: claudeOutputTransformer,
-  commandPlan: ({ prompt, prdFilePath, dangerous }) =>
+  commandPlan: ({ prompt, prdFilePath, extraArgs, dangerous }) =>
     ChildProcess.make(
       "claude",
       [
         ...(dangerous ? ["--dangerously-skip-permissions"] : []),
+        ...extraArgs,
         `@${prdFilePath}
 
 ${prompt}`,
@@ -127,10 +135,11 @@ ${prompt}`,
         stdin: "inherit",
       },
     ),
-  commandPlan: ({ prompt, prdFilePath, dangerous }) =>
+  commandPlan: ({ prompt, prdFilePath, extraArgs, dangerous }) =>
     ChildProcess.make(
       "codex",
       [
+        ...extraArgs,
         ...(dangerous ? ["--dangerously-bypass-approvals-and-sandbox"] : []),
         `@${prdFilePath}
 

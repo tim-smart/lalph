@@ -9,9 +9,6 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
   readonly specsDirectory: string
   readonly stallTimeout: Duration.Duration
   readonly preset: CliAgentPreset
-  readonly commandPrefix: (
-    command: ChildProcess.Command,
-  ) => ChildProcess.Command
   readonly instructions: string
 }) {
   const fs = yield* FileSystem.FileSystem
@@ -43,7 +40,7 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
       extraArgs: options.preset.extraArgs,
     }),
     ChildProcess.setCwd(worktree.directory),
-    options.commandPrefix,
+    options.preset.withCommandPrefix,
   )
 
   return yield* cliCommand.pipe(

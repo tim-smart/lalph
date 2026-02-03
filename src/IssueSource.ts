@@ -1,8 +1,11 @@
-import { Effect, Schema, ServiceMap } from "effect"
+import { Effect, Option, Schema, ServiceMap } from "effect"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
 import { Reactivity } from "effect/unstable/reactivity"
 import type { ProjectId } from "./domain/Project.ts"
 import type { CurrentProjectId, Settings } from "./Settings.ts"
+import type { CliAgentPreset } from "./domain/CliAgentPreset.ts"
+import type { Environment } from "effect/unstable/cli/Prompt"
+import type { QuitError } from "effect/Terminal"
 
 export class IssueSource extends ServiceMap.Service<
   IssueSource,
@@ -42,6 +45,18 @@ export class IssueSource extends ServiceMap.Service<
     readonly info: (
       projectId: ProjectId,
     ) => Effect.Effect<void, IssueSourceError>
+
+    readonly issueCliAgentPreset: (
+      issue: PrdIssue,
+    ) => Effect.Effect<Option.Option<CliAgentPreset>, IssueSourceError>
+
+    readonly updateCliAgentPreset: (
+      preset: CliAgentPreset,
+    ) => Effect.Effect<
+      CliAgentPreset,
+      IssueSourceError | QuitError,
+      Environment
+    >
 
     readonly ensureInProgress: (
       projectId: ProjectId,

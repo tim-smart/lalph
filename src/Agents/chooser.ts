@@ -10,9 +10,6 @@ import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 
 export const agentChooser = Effect.fnUntraced(function* (options: {
   readonly stallTimeout: Duration.Duration
-  readonly commandPrefix: (
-    command: ChildProcess.Command,
-  ) => ChildProcess.Command
   readonly preset: CliAgentPreset
 }) {
   const fs = yield* FileSystem.FileSystem
@@ -35,7 +32,7 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
       extraArgs: options.preset.extraArgs,
     }),
     ChildProcess.setCwd(worktree.directory),
-    options.commandPrefix,
+    options.preset.withCommandPrefix,
     worktree.execWithWorkerOutput({
       cliAgent: options.preset.cliAgent,
     }),

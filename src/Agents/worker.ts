@@ -6,9 +6,6 @@ import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 export const agentWorker = Effect.fnUntraced(function* (options: {
   readonly stallTimeout: Duration.Duration
   readonly preset: CliAgentPreset
-  readonly commandPrefix: (
-    command: ChildProcess.Command,
-  ) => ChildProcess.Command
   readonly prompt: string
 }) {
   const pathService = yield* Path.Path
@@ -21,7 +18,7 @@ export const agentWorker = Effect.fnUntraced(function* (options: {
       extraArgs: [],
     }),
     ChildProcess.setCwd(worktree.directory),
-    options.commandPrefix,
+    options.preset.withCommandPrefix,
   )
 
   return yield* cliCommand.pipe(

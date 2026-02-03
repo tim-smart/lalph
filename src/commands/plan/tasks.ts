@@ -6,8 +6,9 @@ import { layerProjectIdPrompt } from "../../Projects.ts"
 import { PromptGen } from "../../PromptGen.ts"
 import { Settings } from "../../Settings.ts"
 import { Worktree } from "../../Worktree.ts"
-import { getCommandPrefix, getOrSelectCliAgent } from "../agent.ts"
 import { commandRoot } from "../root.ts"
+import { getDefaultCliAgentPreset } from "../../Presets.ts"
+import { CurrentIssueSource } from "../../CurrentIssueSource.ts"
 
 const specificationPath = Argument.path("spec", {
   pathType: "file",
@@ -29,8 +30,7 @@ export const commandPlanTasks = Command.make("tasks", {
         const fs = yield* FileSystem.FileSystem
         const pathService = yield* Path.Path
         const worktree = yield* Worktree
-        const cliAgent = yield* getOrSelectCliAgent
-        const commandPrefix = yield* getCommandPrefix
+        const preset = yield* getDefaultCliAgentPreset
 
         const content = yield* fs.readFileString(specificationPath)
         const relative = pathService.relative(
@@ -46,15 +46,15 @@ export const commandPlanTasks = Command.make("tasks", {
         yield* agentTasker({
           specsDirectory,
           specificationPath: relative,
-          commandPrefix,
-          cliAgent,
+          preset,
         })
       },
       Effect.provide([
         Settings.layer,
         PromptGen.layer,
         Prd.layerProvided.pipe(Layer.provide(layerProjectIdPrompt)),
-        Worktree.layer.pipe(Layer.provide(layerProjectIdPrompt)),
+        CurrentIssueSource.layer,
+        Settings.layer,
       ]),
     ),
   ),
