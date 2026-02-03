@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.18
+
+### Patch Changes
+
+- [#241](https://github.com/tim-smart/lalph/pull/241) [`6c80b03`](https://github.com/tim-smart/lalph/commit/6c80b032ab158f690743cddd5e4090c6450ace85) Thanks [@tim-smart](https://github.com/tim-smart)! - Remove per-project kvs data when a project is deleted.
+
 ## 0.2.17
 
 ### Patch Changes
