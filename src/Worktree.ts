@@ -16,7 +16,7 @@ import {
 } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { RunnerStalled } from "./domain/Errors.ts"
-import type { CliAgent } from "./domain/CliAgent.ts"
+import type { AnyCliAgent } from "./domain/CliAgent.ts"
 import { constWorkerMaxOutputChunks, CurrentWorkerState } from "./Workers.ts"
 import { AtomRegistry } from "effect/unstable/reactivity"
 import { CurrentProjectId } from "./Settings.ts"
@@ -194,7 +194,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
       provide,
     )
 
-  const execWithOutput = (options: { readonly cliAgent: CliAgent }) =>
+  const execWithOutput = (options: { readonly cliAgent: AnyCliAgent }) =>
     Effect.fnUntraced(function* (command: ChildProcess.Command) {
       const handle = yield* provide(command.asEffect())
 
@@ -213,7 +213,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
       return yield* handle.exitCode
     }, Effect.scoped)
 
-  const execWithWorkerOutput = (options: { readonly cliAgent: CliAgent }) =>
+  const execWithWorkerOutput = (options: { readonly cliAgent: AnyCliAgent }) =>
     Effect.fnUntraced(function* (command: ChildProcess.Command) {
       const registry = yield* AtomRegistry.AtomRegistry
       const worker = yield* CurrentWorkerState
@@ -244,7 +244,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
 
   const execWithStallTimeout = (options: {
     readonly stallTimeout: Duration.Duration
-    readonly cliAgent: CliAgent
+    readonly cliAgent: AnyCliAgent
   }) =>
     Effect.fnUntraced(function* (command: ChildProcess.Command) {
       const registry = yield* AtomRegistry.AtomRegistry

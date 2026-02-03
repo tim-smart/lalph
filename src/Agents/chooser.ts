@@ -4,16 +4,16 @@ import { Prd } from "../Prd.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import { RunnerStalled } from "../domain/Errors.ts"
-import type { CliAgent } from "../domain/CliAgent.ts"
 import { makeWaitForFile } from "../shared/fs.ts"
 import { GitFlow } from "../GitFlow.ts"
+import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 
 export const agentChooser = Effect.fnUntraced(function* (options: {
   readonly stallTimeout: Duration.Duration
   readonly commandPrefix: (
     command: ChildProcess.Command,
   ) => ChildProcess.Command
-  readonly cliAgent: CliAgent
+  readonly preset: CliAgentPreset
 }) {
   const fs = yield* FileSystem.FileSystem
   const pathService = yield* Path.Path
@@ -29,13 +29,16 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
   )
 
   yield* pipe(
-    options.cliAgent.command({
+    options.preset.cliAgent.command({
       prompt: promptGen.promptChoose({ gitFlow }),
       prdFilePath: pathService.join(".lalph", "prd.yml"),
+      extraArgs: options.preset.extraArgs,
     }),
     ChildProcess.setCwd(worktree.directory),
     options.commandPrefix,
-    worktree.execWithWorkerOutput({ cliAgent: options.cliAgent }),
+    worktree.execWithWorkerOutput({
+      cliAgent: options.preset.cliAgent,
+    }),
     Effect.timeoutOrElse({
       duration: options.stallTimeout,
       onTimeout: () => Effect.fail(new RunnerStalled()),

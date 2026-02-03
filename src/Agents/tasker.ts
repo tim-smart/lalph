@@ -2,7 +2,7 @@ import { Effect, Path, pipe } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
-import type { CliAgent } from "../domain/CliAgent.ts"
+import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 
 export const agentTasker = Effect.fnUntraced(function* (options: {
   readonly specsDirectory: string
@@ -10,22 +10,23 @@ export const agentTasker = Effect.fnUntraced(function* (options: {
   readonly commandPrefix: (
     command: ChildProcess.Command,
   ) => ChildProcess.Command
-  readonly cliAgent: CliAgent
+  readonly preset: CliAgentPreset
 }) {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
 
   return yield* pipe(
-    options.cliAgent.command({
+    options.preset.cliAgent.command({
       prompt: promptGen.promptPlanTasks({
         specsDirectory: options.specsDirectory,
         specificationPath: options.specificationPath,
       }),
       prdFilePath: pathService.join(".lalph", "prd.yml"),
+      extraArgs: options.preset.extraArgs,
     }),
     ChildProcess.setCwd(worktree.directory),
     options.commandPrefix,
-    worktree.execWithOutput(options),
+    worktree.execWithOutput({ cliAgent: options.preset.cliAgent }),
   )
 })
