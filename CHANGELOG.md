@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.20
+
+### Patch Changes
+
+- [`e1560f2`](https://github.com/tim-smart/lalph/commit/e1560f2d08f48bf0ef23747b58eb9cdc84a03686) Thanks [@tim-smart](https://github.com/tim-smart)! - create plans in your EDITOR
+
 ## 0.2.19
 
 ### Patch Changes
