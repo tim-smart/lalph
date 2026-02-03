@@ -1,62 +1,70 @@
 import * as S from "effect/Schema"
 
-export class Author extends S.Class<Author>("github/Author")({
+export class Author extends S.Class<Author>("Author")({
   login: S.String,
 }) {}
 
-export class Comment extends S.Class<Comment>("github/Comment")({
+export class Comment extends S.Class<Comment>("Comment")({
   id: S.String,
   body: S.String,
   author: Author,
-  // createdAt: S.String,
-}) {}
-
-export class CommentsEdge extends S.Class<CommentsEdge>("github/CommentsEdge")({
-  node: Comment,
+  createdAt: S.String,
 }) {}
 
 export class PullRequestComments extends S.Class<PullRequestComments>(
   "PullRequestComments",
 )({
-  edges: S.Array(CommentsEdge),
+  nodes: S.Array(Comment),
 }) {}
 
-export class PullRequest extends S.Class<PullRequest>("github/PullRequest")({
+export class PullRequest extends S.Class<PullRequest>("PullRequest")({
   url: S.String,
+  reviewDecision: S.Null,
+  reviews: S.suspend(() => Reviews),
   reviewThreads: S.suspend(() => ReviewThreads),
   comments: PullRequestComments,
 }) {}
 
-export class Repository extends S.Class<Repository>("github/Repository")({
+export class Repository extends S.Class<Repository>("Repository")({
   pullRequest: PullRequest,
 }) {}
 
-export class Data extends S.Class<Data>("github/Data")({
+export class Data extends S.Class<Data>("Data")({
   repository: Repository,
 }) {}
 
-export class CommentsData extends S.Class<CommentsData>("github/CommentsData")({
+export class GithubPullRequestData extends S.Class<GithubPullRequestData>(
+  "GithubPullRequestData",
+)({
   data: Data,
 }) {}
 
-export class ReviewComment extends S.Class<ReviewComment>(
-  "github/ReviewComment",
-)({
+export class Review extends S.Class<Review>("Review")({
+  id: S.String,
+  author: Author,
+  body: S.String,
+}) {}
+
+export class Reviews extends S.Class<Reviews>("Reviews")({
+  nodes: S.Array(Review),
+}) {}
+
+export class ReviewComment extends S.Class<ReviewComment>("ReviewComment")({
   id: S.String,
   author: Author,
   body: S.String,
   path: S.String,
-  originalLine: S.NullOr(S.Number),
+  originalLine: S.Number,
   diffHunk: S.String,
-  // createdAt: S.String,
+  createdAt: S.String,
 }) {}
 
-export class NodeComments extends S.Class<NodeComments>("github/NodeComments")({
+export class NodeComments extends S.Class<NodeComments>("NodeComments")({
   nodes: S.Array(ReviewComment),
 }) {}
 
-export class ReviewThreadNode extends S.Class<ReviewThreadNode>(
-  "github/ReviewThreadNode",
+export class ReviewThreadsNode extends S.Class<ReviewThreadsNode>(
+  "ReviewThreadsNode",
 )({
   isCollapsed: S.Boolean,
   isOutdated: S.Boolean,
@@ -67,14 +75,6 @@ export class ReviewThreadNode extends S.Class<ReviewThreadNode>(
   readonly shouldDisplayThread = !this.isCollapsed && !this.isOutdated
 }
 
-export class ReviewThreadsEdge extends S.Class<ReviewThreadsEdge>(
-  "ReviewThreadsEdge",
-)({
-  node: ReviewThreadNode,
-}) {}
-
-export class ReviewThreads extends S.Class<ReviewThreads>(
-  "github/ReviewThreads",
-)({
-  edges: S.Array(ReviewThreadsEdge),
+export class ReviewThreads extends S.Class<ReviewThreads>("ReviewThreads")({
+  nodes: S.Array(ReviewThreadsNode),
 }) {}

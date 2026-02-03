@@ -10,9 +10,9 @@ import {
 } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import {
-  CommentsData,
-  ReviewComment,
   Comment,
+  GithubPullRequestData,
+  ReviewComment,
 } from "../domain/GithubComment.ts"
 
 export class GithubCli extends ServiceMap.Service<GithubCli>()(
@@ -41,17 +41,19 @@ export class GithubCli extends ServiceMap.Service<GithubCli>()(
       const reviewComments = (pr: number) =>
         ChildProcess.make`gh api graphql -f owner=${owner} -f repo=${repo} -F pr=${pr} -f query=${githubReviewCommentsQuery}`.pipe(
           ChildProcess.string,
-          Effect.flatMap(Schema.decodeEffect(CommentsFromJson)),
+          Effect.flatMap(Schema.decodeEffect(PullRequestDataFromJson)),
           Effect.map((data) => {
             const comments =
-              data.data.repository.pullRequest.comments.edges.map(
-                (edge) => edge.node,
+              data.data.repository.pullRequest.comments.nodes.filter(
+                (c) => !c.author.login.startsWith("github"),
+              )
+            const reviews =
+              data.data.repository.pullRequest.reviews.nodes.filter(
+                (r) => r.body.trim().length > 0,
               )
             const reviewThreads =
-              data.data.repository.pullRequest.reviewThreads.edges.map(
-                (edge) => edge.node,
-              )
-            return { comments, reviewThreads } as const
+              data.data.repository.pullRequest.reviewThreads.nodes
+            return { comments, reviews, reviewThreads } as const
           }),
           Effect.provideService(
             ChildProcessSpawner.ChildProcessSpawner,
@@ -61,12 +63,16 @@ export class GithubCli extends ServiceMap.Service<GithubCli>()(
 
       const prFeedbackMd = (pr: number) =>
         reviewComments(pr).pipe(
-          Effect.map(({ comments, reviewThreads }) => {
+          Effect.map(({ comments, reviewThreads, reviews }) => {
             const eligibleReviewThreads = reviewThreads.filter(
               (thread) => thread.shouldDisplayThread,
             )
 
-            if (comments.length === 0 && eligibleReviewThreads.length === 0) {
+            if (
+              comments.length === 0 &&
+              eligibleReviewThreads.length === 0 &&
+              reviews.length === 0
+            ) {
               return `No review comments found.`
             }
 
@@ -88,6 +94,23 @@ Comments are rendered in XML format.`
 ## Review Comments
 
 ${reviewCommentsMd}`
+            }
+
+            if (reviews.length > 0) {
+              const reviewsXml = reviews
+                .map(
+                  (review) => `<review author="${review.author.login}">
+  <body><![CDATA[${review.body}]]></body>
+</review>`,
+                )
+                .join("\n")
+              content += `
+
+## Reviews
+
+<reviews>
+${reviewsXml}
+</reviews>`
             }
 
             if (comments.length > 0) {
@@ -155,45 +178,54 @@ const renderGeneralComment = (
 
 // Schema definitions and GraphQL query
 
-const CommentsFromJson = Schema.fromJsonString(CommentsData)
+const PullRequestDataFromJson = Schema.fromJsonString(GithubPullRequestData)
 
 const githubReviewCommentsQuery = `
-  query FetchPRComments($owner: String!, $repo: String!, $pr: Int!) {
-    repository(owner: $owner, name: $repo) {
-      pullRequest(number: $pr) {
-        url
-        reviewDecision
-        reviewThreads(first: 100) {
-          edges {
-            node {
-              isCollapsed
-              isOutdated
-              isResolved
-              comments(first: 100) {
-                nodes {
-                  id
-                  author { login }
-                  body
-                  path
-                  originalLine
-                  diffHunk
-                  createdAt
-                }
-              }
-            }
+query FetchPRComments($owner: String!, $repo: String!, $pr: Int!) {
+  repository(owner: $owner, name: $repo) {
+    pullRequest(number: $pr) {
+      url
+      reviewDecision
+      reviews(first: 100) {
+        nodes {
+          id
+          author {
+            login
           }
+          body
         }
-        comments(first: 100) {
-          edges {
-            node {
+      }
+      reviewThreads(first: 100) {
+        nodes {
+          isCollapsed
+          isOutdated
+          isResolved
+          comments(first: 100) {
+            nodes {
               id
+              author {
+                login
+              }
               body
-              author { login }
+              path
+              originalLine
+              diffHunk
               createdAt
             }
           }
         }
       }
+      comments(first: 100) {
+        nodes {
+          id
+          body
+          author {
+            login
+          }
+          createdAt
+        }
+      }
     }
   }
+}
 `
