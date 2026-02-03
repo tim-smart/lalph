@@ -185,7 +185,15 @@ ${keyInformation(options)}`
       const promptReview = (options: {
         readonly prompt: string
         readonly gitFlow: GitFlow["Service"]
-      }) => `A previous engineer has completed a task from the instructions below.
+      }) => {
+        const taskIdMatch = options.prompt.match(/^ID:\s*(\S+)/m)
+        const taskId = taskIdMatch?.[1]
+        const commitReferenceInstruction =
+          !options.gitFlow.requiresGithubPr && taskId
+            ? `\n- Include \`References ${taskId}\` in each commit message.`
+            : ""
+
+        return `A previous engineer has completed a task from the instructions below.
 
 You job is to meticulously review their work to ensure it meets the task requirements,
 follows best practices, and maintains high code quality. You should be extremely thorough
@@ -197,13 +205,14 @@ Once you have completed your review, you should:
 - Add follow-up tasks to the prd.yml file for any work that could not be done,
   or for remaining issues that need addressing.
 
-${options.gitFlow.reviewInstructions}
+${options.gitFlow.reviewInstructions}${commitReferenceInstruction}
 
 **Everything should be done without interaction or asking for permission.**
 
 # Previous instructions (only for context, do not repeat)
 
 ${options.prompt}`
+      }
 
       const promptReviewCustom = (options: {
         readonly prompt: string

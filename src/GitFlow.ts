@@ -132,9 +132,8 @@ export const GitFlowCommit = Layer.effect(
       reviewInstructions: `You are already on the branch with their changes.
 After making any changes, commit them to the same branch. Do not git push your changes or switch branches.
 
- - Include \`References {task id}\` in each commit message.
- - **DO NOT** commit any of the files in the \`.lalph\` directory.
- - You have full permission to create git commits.`,
+- **DO NOT** commit any of the files in the \`.lalph\` directory.
+- You have full permission to create git commits.`,
 
       postWork: Effect.fnUntraced(function* ({
         worktree,
