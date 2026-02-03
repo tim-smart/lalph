@@ -1,5 +1,11 @@
 # lalph
 
+## 0.2.19
+
+### Patch Changes
+
+- [`d23e8ce`](https://github.com/tim-smart/lalph/commit/d23e8ce6dc4974ad2fbf50f0b8605fadcd4de73d) Thanks [@tim-smart](https://github.com/tim-smart)! - include review bodies in pr feedback
+
 ## 0.2.18
 
 ### Patch Changes
