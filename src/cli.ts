@@ -2,7 +2,6 @@
 
 import { Command } from "effect/unstable/cli"
 import { Effect, Layer } from "effect"
-import { NodeRuntime } from "@effect/platform-node"
 import { Settings } from "./Settings.ts"
 import { commandRoot } from "./commands/root.ts"
 import { commandPlan } from "./commands/plan.ts"
@@ -17,6 +16,7 @@ import { atomRuntime, lalphMemoMap } from "./shared/runtime.ts"
 import { PlatformServices } from "./shared/platform.ts"
 import { commandProjects, commandProjectsAlias } from "./commands/projects.ts"
 import { commandSh } from "./commands/sh.ts"
+import { BunRuntime } from "@effect/platform-bun"
 
 commandRoot.pipe(
   Command.withSubcommands([
@@ -44,5 +44,5 @@ commandRoot.pipe(
   }),
   Effect.provide(PlatformServices),
   Effect.provideService(Layer.CurrentMemoMap, lalphMemoMap),
-  NodeRuntime.runMain,
+  BunRuntime.runMain,
 )

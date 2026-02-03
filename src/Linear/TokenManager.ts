@@ -19,8 +19,7 @@ import {
   HttpServerResponse,
 } from "effect/unstable/http"
 import { Base64Url } from "effect/encoding"
-import { NodeHttpServer } from "@effect/platform-node"
-import { createServer } from "node:http"
+import { BunHttpServer } from "@effect/platform-bun"
 import { KeyValueStore } from "effect/unstable/persistence"
 import { layerKvs } from "../Kvs.ts"
 
@@ -105,7 +104,7 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
           disableListenLog: true,
           disableLogger: true,
         }).pipe(
-          Layer.provide(NodeHttpServer.layer(createServer, { port: 34338 })),
+          Layer.provide(BunHttpServer.layer({ port: 34338 })),
           Layer.build,
           Effect.orDie,
         )

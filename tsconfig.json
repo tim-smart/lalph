@@ -4,11 +4,15 @@
     // File Layout
     "rootDir": "./src",
     "outDir": "./dist",
+    "noEmit": true,
 
     // Environment Settings
     // See also https://aka.ms/tsconfig/module
-    "module": "nodenext",
-    "target": "esnext",
+    "lib": ["ESNext"],
+    "target": "ESNext",
+    "module": "preserve",
+    "moduleDetection": "force",
+    "moduleResolution": "bundler",
     "types": [],
     "rewriteRelativeImportExtensions": true,
     "allowImportingTsExtensions": true,
@@ -30,7 +34,6 @@
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
     "noUncheckedSideEffectImports": true,
-    "moduleDetection": "force",
     "skipLibCheck": true,
 
     "plugins": [
