@@ -100,7 +100,7 @@ ${reviewCommentsMd}`
               const reviewsXml = reviews
                 .map(
                   (review) => `<review author="${review.author.login}">
-  <body><![CDATA[${review.body}]]></body>
+  <body>${review.body}</body>
 </review>`,
                 )
                 .join("\n")
@@ -152,8 +152,8 @@ const renderReviewComments = (
 ) => `<comment author="${comment.author.login}" path="${comment.path}"${
   comment.originalLine ? ` originalLine="${comment.originalLine}"` : ""
 }>
-  <diffHunk><![CDATA[${comment.diffHunk}]]></diffHunk>
-  <body><![CDATA[${comment.body}]]></body>${
+  <diffHunk>${comment.diffHunk}</diffHunk>
+  <body>${comment.body}</body>${
     followup.length > 0
       ? `
 
@@ -161,7 +161,7 @@ const renderReviewComments = (
     .map(
       (fc) => `
     <comment author="${fc.author.login}">
-      <body><![CDATA[${fc.body}]]></body>
+      <body>${fc.body}</body>
     </comment>`,
     )
     .join("")}
@@ -173,7 +173,7 @@ const renderReviewComments = (
 const renderGeneralComment = (
   comment: Comment,
 ) => `  <comment author="${comment.author.login}">
-    <body><![CDATA[${comment.body}]]></body>
+    <body>${comment.body}</body>
   </comment>`
 
 // Schema definitions and GraphQL query

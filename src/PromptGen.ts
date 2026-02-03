@@ -156,9 +156,12 @@ ${options.task.description}
 
 # Instructions
 
-1. Study the ${options.specsDirectory}/README.md file (if available), and read
-   the entire prd.yml file to understand the context of the task and any key
-   learnings from previous work.
+Your job is to implement the task described above.
+
+1. Carefully study the prd.yml file to understand the context of the task, and
+   discover any key learnings from previous work.
+   Also read the ${options.specsDirectory}/README.md file (if available), to see
+   if any previous specifications could assist you.
 2. ${options.gitFlow.setupInstructions(options)}
 3. Implement the task.
    - If this task is a research task, **do not** make any code changes yet.
@@ -236,9 +239,9 @@ ${prdNotes(options)}`
       const planPrompt = (options: {
         readonly plan: string
         readonly specsDirectory: string
-      }) => `<request><![CDATA[
+      }) => `<request>
 ${options.plan}
-]]></request>
+</request>
 
 ## Instructions
 
@@ -261,7 +264,6 @@ ${options.plan}
    }
    \`\`\`
 5. Present the saved specification for review (include the full text in your response).
-   If any corrections are needed, update the specification and adjust the plan tasks accordingly.
 
 **Important:** You are only creating or updating a plan, not implementing any tasks yet.
 
