@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.0
+
+### Minor Changes
+
+- [#248](https://github.com/tim-smart/lalph/pull/248) [`113ef74`](https://github.com/tim-smart/lalph/commit/113ef7470dcf6978a0b071027927929348629a55) Thanks [@tim-smart](https://github.com/tim-smart)! - add agent presets, to allow for different models per task
+
 ## 0.2.21
 
 ### Patch Changes
