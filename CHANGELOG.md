@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.6
+
+### Patch Changes
+
+- [#255](https://github.com/tim-smart/lalph/pull/255) [`6c33af0`](https://github.com/tim-smart/lalph/commit/6c33af00e708e426053acf1792afaf80f201cc55) Thanks [@tim-smart](https://github.com/tim-smart)! - Cancel active runs when the current task leaves in-progress or in-review.
+
 ## 0.3.5
 
 ### Patch Changes
