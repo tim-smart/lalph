@@ -1,4 +1,5 @@
 import {
+  Cause,
   Config,
   Deferred,
   Duration,
@@ -119,6 +120,16 @@ const run = Effect.fnUntraced(
     yield* Effect.addFinalizer(
       Effect.fnUntraced(function* (exit) {
         if (exit._tag === "Success") return
+        if (
+          exit._tag === "Failure" &&
+          exit.cause.failures.some(
+            (failure) =>
+              Cause.failureIsFail(failure) &&
+              failure.error instanceof TaskStateChanged,
+          )
+        ) {
+          return
+        }
         if (taskId) {
           yield* source.updateIssue({
             projectId,
@@ -171,7 +182,7 @@ const run = Effect.fnUntraced(
       () => preset,
     )
 
-    const cancelled = yield* Effect.gen(function* () {
+    const workAndReview = Effect.gen(function* () {
       //
       // 2. Work on task
       // -----------------------
@@ -221,33 +232,35 @@ const run = Effect.fnUntraced(
           task: chosenTask.prd,
         }),
       ),
-      Effect.raceFirst(watchTaskState({ issueId: taskId })),
-      Effect.as(false),
-      Effect.catchTag("TaskStateChanged", (error) =>
-        Effect.log(
-          `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
-        ).pipe(Effect.as(true)),
-      ),
     )
 
-    if (cancelled) return
+    yield* Effect.gen(function* () {
+      yield* workAndReview
 
-    yield* gitFlow.postWork({
-      worktree,
-      targetBranch: Option.getOrUndefined(options.targetBranch),
-      issueId: taskId,
-    })
-
-    const task = yield* prd.findById(taskId)
-    if (task?.autoMerge) {
-      yield* gitFlow.autoMerge({
+      yield* gitFlow.postWork({
+        worktree,
         targetBranch: Option.getOrUndefined(options.targetBranch),
         issueId: taskId,
-        worktree,
       })
-    } else {
-      yield* prd.maybeRevertIssue({ issueId: taskId })
-    }
+
+      const task = yield* prd.findById(taskId)
+      if (task?.autoMerge) {
+        yield* gitFlow.autoMerge({
+          targetBranch: Option.getOrUndefined(options.targetBranch),
+          issueId: taskId,
+          worktree,
+        })
+      } else {
+        yield* prd.maybeRevertIssue({ issueId: taskId })
+      }
+    }).pipe(
+      Effect.raceFirst(watchTaskState({ issueId: taskId })),
+      Effect.tapErrorTag("TaskStateChanged", (error) =>
+        Effect.log(
+          `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
+        ),
+      ),
+    )
   },
   Effect.scoped,
   Effect.provide(Prd.layer, { local: true }),
@@ -323,6 +336,9 @@ const runProject = Effect.fnUntraced(
           },
           QuitError(_error) {
             quit = true
+            return Effect.void
+          },
+          TaskStateChanged(_error) {
             return Effect.void
           },
         }),
