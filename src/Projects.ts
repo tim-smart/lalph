@@ -135,7 +135,7 @@ export const welcomeWizard = Effect.gen(function* () {
     " |^()^|  lalph",
     "  '--'",
     "",
-    "Welcome! Let's add your first project.",
+    "Let's add your first project.",
     "Projects let you configure how lalph runs tasks.",
     "",
   ].join("\n")
