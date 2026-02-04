@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.5
+
+### Patch Changes
+
+- [`f237057`](https://github.com/tim-smart/lalph/commit/f23705720fcab320ed3976ae32394fe5d91b90e1) Thanks [@tim-smart](https://github.com/tim-smart)! - try improve plan subagents
+
 ## 0.3.4
 
 ### Patch Changes
