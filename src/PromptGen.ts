@@ -255,13 +255,34 @@ ${options.plan}
      accordingly.
 2. Add a detailed implementation plan to the specification, breaking down the work into
    smaller, manageable tasks.
-3. Start two subagents with a copy of this prompt.
-   - The first subagent will review the plan and provide feedback or improvements.
-   - The second subagent will look over the implementation plan, and ensure each task is
-     small, atomic and independently shippable. It also **NEEDS TO** make sure task
+3. Start two subagents to review the plan:
+   - The first subagent will recieve the following prompt:
+     \`\`\`
+     Your job is to thoroughly review the specification created for the request,
+     recommend improvements, and ensure every detail is covered.
+
+     Below is the original request.
+
+     ---
+
+     {insert original prompt here}
+     \`\`\`
+
+   - The second subagent will receive the following prompt:
+     \`\`\`
+     Your job is to look over the implementation plan, and ensure each task is
+     small, atomic and independently shippable. You also **NEED TO** make sure task
      can be completed without failing validation checks (typechecks, linting, tests).
      If a task will only pass validations when combined with another, the subagent should
      combine the work into one task.
+
+     Below is the original request.
+
+     ---
+
+     {insert original prompt here}
+     \`\`\`
+
 4. Write the specification details to a \`.lalph/plan.json\` file using the following format:
    \`\`\`json
    {
