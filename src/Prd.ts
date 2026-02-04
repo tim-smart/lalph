@@ -224,6 +224,7 @@ export class Prd extends ServiceMap.Service<
         yield* fs.writeFileString(prdFile, nextYaml)
       },
       Effect.scoped,
+      syncSemaphore.withPermitsIfAvailable(1),
       Effect.withSpan("Prd.updateSync"),
       FiberHandle.run(updateSyncHandle, { onlyIfMissing: true }),
     )
