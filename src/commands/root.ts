@@ -223,40 +223,40 @@ const run = Effect.fnUntraced(
       ),
     )
 
-    const runTask = Effect.gen(function* () {
-      const cancelled = yield* Effect.raceFirst(
-        workEffect,
-        watchTaskState({ issueId: taskId }),
-      ).pipe(
-        Effect.as(false),
-        Effect.catchTag("TaskStateChanged", (error) =>
-          Effect.log(
+    const runTask = Effect.raceFirst(
+      workEffect,
+      watchTaskState({ issueId: taskId }),
+    ).pipe(
+      Effect.matchEffect({
+        onFailure: (error) => {
+          if (error._tag !== "TaskStateChanged") {
+            return Effect.fail(error)
+          }
+          return Effect.log(
             `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
-          ).pipe(Effect.as(true)),
-        ),
-      )
+          )
+        },
+        onSuccess: () =>
+          Effect.gen(function* () {
+            yield* gitFlow.postWork({
+              worktree,
+              targetBranch: Option.getOrUndefined(options.targetBranch),
+              issueId: taskId,
+            })
 
-      if (cancelled) {
-        return
-      }
-
-      yield* gitFlow.postWork({
-        worktree,
-        targetBranch: Option.getOrUndefined(options.targetBranch),
-        issueId: taskId,
-      })
-
-      const task = yield* prd.findById(taskId)
-      if (task?.autoMerge) {
-        yield* gitFlow.autoMerge({
-          targetBranch: Option.getOrUndefined(options.targetBranch),
-          issueId: taskId,
-          worktree,
-        })
-      } else {
-        yield* prd.maybeRevertIssue({ issueId: taskId })
-      }
-    })
+            const task = yield* prd.findById(taskId)
+            if (task?.autoMerge) {
+              yield* gitFlow.autoMerge({
+                targetBranch: Option.getOrUndefined(options.targetBranch),
+                issueId: taskId,
+                worktree,
+              })
+            } else {
+              yield* prd.maybeRevertIssue({ issueId: taskId })
+            }
+          }),
+      }),
+    )
 
     yield* runTask
   },
