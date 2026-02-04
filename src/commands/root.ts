@@ -223,10 +223,8 @@ const run = Effect.fnUntraced(
       ),
     )
 
-    const runTask = Effect.raceFirst(
-      workEffect,
-      watchTaskState({ issueId: taskId }),
-    ).pipe(
+    const cancelled = yield* workEffect.pipe(
+      Effect.raceFirst(watchTaskState({ issueId: taskId })),
       Effect.matchEffect({
         onFailure: (error) => {
           if (error._tag !== "TaskStateChanged") {
@@ -234,31 +232,30 @@ const run = Effect.fnUntraced(
           }
           return Effect.log(
             `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
-          )
+          ).pipe(Effect.map(() => true))
         },
-        onSuccess: () =>
-          Effect.gen(function* () {
-            yield* gitFlow.postWork({
-              worktree,
-              targetBranch: Option.getOrUndefined(options.targetBranch),
-              issueId: taskId,
-            })
-
-            const task = yield* prd.findById(taskId)
-            if (task?.autoMerge) {
-              yield* gitFlow.autoMerge({
-                targetBranch: Option.getOrUndefined(options.targetBranch),
-                issueId: taskId,
-                worktree,
-              })
-            } else {
-              yield* prd.maybeRevertIssue({ issueId: taskId })
-            }
-          }),
+        onSuccess: () => Effect.succeed(false),
       }),
     )
 
-    yield* runTask
+    if (cancelled) return
+
+    yield* gitFlow.postWork({
+      worktree,
+      targetBranch: Option.getOrUndefined(options.targetBranch),
+      issueId: taskId,
+    })
+
+    const task = yield* prd.findById(taskId)
+    if (task?.autoMerge) {
+      yield* gitFlow.autoMerge({
+        targetBranch: Option.getOrUndefined(options.targetBranch),
+        issueId: taskId,
+        worktree,
+      })
+    } else {
+      yield* prd.maybeRevertIssue({ issueId: taskId })
+    }
   },
   Effect.scoped,
   Effect.provide(Prd.layer, { local: true }),
