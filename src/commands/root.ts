@@ -8,6 +8,7 @@ import {
   Iterable,
   Option,
   Path,
+  Stream,
 } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
@@ -17,12 +18,13 @@ import { IssueSource } from "../IssueSource.ts"
 import {
   checkForWork,
   CurrentIssueSource,
+  currentIssuesAtom,
   resetInProgress,
 } from "../CurrentIssueSource.ts"
 import { GithubCli } from "../Github/Cli.ts"
 import { agentWorker } from "../Agents/worker.ts"
 import { agentChooser } from "../Agents/chooser.ts"
-import { RunnerStalled } from "../domain/Errors.ts"
+import { RunnerStalled, TaskStateChanged } from "../domain/Errors.ts"
 import { agentReviewer } from "../Agents/reviewer.ts"
 import { agentTimeout } from "../Agents/timeout.ts"
 import { CurrentProjectId, Settings } from "../Settings.ts"
@@ -39,6 +41,40 @@ import type { Project } from "../domain/Project.ts"
 import { getDefaultCliAgentPreset } from "../Presets.ts"
 
 // Main iteration run logic
+
+const watchTaskState = Effect.fnUntraced(function* (options: {
+  readonly issueId: string
+}) {
+  const registry = yield* AtomRegistry.AtomRegistry
+  const projectId = yield* CurrentProjectId
+
+  return yield* AtomRegistry.toStreamResult(
+    registry,
+    currentIssuesAtom(projectId),
+  ).pipe(
+    Stream.runForEach((issues) => {
+      const issue = issues.find((entry) => entry.id === options.issueId)
+      if (!issue) {
+        return Effect.fail(
+          new TaskStateChanged({
+            issueId: options.issueId,
+            state: "missing",
+          }),
+        )
+      }
+      if (issue.state === "in-progress" || issue.state === "in-review") {
+        return Effect.void
+      }
+      return Effect.fail(
+        new TaskStateChanged({
+          issueId: options.issueId,
+          state: issue.state,
+        }),
+      )
+    }),
+    Effect.withSpan("Main.watchTaskState"),
+  )
+})
 
 const run = Effect.fnUntraced(
   function* (options: {
@@ -135,7 +171,7 @@ const run = Effect.fnUntraced(
       () => preset,
     )
 
-    yield* Effect.gen(function* () {
+    const cancelled = yield* Effect.gen(function* () {
       //
       // 2. Work on task
       // -----------------------
@@ -185,7 +221,16 @@ const run = Effect.fnUntraced(
           task: chosenTask.prd,
         }),
       ),
+      Effect.raceFirst(watchTaskState({ issueId: taskId })),
+      Effect.as(false),
+      Effect.catchTag("TaskStateChanged", (error) =>
+        Effect.log(
+          `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
+        ).pipe(Effect.as(true)),
+      ),
     )
+
+    if (cancelled) return
 
     yield* gitFlow.postWork({
       worktree,
