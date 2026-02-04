@@ -23,7 +23,7 @@ export const commandProjectsRm = Command.make("rm").pipe(
         encodeURIComponent(project.id),
       )
       if (yield* fs.exists(kvsPath)) {
-        yield* fs.remove(kvsPath)
+        yield* fs.remove(kvsPath, { recursive: true })
       }
     }),
   ),
