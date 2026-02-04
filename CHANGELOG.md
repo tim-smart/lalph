@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.1
+
+### Patch Changes
+
+- [`c567f0b`](https://github.com/tim-smart/lalph/commit/c567f0b096b30228cc8accb067d7361f1fbeb4a6) Thanks [@github-actions[bot]](https://github.com/github-actions%5Bbot%5D)! - don't use extra args for plan mode
+
 ## 0.3.0
 
 ### Minor Changes
