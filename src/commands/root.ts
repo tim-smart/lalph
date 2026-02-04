@@ -114,12 +114,11 @@ const run = Effect.fnUntraced(
     )
 
     let taskId: string | undefined = undefined
-    let skipFailureRevert = false
 
     // setup finalizer to revert issue if we fail
     yield* Effect.addFinalizer(
       Effect.fnUntraced(function* (exit) {
-        if (exit._tag === "Success" || skipFailureRevert) return
+        if (exit._tag === "Success") return
         if (taskId) {
           yield* source.updateIssue({
             projectId,
@@ -225,16 +224,21 @@ const run = Effect.fnUntraced(
     )
 
     const runTask = Effect.gen(function* () {
-      yield* Effect.raceFirst(
+      const cancelled = yield* Effect.raceFirst(
         workEffect,
         watchTaskState({ issueId: taskId }),
       ).pipe(
-        Effect.tapErrorTag("TaskStateChanged", () =>
-          Effect.sync(() => {
-            skipFailureRevert = true
-          }),
+        Effect.as(false),
+        Effect.catchTag("TaskStateChanged", (error) =>
+          Effect.log(
+            `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
+          ).pipe(Effect.as(true)),
         ),
       )
+
+      if (cancelled) {
+        return
+      }
 
       yield* gitFlow.postWork({
         worktree,
@@ -331,11 +335,6 @@ const runProject = Effect.fnUntraced(
           QuitError(_error) {
             quit = true
             return Effect.void
-          },
-          TaskStateChanged(error) {
-            return Effect.log(
-              `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
-            )
           },
         }),
         Effect.catchCause((cause) =>
