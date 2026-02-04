@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.2
+
+### Patch Changes
+
+- [`1db59bb`](https://github.com/tim-smart/lalph/commit/1db59bbd2cd33ee54c7e9402f7e2ea0530d585f8) Thanks [@tim-smart](https://github.com/tim-smart)! - fix project removal
+
+- [`0ce7a30`](https://github.com/tim-smart/lalph/commit/0ce7a30a015cf430c359ffc9734cf284684e6aea) Thanks [@tim-smart](https://github.com/tim-smart)! - fix worker agents using preset args
+
 ## 0.3.1
 
 ### Patch Changes
