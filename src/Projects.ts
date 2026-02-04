@@ -168,6 +168,9 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
   const targetBranch = pipe(
     yield* Prompt.text({
       message: "Target branch (leave empty to use HEAD)",
+      default: existing
+        ? Option.getOrElse(existing.targetBranch, () => "")
+        : "",
     }),
     String.trim,
     Option.liftPredicate(String.isNonEmpty),
@@ -179,16 +182,19 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
         title: "Pull Request",
         description: "Create a pull request for each task",
         value: "pr",
+        selected: existing ? existing.gitFlow === "pr" : false,
       },
       {
         title: "Commit",
         description: "Tasks are committed directly to the target branch",
         value: "commit",
+        selected: existing ? existing.gitFlow === "pr" : false,
       },
     ] as const,
   })
   const reviewAgent = yield* Prompt.toggle({
     message: "Enable review agent?",
+    initial: existing ? existing.reviewAgent : true,
   })
 
   const project = new Project({

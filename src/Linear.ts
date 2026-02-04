@@ -456,23 +456,6 @@ export const LinearIssueSource = Layer.effect(
       }),
       settings: (projectId) =>
         Effect.asVoid(Cache.get(projectSettings, projectId)),
-      issueCliAgentPreset: (_issue) =>
-        Effect.sync(() => Option.fromUndefinedOr(presetMap.get(_issue.id!))),
-      updateCliAgentPreset: Effect.fnUntraced(function* (preset) {
-        const labels = yield* Stream.runCollect(linear.labels).pipe(
-          Effect.mapError((cause) => new IssueSourceError({ cause })),
-        )
-        const labelId = yield* Prompt.autoComplete({
-          message: "Select a label for this preset",
-          choices: labels.map((label) => ({
-            title: label.name,
-            value: label.id,
-          })),
-        })
-        return yield* preset.addMetadata("linear", PresetMetadata, {
-          labelId,
-        })
-      }),
       info: Effect.fnUntraced(
         function* (lalphProjectId) {
           const { teamId, labelId, autoMergeLabelId, project } =
@@ -503,6 +486,39 @@ export const LinearIssueSource = Layer.effect(
           console.log(
             `  Auto-merge label: ${resolveAutoMergeLabel(autoMergeLabel)}`,
           )
+        },
+        Effect.mapError((cause) => new IssueSourceError({ cause })),
+      ),
+      issueCliAgentPreset: (_issue) =>
+        Effect.sync(() => Option.fromUndefinedOr(presetMap.get(_issue.id!))),
+      updateCliAgentPreset: Effect.fnUntraced(function* (preset) {
+        const labels = yield* Stream.runCollect(linear.labels).pipe(
+          Effect.mapError((cause) => new IssueSourceError({ cause })),
+        )
+        const labelId = yield* Prompt.autoComplete({
+          message: "Select a label for this preset",
+          choices: labels.map((label) => ({
+            title: label.name,
+            value: label.id,
+          })),
+        })
+        return yield* preset.addMetadata("linear", PresetMetadata, {
+          labelId,
+        })
+      }),
+      cliAgentPresetInfo: Effect.fnUntraced(
+        function* (preset) {
+          const metadata = yield* preset.decodeMetadata(
+            "linear",
+            PresetMetadata,
+          )
+          if (Option.isNone(metadata)) return
+          const label = yield* linear.labels.pipe(
+            Stream.filter((label) => label.id === metadata.value.labelId),
+            Stream.runHead,
+          )
+          if (Option.isNone(label)) return
+          console.log(`  Label: ${label.value.name}`)
         },
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),

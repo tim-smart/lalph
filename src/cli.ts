@@ -16,6 +16,7 @@ import { atomRuntime, lalphMemoMap } from "./shared/runtime.ts"
 import { PlatformServices } from "./shared/platform.ts"
 import { commandProjects, commandProjectsAlias } from "./commands/projects.ts"
 import { commandSh } from "./commands/sh.ts"
+import { commandAgents, commandAgentsAlias } from "./commands/agents.ts"
 
 commandRoot.pipe(
   Command.withSubcommands([
@@ -24,9 +25,11 @@ commandRoot.pipe(
     commandEdit,
     commandSh,
     commandSource,
+    commandAgents,
     commandProjects,
-    commandIssueAlias,
+    commandAgentsAlias,
     commandEditAlias,
+    commandIssueAlias,
     commandProjectsAlias,
   ]),
   Command.provide(Settings.layer),

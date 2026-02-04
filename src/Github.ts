@@ -467,6 +467,11 @@ export const GithubIssueSource = Layer.effect(
         })
         return yield* preset.addMetadata("github", PresetMetadata, { label })
       }),
+      cliAgentPresetInfo: Effect.fnUntraced(function* (preset) {
+        const metadata = yield* preset.decodeMetadata("github", PresetMetadata)
+        if (Option.isNone(metadata)) return
+        console.log(`  Label: ${metadata.value.label}`)
+      }),
       ensureInProgress: Effect.fnUntraced(
         function* (_project, issueId) {
           const issueNumber = Number(issueId.slice(1))

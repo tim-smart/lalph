@@ -49,7 +49,6 @@ export class IssueSource extends ServiceMap.Service<
     readonly issueCliAgentPreset: (
       issue: PrdIssue,
     ) => Effect.Effect<Option.Option<CliAgentPreset>, IssueSourceError>
-
     readonly updateCliAgentPreset: (
       preset: CliAgentPreset,
     ) => Effect.Effect<
@@ -57,6 +56,9 @@ export class IssueSource extends ServiceMap.Service<
       IssueSourceError | QuitError,
       Environment
     >
+    readonly cliAgentPresetInfo: (
+      preset: CliAgentPreset,
+    ) => Effect.Effect<void, IssueSourceError>
 
     readonly ensureInProgress: (
       projectId: ProjectId,

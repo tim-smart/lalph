@@ -132,6 +132,10 @@ export class CurrentIssueSource extends ServiceMap.Service<
           ScopedRef.get(ref).pipe(
             Effect.flatMap((source) => source.updateCliAgentPreset(preset)),
           ),
+        cliAgentPresetInfo: (preset) =>
+          ScopedRef.get(ref).pipe(
+            Effect.flatMap((source) => source.cliAgentPresetInfo(preset)),
+          ),
         ensureInProgress: (projectId, issueId) =>
           ScopedRef.get(ref).pipe(
             Effect.flatMap((source) =>
