@@ -225,7 +225,16 @@ const run = Effect.fnUntraced(
     )
 
     const runTask = Effect.gen(function* () {
-      yield* workEffect
+      yield* Effect.raceFirst(
+        workEffect,
+        watchTaskState({ issueId: taskId }),
+      ).pipe(
+        Effect.tapErrorTag("TaskStateChanged", () =>
+          Effect.sync(() => {
+            skipFailureRevert = true
+          }),
+        ),
+      )
 
       yield* gitFlow.postWork({
         worktree,
@@ -245,13 +254,7 @@ const run = Effect.fnUntraced(
       }
     })
 
-    yield* Effect.raceFirst(runTask, watchTaskState({ issueId: taskId })).pipe(
-      Effect.tapErrorTag("TaskStateChanged", () =>
-        Effect.sync(() => {
-          skipFailureRevert = true
-        }),
-      ),
-    )
+    yield* runTask
   },
   Effect.scoped,
   Effect.provide(Prd.layer, { local: true }),
