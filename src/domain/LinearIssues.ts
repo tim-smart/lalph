@@ -54,7 +54,7 @@ export class IssuesNode extends S.Class<IssuesNode>("IssuesNode")({
       incompleteStates.has(relation.issue.state.type),
   )
 }
-const incompleteStates = new Set<Type>(["unstarted", "started"])
+const incompleteStates = new Set<Type>(["backlog", "unstarted", "started"])
 
 export const LinearIssueData = S.Struct({
   issue: IssuesNode,
