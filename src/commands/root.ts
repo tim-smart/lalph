@@ -222,17 +222,12 @@ const run = Effect.fnUntraced(
         }),
       ),
       Effect.raceFirst(watchTaskState({ issueId: taskId })),
-      Effect.matchEffect({
-        onFailure: (error) => {
-          if (error._tag !== "TaskStateChanged") {
-            return Effect.fail(error)
-          }
-          return Effect.log(
-            `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
-          ).pipe(Effect.map(() => true))
-        },
-        onSuccess: () => Effect.succeed(false),
-      }),
+      Effect.as(false),
+      Effect.catchTag("TaskStateChanged", (error) =>
+        Effect.log(
+          `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
+        ).pipe(Effect.as(true)),
+      ),
     )
 
     if (cancelled) return
