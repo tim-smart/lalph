@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.7
+
+### Patch Changes
+
+- [`38956b0`](https://github.com/tim-smart/lalph/commit/38956b031648ed975966b44038c367ed752dc2e7) Thanks [@tim-smart](https://github.com/tim-smart)! - fix race condition on task sync
+
 ## 0.3.6
 
 ### Patch Changes
