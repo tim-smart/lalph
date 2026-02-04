@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.4
+
+### Patch Changes
+
+- [`afe919d`](https://github.com/tim-smart/lalph/commit/afe919d8b0c0fecdfce73884a80418e4781bafa7) Thanks [@tim-smart](https://github.com/tim-smart)! - launch plan editor as fast as possible
+
 ## 0.3.3
 
 ### Patch Changes
