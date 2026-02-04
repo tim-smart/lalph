@@ -55,7 +55,9 @@ If you need to add a research task, mention in the description that it needs to:
 - add a specification file in the \`${options.specsDirectory}\` directory with
   an implementation plan based on the research findings.
 - once the specification file is added, turn the implementation plan into tasks
-  in the prd.yml file.
+  in the prd.yml file. Each task should reference the specification file in its
+  description, and be small, atomic and independently shippable without failing
+  validation checks (typechecks, linting, tests).
 - make sure the follow up tasks include a dependency on the research task.`
           : ""
       }
@@ -256,7 +258,10 @@ ${options.plan}
 3. Start two subagents with a copy of this prompt.
    - The first subagent will review the plan and provide feedback or improvements.
    - The second subagent will look over the implementation plan, and ensure each task is
-     small, atomic and independently shippable without failing validation checks (typechecks, linting, tests).
+     small, atomic and independently shippable. It also **NEEDS TO** make sure task
+     can be completed without failing validation checks (typechecks, linting, tests).
+     If a task will only pass validations when combined with another, the subagent should
+     combine the work into one task.
 4. Write the specification details to a \`.lalph/plan.json\` file using the following format:
    \`\`\`json
    {
