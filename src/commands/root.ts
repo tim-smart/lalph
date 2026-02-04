@@ -171,7 +171,7 @@ const run = Effect.fnUntraced(
       () => preset,
     )
 
-    const workEffect = Effect.gen(function* () {
+    const cancelled = yield* Effect.gen(function* () {
       //
       // 2. Work on task
       // -----------------------
@@ -221,9 +221,6 @@ const run = Effect.fnUntraced(
           task: chosenTask.prd,
         }),
       ),
-    )
-
-    const cancelled = yield* workEffect.pipe(
       Effect.raceFirst(watchTaskState({ issueId: taskId })),
       Effect.matchEffect({
         onFailure: (error) => {
