@@ -2,18 +2,19 @@
 
 ## Summary
 
-Add `lalph agents ...` commands to manage CLI agent presets and use them to
-select the right agent per task. Presets define the CLI agent, extra arguments,
-and optional issue-source matching (for example, labels). When `lalph` starts
-without presets it prompts to add one; when a task has no matching preset it
-prompts to add one.
+Add `lalph agents ...` commands to manage CLI agent presets. Presets define the
+CLI agent, command prefix, extra args, and per-issue-source metadata (labels)
+used to map issues to presets. A `default` preset is created via a welcome
+wizard when missing; it is used for task selection and planning and as the
+fallback when no issue-specific preset matches.
 
 ## Goals
 
-- Let users create, list, edit, and remove CLI agent presets via `lalph agents`.
+- Let users create, list, edit, and remove CLI agent presets via `lalph agents`
+  (and the `lalph a` alias).
 - Support label-based preset matching for GitHub and Linear issues.
-- Apply presets automatically during task execution and review.
-- Prompt to create a preset when none exist or when a task has no match.
+- Apply presets automatically during task execution and review, falling back to
+  the default preset.
 
 ## Non-Goals
 
@@ -27,11 +28,11 @@ prompts to add one.
 ## Assumptions
 
 - Presets are stored in settings and are global (not per project).
+- The default preset has id `default`.
 - Label matching uses the issue source's label identifiers:
-  - GitHub: label names.
-  - Linear: label names (resolved from label IDs at fetch time).
-- A preset with no match criteria is considered the default preset.
-- Label matching is case-insensitive and trims whitespace.
+  - GitHub: label names (exact match).
+  - Linear: label ids (exact match).
+- Matching uses stored preset order; the first match wins.
 
 ## Users
 
@@ -42,100 +43,99 @@ prompts to add one.
 
 - As a user, I can add a preset that uses `claude` with model args for `opus`.
 - As a user, I can list presets to see which labels map to which agents.
-- As a user, I am prompted to add a preset when none exist.
-- As a user, if a task has no matching preset, I can add one and continue.
+- As a user, I am prompted to add a default preset when one does not exist.
+- As a user, tasks without a matching preset fall back to the default preset.
 
 ## Functional Requirements
 
-- The CLI exposes `lalph agents` with `ls`, `add`, `edit`, and `rm` subcommands.
-- Presets include: `id`, `cliAgent`, `extraArgs`, and optional match criteria.
-- Presets store optional issue-source metadata for matching.
-- Match criteria are stored per issue source.
-- Preset matching uses list order; the first match wins.
-- A preset with no match criteria is treated as the default preset.
-- On `lalph` startup, if no presets exist, prompt to add one.
-- When a task is chosen and no preset matches it, prompt to add one.
-- The chosen preset is used for worker/reviewer/timeout agents.
+- The CLI exposes `lalph agents` with `ls`, `add`, `edit`, and `rm` subcommands
+  plus the `lalph a` alias.
+- Presets include: `id`, `cliAgent`, `commandPrefix`, `extraArgs`, and
+  `sourceMetadata`.
+- The default preset has id `default` and is created via the welcome wizard
+  when missing.
+- Non-default presets are updated with metadata from the current issue source
+  during add/edit.
+- IssueSource exposes:
+  - `issueCliAgentPreset(issue: PrdIssue)` -> `Option<CliAgentPreset>`
+  - `updateCliAgentPreset(preset: CliAgentPreset)` -> `CliAgentPreset`
+  - `cliAgentPresetInfo(preset: CliAgentPreset)` for `ls` output
+- Task selection uses the default preset; issue-specific presets are used for
+  worker/reviewer/timeout when available, otherwise the default is used.
 - Planning flows (`lalph plan`, `lalph plan tasks`) use the default preset.
-- Extra args apply to agent command invocations (task worker, chooser, reviewer,
-  timeout, planner, tasker) unless the agent explicitly ignores them.
-- Label matching is case-insensitive; any issue label match qualifies.
-- IssueSource resolves the preset for a given issue.
+- Command prefix is applied to all agent commands.
+- Extra args are passed to chooser/reviewer/timeout/planner/tasker; worker
+  currently ignores extra args.
+- GitHub label matching uses exact label names; Linear uses exact label ids;
+  first matching preset wins.
 
 ## Data Model
 
-Extend `CliAgentPreset` with optional source matching and metadata:
+Extend `CliAgentPreset` with command prefix and source metadata:
 
 ```ts
 type CliAgentPreset = {
   id: string
   cliAgent: AnyCliAgent
+  commandPrefix: string[]
   extraArgs: string[]
-  sourceMetadata?: {
-    github?: unknown
-    linear?: unknown
-  }
+  sourceMetadata: Record<string, unknown>
 }
 ```
 
-`sourceMetadata` is stored per issue source.
+`sourceMetadata` is stored per issue source and encoded by each IssueSource.
 Label-based matching uses `sourceMetadata.github.label` (label name) or
-`sourceMetadata.linear.labelId` (label id), depending on the issue source.
+`sourceMetadata.linear.labelId` (label id).
 
 Schema shape for `sourceMetadata`:
 
 ```ts
 Schema.Struct({
-  github: Schema.optional(
-    Schema.Struct({
-      label: Schema.optional(Schema.String),
-    }),
-  ),
-  linear: Schema.optional(
-    Schema.Struct({
-      labelId: Schema.optional(Schema.String),
-    }),
-  ),
+  github: Schema.Struct({
+    label: Schema.NonEmptyString,
+  }),
+})
+
+Schema.Struct({
+  linear: Schema.Struct({
+    labelId: Schema.String,
+  }),
 })
 ```
 
 ## Issue Preset Resolution
 
-Add an IssueSource method to resolve the preset for a given issue:
+IssueSource resolves a preset for a given issue:
 
 ```ts
-issuePreset(issueId: string): Effect<CliAgentPreset, IssueSourceError>
+issueCliAgentPreset(
+  issue: PrdIssue,
+): Effect<Option<CliAgentPreset>, IssueSourceError>
 ```
 
 - IssueSource is responsible for matching presets based on source metadata.
-- GitHub matches on label names (case-insensitive, trimmed).
-- Linear matches on label IDs (exact match).
-- If no preset matches and no default preset exists, return a not-found error.
+- GitHub matches on label names (exact match).
+- Linear matches on label ids (exact match).
+- If no preset matches, `None` is returned and the default preset is used.
 - IssueSource may cache issue metadata to avoid repeated API calls.
 
 ## Preset Matching
 
-- Evaluate presets in stored order.
-- A preset matches when:
-  - `sourceMetadata` is undefined (default preset), or
-  - the current issue source has metadata configured and
-    its label criterion is undefined or the issue labels include it.
-- If multiple presets match, the first in list is chosen.
-- Label matching is case-insensitive and trims whitespace on both sides.
-- Label criteria are only supported when metadata for the current source is set.
-- Matching uses `IssueSource.issuePreset` for the chosen task.
-- If no preset matches and no default exists, prompt to add a preset with
-  the issue source preselected and the label prompt focused on the issue's
-  labels (when available).
-- After adding a preset, re-evaluate matching; if still no match, fail with an
-  actionable message to edit presets.
+- Presets are evaluated in stored order when building the issue preset map.
+- GitHub: when issues are fetched, the first preset whose metadata label matches
+  an issue label is recorded for that issue id.
+- Linear: when issues are fetched, the first preset whose metadata label id is
+  included in the issue label ids is recorded for that issue id.
+- `issueCliAgentPreset` returns the recorded preset for the issue, or `None`.
+- When no match exists, the default preset is used by the runtime flow.
 
 ## CLI Commands
 
 ### `lalph agents ls`
 
-- List presets in order with id, agent name, extra args, and match criteria.
-- Show `Default` when no match criteria are set.
+- Print the current issue source name.
+- List presets in order with id, source metadata (if available), agent name,
+  extra args, and command prefix.
 - Ordering is creation order; to reprioritize, remove and re-add presets.
 
 ### `lalph agents add`
@@ -145,31 +145,22 @@ Prompt flow:
 - Preset name (unique, non-empty).
 - CLI agent selection from `allCliAgents`.
 - Extra args as a single string, parsed into argv (supports quotes).
-- Match scope:
-  - Any source (default preset)
-  - GitHub issues
-  - Linear issues
-- If GitHub/Linear selected: optional label filter
-  - GitHub: free text (empty for none).
-  - Linear: autocomplete from labels (empty for none, stores label id).
-  - Label stored as `sourceMetadata.github.label` or
-    `sourceMetadata.linear.labelId`.
-  - Selecting a source with no label stores empty metadata for that source.
+- Command prefix as a single string, parsed into argv (supports quotes).
+- If the preset id is not `default`, prompt the current issue source to attach
+  metadata:
+  - GitHub: text input for a label (non-empty).
+  - Linear: autocomplete selection of a label (required).
 
 ### `lalph agents edit`
 
 - Select a preset to edit.
 - Re-run the same prompts as `add`, prefilled with current values.
+- For non-default presets, the current issue source prompts for metadata again.
 
 ### `lalph agents rm`
 
 - Select a preset to remove.
-- Confirm removal before deleting.
-
-### Legacy `lalph agent`
-
-- If no presets exist, route to `lalph agents add`.
-- If presets exist, edit the default preset (the first preset with no match).
+- Remove without additional confirmation.
 
 ## Storage & Migration
 
@@ -179,35 +170,31 @@ Prompt flow:
 ## Error Handling & Edge Cases
 
 - Duplicate preset ids are rejected on add/edit.
-- If label metadata is unavailable, allow adding a preset with free-text label.
-- If no default preset exists, startup prompt requires creating one.
-- If a task has no match and user aborts the prompt, stop the run with a clear
-  message to add a preset via `lalph agents add`.
-- In non-interactive environments, missing preset prompts fail fast with an
-  actionable error (no blocking prompt).
-- IssueSource caches issue metadata where possible to reduce API calls.
+- GitHub presets require a non-empty label; Linear presets require a label
+  selection.
+- If no default preset exists, the welcome wizard runs when default is
+  requested (startup, plan, task selection).
+- IssueSource may cache issue metadata to reduce API calls.
 
 ## Acceptance Criteria
 
-- `lalph agents` can add, list, edit, and remove presets.
-- Starting `lalph` with zero presets prompts to add one.
+- `lalph agents` can add, list, edit, and remove presets (`lalph a` works).
+- Running `lalph` or `lalph plan` with no default preset prompts to create one.
 - A labeled task uses the preset that matches its issue source and label.
-- A task with no matching preset prompts to add one.
+- A task with no matching preset falls back to the default preset.
 - Planning flows use the default preset.
 
 ## Implementation Plan
 
 1. Update domain/source interfaces, settings, and matching utilities together:
-   - Extend `CliAgentPreset` with `sourceMetadata`.
-   - Add `IssueSource.issuePreset` and implement matching for GitHub and Linear.
-   - Create `cliAgentPresets` setting.
-   - Implement label normalization and default preset lookup for IssueSource use.
-   - Handle non-interactive missing-preset errors.
-2. Add `lalph agents` command set:
-   - `ls`, `add`, `edit`, `rm` prompts storing `sourceMetadata.label`.
-   - Wire into CLI root and legacy `lalph agent` behavior.
+   - Extend `CliAgentPreset` with `commandPrefix` and `sourceMetadata`.
+   - Add `IssueSource.issueCliAgentPreset` plus source-specific metadata
+     helpers (`updateCliAgentPreset`, `cliAgentPresetInfo`).
+   - Create `cliAgentPresets` setting and default preset id `default`.
+2. Add `lalph agents` command set (and `lalph a` alias):
+   - `ls`, `add`, `edit`, `rm` prompts; store source metadata via
+     `IssueSource.updateCliAgentPreset`.
 3. Integrate presets into runtime flows:
-   - Startup prompt when no presets exist (TTY only).
-   - After choosing a task, call `issuePreset` and select preset.
-   - Use matched preset for worker/reviewer/timeout; default for chooser/plan.
-4. Add a changeset describing the new feature.
+   - Welcome wizard when default preset is missing.
+   - Use default preset for chooser/planning/tasker; use issue-specific preset
+     for worker/reviewer/timeout when available.
