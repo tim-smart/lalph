@@ -71,8 +71,7 @@ Commands to cover:
   - Purpose: convert a spec file into tasks without re-running the plan.
   - Argument description must clearly indicate a file path is required.
 - `issue` / `i`:
-  - Purpose: create a new issue by editing a file with YAML front matter.
-  - Mention that saving the file creates the issue in the current issue source.
+  - Purpose: create a new issue in your editor.
 - `edit` / `e`:
   - Purpose: open the local `.lalph/prd.yml` for the selected project.
 - `source`:

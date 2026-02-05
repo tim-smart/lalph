@@ -87,15 +87,13 @@ const handler = flow(
 )
 
 export const commandIssue = Command.make("issue").pipe(
-  Command.withDescription(
-    "Create a new issue by editing a file with YAML front matter; save and close it to create the issue in the current issue source.",
-  ),
+  Command.withDescription("Create a new issue in your editor."),
   handler,
 )
 
 export const commandIssueAlias = Command.make("i").pipe(
   Command.withDescription(
-    "Alias for 'issue' (create a new issue by editing a file with YAML front matter; save and close it to create the issue in the current issue source).",
+    "Alias for 'issue' (create a new issue in your editor).",
   ),
   handler,
 )
