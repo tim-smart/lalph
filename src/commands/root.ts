@@ -348,7 +348,7 @@ const stallMinutes = Flag.integer("stall-minutes").pipe(
 
 const specsDirectory = Flag.directory("specs").pipe(
   Flag.withDescription(
-    "Directory (relative to the project worktree) where plan specs are written and read (default: LALPH_SPECS or .specs).",
+    "Directory where plan specs are written and read (default: LALPH_SPECS or .specs).",
   ),
   Flag.withAlias("s"),
   Flag.withFallbackConfig(Config.string("LALPH_SPECS")),
