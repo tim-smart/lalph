@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.8
+
+### Patch Changes
+
+- [`d2fa23b`](https://github.com/tim-smart/lalph/commit/d2fa23bd9866468677b27ed29603ec47b3385d5d) Thanks [@tim-smart](https://github.com/tim-smart)! - set task in-progress using api
+
 ## 0.3.7
 
 ### Patch Changes
