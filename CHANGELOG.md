@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.9
+
+### Patch Changes
+
+- [`c588a09`](https://github.com/tim-smart/lalph/commit/c588a09773d76e05e252567a5c3af90a90a9b959) Thanks [@tim-smart](https://github.com/tim-smart)! - fix task chooser agent
+
 ## 0.3.8
 
 ### Patch Changes
