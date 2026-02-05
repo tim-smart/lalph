@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.13
+
+### Patch Changes
+
+- [#265](https://github.com/tim-smart/lalph/pull/265) [`c7f640b`](https://github.com/tim-smart/lalph/commit/c7f640b295d7b8168156ebe7b12d9ac31016496e) Thanks [@tim-smart](https://github.com/tim-smart)! - Plan mode now commits and pushes generated specifications when it finishes.
+
+- [#266](https://github.com/tim-smart/lalph/pull/266) [`03b1395`](https://github.com/tim-smart/lalph/commit/03b13950b590ffc29a322b05bbc3a55d353b7548) Thanks [@tim-smart](https://github.com/tim-smart)! - Update docs
+
 ## 0.3.12
 
 ### Patch Changes
