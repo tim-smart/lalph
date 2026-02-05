@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.14
+
+### Patch Changes
+
+- [#268](https://github.com/tim-smart/lalph/pull/268) [`71b2eb6`](https://github.com/tim-smart/lalph/commit/71b2eb6d40b47cb9629bb65b464132736756a857) Thanks [@tim-smart](https://github.com/tim-smart)! - Add a "Create a new Linear project" option to the Linear project selector, including prompts for project name and team before creating and selecting the new project.
+
 ## 0.3.13
 
 ### Patch Changes
