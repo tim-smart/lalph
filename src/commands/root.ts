@@ -332,7 +332,7 @@ const iterations = Flag.integer("iterations").pipe(
 
 const maxIterationMinutes = Flag.integer("max-minutes").pipe(
   Flag.withDescription(
-    "Timeout an iteration if execution (and review, if enabled) exceeds this many minutes (default: LALPH_MAX_MINUTES or 90). Increase this for long-running tasks.",
+    "Timeout an iteration if execution (and review, if enabled) exceeds this many minutes (default: LALPH_MAX_MINUTES or 90).",
   ),
   Flag.withFallbackConfig(Config.int("LALPH_MAX_MINUTES")),
   Flag.withDefault(90),
