@@ -9,7 +9,7 @@ A LLM agent orchestrator driven by your chosen source of issues.
 ## Features
 
 - Pull work from an issue source (GitHub Issues, Linear, etc.) and keep task state in sync
-- Projects to group per-repo execution settings (enabled state, concurrency, git flow, review agent)
+- Projects to group execution settings (enabled state, concurrency, target branch, git flow, review agent)
 - Agent presets to control which CLI agent runs tasks, with optional label-based routing
 - Plan mode to turn a high-level plan into a spec and generate PRD tasks
 - Git worktrees to support multiple concurrent iterations
@@ -35,7 +35,7 @@ npx -y lalph@latest
 - Inspect and configure agent presets: `lalph agents ls`
 - Start plan mode: `lalph plan`
 - Create an issue from your editor: `lalph issue`
-- Choose your issue source integration: `lalph source`
+- Choose your issue source integration (applies to all projects): `lalph source`
 
 It is recommended to add `.lalph/` to your `.gitignore` to avoid committing your
 credentials.
@@ -56,9 +56,9 @@ lalph agents add
 
 ## Projects
 
-Projects bundle the settings for a repo: whether it is enabled for runs, how
-many tasks can run concurrently, what git flow to use, and whether review is
-enabled.
+Projects bundle execution settings for the current repo: whether it is enabled
+for runs, how many tasks can run concurrently, which branch to target, what git
+flow to use, and whether review is enabled.
 
 `lalph` runs across all enabled projects in parallel; for single-project
 commands, you'll be prompted to choose an active project when needed.
@@ -85,6 +85,8 @@ lalph plan tasks .specs/my-spec.md
 
 `lalph issue` opens a new-issue template in your editor. When you save and close
 the file, the issue is created in the current issue source.
+
+Anything below the front matter is used as the issue description.
 
 Front matter fields:
 
