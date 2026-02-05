@@ -12,6 +12,8 @@ import { agentTasker } from "../Agents/tasker.ts"
 import { commandPlanTasks } from "./plan/tasks.ts"
 import { Editor } from "../Editor.ts"
 import { getDefaultCliAgentPreset } from "../Presets.ts"
+import { ChildProcess } from "effect/unstable/process"
+import { parseBranch } from "../shared/git.ts"
 
 const dangerous = Flag.boolean("dangerous").pipe(
   Flag.withAlias("d"),
@@ -86,6 +88,13 @@ const plan = Effect.fnUntraced(
       Effect.mapError(() => new SpecNotFound()),
     )
 
+    if (Option.isSome(options.targetBranch)) {
+      yield* commitAndPushSpecification({
+        specsDirectory: options.specsDirectory,
+        targetBranch: options.targetBranch.value,
+      })
+    }
+
     yield* Effect.log("Converting specification into tasks")
 
     yield* agentTasker({
@@ -118,6 +127,50 @@ const plan = Effect.fnUntraced(
 export class SpecNotFound extends Data.TaggedError("SpecNotFound") {
   readonly message = "The AI agent failed to produce a specification."
 }
+
+export class SpecGitError extends Data.TaggedError("SpecGitError")<{
+  readonly message: string
+}> {}
+
+const commitAndPushSpecification = Effect.fnUntraced(
+  function* (options: {
+    readonly specsDirectory: string
+    readonly targetBranch: string
+  }) {
+    const worktree = yield* Worktree
+    const pathService = yield* Path.Path
+
+    const absSpecsDirectory = pathService.join(
+      worktree.directory,
+      options.specsDirectory,
+    )
+
+    const git = (args: ReadonlyArray<string>) =>
+      ChildProcess.make("git", [...args], {
+        cwd: worktree.directory,
+        stdout: "inherit",
+        stderr: "inherit",
+      }).pipe(ChildProcess.exitCode)
+
+    const addCode = yield* git(["add", absSpecsDirectory])
+    if (addCode !== 0) {
+      return yield* new SpecGitError({
+        message: "Failed to stage specification changes.",
+      })
+    }
+
+    const commitCode = yield* git(["commit", "-m", "Update plan specification"])
+    if (commitCode !== 0) {
+      return yield* new SpecGitError({
+        message: "Failed to commit the generated specification changes.",
+      })
+    }
+
+    const parsed = parseBranch(options.targetBranch)
+    yield* git(["push", parsed.remote, `HEAD:${parsed.branch}`])
+  },
+  Effect.ignore({ log: "Warn" }),
+)
 
 const PlanDetails = Schema.fromJsonString(
   Schema.Struct({
