@@ -7,7 +7,7 @@ import { layerProjectIdPrompt } from "../Projects.ts"
 
 export const commandSh = Command.make("sh").pipe(
   Command.withDescription(
-    "Launch an interactive shell in the active project's worktree and link your local .lalph config into it.",
+    "Launch an interactive shell in the active project's worktree.",
   ),
   Command.withHandler(
     Effect.fnUntraced(
