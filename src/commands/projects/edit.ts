@@ -9,7 +9,9 @@ import { Settings } from "../../Settings.ts"
 import { CurrentIssueSource } from "../../CurrentIssueSource.ts"
 
 export const commandProjectsEdit = Command.make("edit").pipe(
-  Command.withDescription("Modify a project"),
+  Command.withDescription(
+    "Edit a project's execution settings (concurrency, target branch, git flow, review agent) and issue source settings.",
+  ),
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const projects = yield* getAllProjects

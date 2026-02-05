@@ -6,7 +6,9 @@ import { Worktree } from "../Worktree.ts"
 import { layerProjectIdPrompt } from "../Projects.ts"
 
 export const commandSh = Command.make("sh").pipe(
-  Command.withDescription("Enter an interactive shell in the worktree"),
+  Command.withDescription(
+    "Launch an interactive shell in the active project's worktree.",
+  ),
   Command.withHandler(
     Effect.fnUntraced(
       function* () {

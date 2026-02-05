@@ -19,11 +19,15 @@ const handler = Command.withHandler(
 )
 
 export const commandEdit = Command.make("edit").pipe(
-  Command.withDescription("Open the prd.yml file in your editor"),
+  Command.withDescription(
+    "Open the selected project's .lalph/prd.yml in your editor.",
+  ),
   handler,
 )
 
 export const commandEditAlias = Command.make("e").pipe(
-  Command.withDescription("Alias for 'edit' command"),
+  Command.withDescription(
+    "Alias for 'edit' (open the selected project's .lalph/prd.yml in your editor).",
+  ),
   handler,
 )
