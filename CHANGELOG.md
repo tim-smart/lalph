@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.12
+
+### Patch Changes
+
+- [`ac21a73`](https://github.com/tim-smart/lalph/commit/ac21a73d26727665ce11bc57924ce90f6beb18af) Thanks [@tim-smart](https://github.com/tim-smart)! - make current issues uninteruptible
+
 ## 0.3.11
 
 ### Patch Changes
