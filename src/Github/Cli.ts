@@ -149,10 +149,9 @@ export class GithubCliRepoNotFound extends Data.TaggedError(
 const renderReviewComments = (
   comment: ReviewComment,
   followup: Array<ReviewComment>,
-) => `<comment author="${comment.author.login}" path="${comment.path}"${
-  comment.originalLine ? ` originalLine="${comment.originalLine}"` : ""
-}>
+) => `<comment author="${comment.author.login}" path="${comment.path}">
   <diffHunk>${comment.diffHunk}</diffHunk>
+  ${comment.originalLine ? `<lineNumber>${comment.originalLine}</lineNumber>` : ""}
   <body>${comment.body}</body>${
     followup.length > 0
       ? `
