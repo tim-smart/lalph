@@ -88,14 +88,14 @@ const handler = flow(
 
 export const commandIssue = Command.make("issue").pipe(
   Command.withDescription(
-    "Create a new issue from a YAML front matter template; saving creates it in the current issue source.",
+    "Create a new issue by filling out a file with YAML front matter; saving creates it in the current issue source.",
   ),
   handler,
 )
 
 export const commandIssueAlias = Command.make("i").pipe(
   Command.withDescription(
-    "Alias for 'issue' (create a new issue from a YAML front matter template; saving creates it in the current issue source).",
+    "Alias for 'issue' (create a new issue by filling out a file with YAML front matter; saving creates it in the current issue source).",
   ),
   handler,
 )
