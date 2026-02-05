@@ -64,6 +64,8 @@ const handler = flow(
       )
       const description = lines.slice(descriptionStartIndex).join("\n").trim()
 
+      if (frontMatter.title.trim() === "Issue Title") return
+
       yield* Effect.gen(function* () {
         const source = yield* IssueSource
         const projectId = yield* CurrentProjectId
