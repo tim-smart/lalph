@@ -6,7 +6,9 @@ import { getAllProjects } from "../../Projects.ts"
 import { Settings } from "../../Settings.ts"
 
 export const commandProjectsLs = Command.make("ls").pipe(
-  Command.withDescription("List all configured projects and their settings"),
+  Command.withDescription(
+    "List configured projects and their execution settings (enabled state, concurrency, branch, git flow, review agent). Use this to confirm what will run before you start lalph.",
+  ),
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const meta = yield* CurrentIssueSource
