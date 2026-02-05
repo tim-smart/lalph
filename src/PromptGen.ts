@@ -74,25 +74,22 @@ ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
 
       const promptChoose = (options: {
         readonly gitFlow: GitFlow["Service"]
-      }) => `Your job is to choose the next task to work on from the prd.yml file. **DO NOT** implement the task yet.
+      }) => `Your job is to choose the next task to work on from the prd.yml file. **DO NOT** implement the task yet, or update the prd.yml file.
 
 The following instructions should be done without interaction or asking for permission.
 
 - Decide which single task to work on next from the prd.yml file. This should
-   be the task YOU decide as the most important to work on next, not just the
-   first task in the list.
-   - Only start tasks that are in a "todo" state.
-   - You **cannot** start tasks unless they have an empty \`blockedBy\` field.
-- **Before doing anything else**, mark the task as "in-progress" by updating its
-   \`state\` in the prd.yml file.
-This prevents other people or agents from working on the same task simultaneously.${
-        options.gitFlow.requiresGithubPr
-          ? `
+  be the task YOU decide as the most important to work on next, not just the
+  first task in the list.
+  - Only start tasks that are in a "todo" state.
+  - You **cannot** start tasks unless they have an empty \`blockedBy\` field.${
+    options.gitFlow.requiresGithubPr
+      ? `
 - Check if there is an open Github PR for the chosen task. If there is, note the PR number for inclusion in the task.json file.
    - Only include "open" PRs that are not yet merged.
    - The pull request will contain the task id in the title or description.`
-          : ""
-      }
+      : ""
+  }
 - Once you have chosen a task, save its information in a "task.json" file alongside
    the prd.yml file. Use the following format:
 

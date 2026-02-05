@@ -224,17 +224,13 @@ export class Prd extends ServiceMap.Service<
         yield* fs.writeFileString(prdFile, nextYaml)
       },
       Effect.scoped,
-      syncSemaphore.withPermitsIfAvailable(1),
       Effect.withSpan("Prd.updateSync"),
       FiberHandle.run(updateSyncHandle, { onlyIfMissing: true }),
+      syncSemaphore.withPermitsIfAvailable(1),
     )
 
     yield* fs.watch(lalphDir).pipe(
       Stream.debounce(50),
-      Stream.buffer({
-        capacity: 1,
-        strategy: "dropping",
-      }),
       Stream.runForEach((_) =>
         FiberHandle.clear(updateSyncHandle).pipe(
           Effect.andThen(Effect.ignore(sync)),

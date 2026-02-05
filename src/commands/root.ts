@@ -114,6 +114,11 @@ const run = Effect.fnUntraced(
     yield* prd.setChosenIssueId(taskId)
     yield* prd.setAutoMerge(chosenTask.prd.autoMerge)
 
+    yield* source.updateIssue({
+      projectId,
+      issueId: taskId,
+      state: "in-progress",
+    })
     yield* source.ensureInProgress(projectId, taskId).pipe(
       Effect.timeoutOrElse({
         duration: "1 minute",
