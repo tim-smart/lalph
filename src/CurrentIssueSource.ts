@@ -176,6 +176,7 @@ export const currentIssuesAtom = Atom.family((projectId: ProjectId) =>
         get.addFinalizer(() => clearTimeout(handle))
         return issues
       }),
+      { uninterruptible: true },
     ),
     atomRuntime.withReactivity([`issues:${projectId}`]),
     Atom.keepAlive,
