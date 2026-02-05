@@ -7,7 +7,7 @@ import { Settings } from "../../Settings.ts"
 
 export const commandProjectsLs = Command.make("ls").pipe(
   Command.withDescription(
-    "List configured projects and how they'll run (enabled state, concurrency, branch, git flow, review agent).",
+    "List configured projects and how they run (enabled state, concurrency, branch, git flow, review agent).",
   ),
   Command.withHandler(
     Effect.fnUntraced(function* () {
