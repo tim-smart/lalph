@@ -9,7 +9,9 @@ import {
 } from "../../Presets.ts"
 
 export const commandAgentsEdit = Command.make("edit").pipe(
-  Command.withDescription("Modify a CLI agent preset"),
+  Command.withDescription(
+    "Edit an existing agent preset (interactive prompt to update agent, arguments, and issue-source options).",
+  ),
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const projects = yield* getAllCliAgentPresets

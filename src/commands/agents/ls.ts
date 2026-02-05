@@ -6,7 +6,9 @@ import { Settings } from "../../Settings.ts"
 import { getAllCliAgentPresets } from "../../Presets.ts"
 
 export const commandAgentsLs = Command.make("ls").pipe(
-  Command.withDescription("List all configured CLI agent presets"),
+  Command.withDescription(
+    "List configured agent presets (preset ids, agent, arguments, and issue-source options).",
+  ),
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const meta = yield* CurrentIssueSource

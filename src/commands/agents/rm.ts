@@ -9,7 +9,9 @@ import {
 } from "../../Presets.ts"
 
 export const commandAgentsRm = Command.make("rm").pipe(
-  Command.withDescription("Remove a CLI agent preset"),
+  Command.withDescription(
+    "Remove an agent preset (select a preset to delete from your configuration).",
+  ),
   Command.withHandler(
     Effect.fnUntraced(function* () {
       const presets = yield* getAllCliAgentPresets
