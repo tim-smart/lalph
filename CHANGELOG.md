@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.11
+
+### Patch Changes
+
+- [`e50f2fb`](https://github.com/tim-smart/lalph/commit/e50f2fb43d95388ebac1d5ce8ef8d3bab7df2a0b) Thanks [@tim-smart](https://github.com/tim-smart)! - don't create issue if nothing is changed
+
+- [`33b6aa1`](https://github.com/tim-smart/lalph/commit/33b6aa1035c24efaf5683a748d4d64dbefc94bb2) Thanks [@tim-smart](https://github.com/tim-smart)! - show opencode thinking output
+
 ## 0.3.10
 
 ### Patch Changes
