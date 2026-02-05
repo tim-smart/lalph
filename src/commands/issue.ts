@@ -8,6 +8,8 @@ import { CurrentProjectId } from "../Settings.ts"
 import { layerProjectIdPrompt } from "../Projects.ts"
 import { Editor } from "../Editor.ts"
 
+const issueDescriptionPlaceholder = "Describe the issue here."
+
 const issueTemplate = `---
 title: Issue Title
 priority: 3
@@ -16,7 +18,7 @@ blockedBy: []
 autoMerge: false
 ---
 
-Describe the issue here.`
+${issueDescriptionPlaceholder}`
 
 const FrontMatterSchema = Schema.toCodecJson(
   Schema.Struct({
@@ -62,7 +64,12 @@ const handler = flow(
       const frontMatter = yield* Schema.decodeEffect(FrontMatterSchema)(
         Yaml.parse(yamlContent),
       )
-      const description = lines.slice(descriptionStartIndex).join("\n").trim()
+      const rawDescription = lines
+        .slice(descriptionStartIndex)
+        .join("\n")
+        .trim()
+      const description =
+        rawDescription === issueDescriptionPlaceholder ? "" : rawDescription
 
       yield* Effect.gen(function* () {
         const source = yield* IssueSource
