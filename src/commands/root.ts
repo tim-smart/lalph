@@ -340,7 +340,7 @@ const maxIterationMinutes = Flag.integer("max-minutes").pipe(
 
 const stallMinutes = Flag.integer("stall-minutes").pipe(
   Flag.withDescription(
-    "Fail an iteration if the agent stops responding for this many minutes (default: LALPH_STALL_MINUTES or 5). Increase this if your agent can go quiet for long periods.",
+    "Fail an iteration if the agent stops responding for this many minutes (default: LALPH_STALL_MINUTES or 5).",
   ),
   Flag.withFallbackConfig(Config.int("LALPH_STALL_MINUTES")),
   Flag.withDefault(5),
