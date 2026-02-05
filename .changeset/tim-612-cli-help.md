@@ -2,4 +2,4 @@
 "lalph": patch
 ---
 
-Tighten root CLI help and global flag descriptions.
+Tighten CLI help descriptions for the root and projects commands.
