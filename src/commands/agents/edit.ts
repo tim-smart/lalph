@@ -10,7 +10,7 @@ import {
 
 export const commandAgentsEdit = Command.make("edit").pipe(
   Command.withDescription(
-    "Edit an existing agent preset (interactive prompt to update agent, arguments, and issue-source options).",
+    "Edit an existing agent preset (interactive prompt to update agent, arguments, and any issue-source options).",
   ),
   Command.withHandler(
     Effect.fnUntraced(function* () {

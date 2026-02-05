@@ -7,7 +7,7 @@ import { getAllCliAgentPresets } from "../../Presets.ts"
 
 export const commandAgentsLs = Command.make("ls").pipe(
   Command.withDescription(
-    "List configured agent presets (preset ids, agent, arguments, and issue-source options).",
+    "List configured agent presets (preset ids, agent, arguments, and any issue-source options).",
   ),
   Command.withHandler(
     Effect.fnUntraced(function* () {

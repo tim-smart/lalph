@@ -13,7 +13,7 @@ const subcommands = Command.withSubcommands([
 
 export const commandAgents = Command.make("agents").pipe(
   Command.withDescription(
-    "Manage agent presets used to run tasks. Use 'ls' to inspect presets and 'add'/'edit' to configure agents, arguments, and issue-source options.",
+    "Manage agent presets used to run tasks. Use 'ls' to inspect presets and 'add'/'edit' to configure agents, arguments, and any issue-source options.",
   ),
   subcommands,
 )
