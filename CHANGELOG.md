@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.10
+
+### Patch Changes
+
+- [#261](https://github.com/tim-smart/lalph/pull/261) [`5213306`](https://github.com/tim-smart/lalph/commit/52133065be8a7cf55ac5d5fd2d829a2663d14b58) Thanks [@tim-smart](https://github.com/tim-smart)! - Blank out the default issue description placeholder when unchanged.
+
 ## 0.3.9
 
 ### Patch Changes
