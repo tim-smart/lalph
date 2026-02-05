@@ -74,7 +74,8 @@ ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
 
       const promptChoose = (options: {
         readonly gitFlow: GitFlow["Service"]
-      }) => `Your job is to choose the next task to work on from the prd.yml file. **DO NOT** implement the task yet, or update the prd.yml file.
+      }) => `Your job is to choose the next task to work on from the prd.yml file and save it in a task.json file.
+**DO NOT** implement the task yet.
 
 The following instructions should be done without interaction or asking for permission.
 
@@ -91,7 +92,7 @@ The following instructions should be done without interaction or asking for perm
       : ""
   }
 - Once you have chosen a task, save its information in a "task.json" file alongside
-   the prd.yml file. Use the following format:
+  the prd.yml file. Use the following format:
 
 \`\`\`json
 {
@@ -106,8 +107,7 @@ Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.
 `
           : "\n\nLeave `githubPrNumber` as null."
       }
-
-${prdNotes()}`
+`
 
       const keyInformation = (options: {
         readonly specsDirectory: string

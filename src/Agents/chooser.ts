@@ -52,9 +52,7 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
     Effect.flatMap(
       Effect.fnUntraced(function* (task) {
         const prdTask = yield* prd.findById(task.id)
-        if (prdTask?.state === "in-progress") {
-          return { ...task, prd: prdTask }
-        }
+        if (prdTask) return { ...task, prd: prdTask }
         return yield* new ChosenTaskNotFound()
       }),
     ),
