@@ -10,7 +10,7 @@ import { CurrentIssueSource } from "../../CurrentIssueSource.ts"
 
 export const commandProjectsEdit = Command.make("edit").pipe(
   Command.withDescription(
-    "Edit a project's execution settings (concurrency, target branch, git flow, review agent). Use this to change how lalph runs for that project.",
+    "Edit a project's execution settings (concurrency, target branch, git flow, review agent) and issue source settings.",
   ),
   Command.withHandler(
     Effect.fnUntraced(function* () {

@@ -6,7 +6,7 @@ import { Project } from "../../domain/Project.ts"
 
 export const commandProjectsToggle = Command.make("toggle").pipe(
   Command.withDescription(
-    "Enable or disable configured projects for lalph runs. Use this to choose which projects participate when you run lalph.",
+    "Enable or disable configured projects for lalph runs.",
   ),
   Command.withHandler(
     Effect.fnUntraced(function* () {

@@ -6,7 +6,7 @@ import { CurrentIssueSource } from "../../CurrentIssueSource.ts"
 
 export const commandProjectsRm = Command.make("rm").pipe(
   Command.withDescription(
-    "Remove a project from the configured list and delete its stored state under .lalph/projects. Use this when you no longer want lalph to run that project.",
+    "Remove a project from the configured list and delete its stored state under .lalph/projects.",
   ),
   Command.withHandler(
     Effect.fnUntraced(function* () {
