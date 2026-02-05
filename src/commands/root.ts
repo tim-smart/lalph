@@ -323,14 +323,16 @@ const runProject = Effect.fnUntraced(
 // Command
 
 const iterations = Flag.integer("iterations").pipe(
-  Flag.withDescription("Number of iterations to run, defaults to unlimited"),
+  Flag.withDescription(
+    "Limit how many task iterations run per enabled project. Use -i 1 to run a single iteration and exit.",
+  ),
   Flag.withAlias("i"),
   Flag.withDefault(Number.POSITIVE_INFINITY),
 )
 
 const maxIterationMinutes = Flag.integer("max-minutes").pipe(
   Flag.withDescription(
-    "Maximum number of minutes to allow an iteration to run. Defaults to 90 minutes. Env variable: LALPH_MAX_MINUTES",
+    "Timeout an iteration if the agent run exceeds this many minutes. Defaults to LALPH_MAX_MINUTES (or 90 when unset).",
   ),
   Flag.withFallbackConfig(Config.int("LALPH_MAX_MINUTES")),
   Flag.withDefault(90),
@@ -338,7 +340,7 @@ const maxIterationMinutes = Flag.integer("max-minutes").pipe(
 
 const stallMinutes = Flag.integer("stall-minutes").pipe(
   Flag.withDescription(
-    "If no activity occurs for this many minutes, the iteration will be stopped. Defaults to 5 minutes. Env variable: LALPH_STALL_MINUTES",
+    "Fail an iteration if the agent stops producing output for this many minutes. Defaults to LALPH_STALL_MINUTES (or 5 when unset).",
   ),
   Flag.withFallbackConfig(Config.int("LALPH_STALL_MINUTES")),
   Flag.withDefault(5),
@@ -346,7 +348,7 @@ const stallMinutes = Flag.integer("stall-minutes").pipe(
 
 const specsDirectory = Flag.directory("specs").pipe(
   Flag.withDescription(
-    "Directory to store plan specifications. Env variable: LALPH_SPECS",
+    "Directory (relative to the project worktree) where plan specs are written and read. Defaults to LALPH_SPECS (or .specs when unset).",
   ),
   Flag.withAlias("s"),
   Flag.withFallbackConfig(Config.string("LALPH_SPECS")),
@@ -354,7 +356,9 @@ const specsDirectory = Flag.directory("specs").pipe(
 )
 
 const verbose = Flag.boolean("verbose").pipe(
-  Flag.withDescription("Enable verbose logging"),
+  Flag.withDescription(
+    "Increase log output for debugging. Use -v when you need detailed logs.",
+  ),
   Flag.withAlias("v"),
 )
 
@@ -365,6 +369,9 @@ export const commandRoot = Command.make("lalph", {
   specsDirectory,
   verbose,
 }).pipe(
+  Command.withDescription(
+    "Run the task loop for all enabled projects: pick issues from the current issue source and execute them with your configured agent preset(s). Use --iterations for a bounded run; set per-project concurrency in lalph projects edit.",
+  ),
   Command.withHandler(
     Effect.fnUntraced(
       function* ({
