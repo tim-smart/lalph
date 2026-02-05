@@ -551,7 +551,7 @@ const createLinearProject = Effect.gen(function* () {
   const linear = yield* Linear
   const projects = yield* Stream.runCollect(linear.projects)
   const projectName = yield* Prompt.text({
-    message: "New Linear project name",
+    message: "Project name",
     validate(input) {
       const name = input.trim()
       if (name.length === 0) {
@@ -594,7 +594,7 @@ const selectProject = Effect.gen(function* () {
     readonly value: ProjectSelection
   }> = [
     {
-      title: "Create a new Linear project",
+      title: "Create new",
       value: { _tag: "create" },
     },
     ...projects.map((project) => ({
