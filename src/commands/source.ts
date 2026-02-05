@@ -4,7 +4,7 @@ import { Settings } from "../Settings.ts"
 
 export const commandSource = Command.make("source").pipe(
   Command.withDescription(
-    "Select the issue source (e.g. GitHub Issues or Linear) for the active project.",
+    "Select the issue source to use (e.g. GitHub Issues or Linear). This applies to all projects.",
   ),
   Command.withHandler(() => selectIssueSource),
   Command.provide(Settings.layer),
