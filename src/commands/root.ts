@@ -111,14 +111,14 @@ const run = Effect.fnUntraced(
     }).pipe(Effect.withSpan("Main.agentChooser"))
 
     taskId = chosenTask.id
-    yield* prd.setChosenIssueId(taskId)
-    yield* prd.setAutoMerge(chosenTask.prd.autoMerge)
-
     yield* source.updateIssue({
       projectId,
       issueId: taskId,
       state: "in-progress",
     })
+    yield* prd.setChosenIssueId(taskId)
+    yield* prd.setAutoMerge(chosenTask.prd.autoMerge)
+
     yield* source.ensureInProgress(projectId, taskId).pipe(
       Effect.timeoutOrElse({
         duration: "1 minute",
@@ -418,6 +418,8 @@ const watchTaskState = Effect.fnUntraced(function* (options: {
 }) {
   const registry = yield* AtomRegistry.AtomRegistry
   const projectId = yield* CurrentProjectId
+
+  yield* Effect.sleep(Duration.seconds(10))
 
   return yield* AtomRegistry.toStreamResult(
     registry,
