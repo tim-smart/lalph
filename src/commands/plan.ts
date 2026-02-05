@@ -16,20 +16,24 @@ import { getDefaultCliAgentPreset } from "../Presets.ts"
 const dangerous = Flag.boolean("dangerous").pipe(
   Flag.withAlias("d"),
   Flag.withDescription(
-    "Enable dangerous mode (skip permission prompts) during plan generation",
+    "Skip permission prompts while generating the specification and tasks from your plan",
   ),
 )
 
 const withNewProject = Flag.boolean("new").pipe(
   Flag.withAlias("n"),
-  Flag.withDescription("Create a new project before starting plan mode"),
+  Flag.withDescription(
+    "Create a new project (via prompts) before starting plan mode",
+  ),
 )
 
 export const commandPlan = Command.make("plan", {
   dangerous,
   withNewProject,
 }).pipe(
-  Command.withDescription("Iterate on an issue plan and create PRD tasks"),
+  Command.withDescription(
+    "Open an editor to draft a plan; on save, generate a specification in --specs and then create tasks from it. Use --new to create a project first, and --dangerous to skip permission prompts while the agent runs.",
+  ),
   Command.withHandler(
     Effect.fnUntraced(function* ({ dangerous, withNewProject }) {
       const editor = yield* Editor

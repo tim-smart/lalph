@@ -15,14 +15,16 @@ const specificationPath = Argument.path("spec", {
   mustExist: true,
 }).pipe(
   Argument.withDescription(
-    "Path to the specification file to convert into tasks",
+    "Required. Path to an existing specification file to convert into tasks",
   ),
 )
 
 export const commandPlanTasks = Command.make("tasks", {
   specificationPath,
 }).pipe(
-  Command.withDescription("Convert a specification into tasks"),
+  Command.withDescription(
+    "Convert an existing specification file into PRD tasks (without re-running plan mode)",
+  ),
   Command.withHandler(
     Effect.fnUntraced(
       function* ({ specificationPath }) {
