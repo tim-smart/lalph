@@ -2,4 +2,4 @@
 "lalph": patch
 ---
 
-Remove "YAML front matter template" phrasing from issue command help.
+Update issue command help wording to avoid calling it a template.
