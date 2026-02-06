@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.16
+
+### Patch Changes
+
+- [`5d88208`](https://github.com/tim-smart/lalph/commit/5d88208758d4932ff83c61aece0a237414e617a5) Thanks [@tim-smart](https://github.com/tim-smart)! - cache linear state
+
 ## 0.3.15
 
 ### Patch Changes
