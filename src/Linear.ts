@@ -324,7 +324,7 @@ export const LinearIssueSource = Layer.effect(
       issues: Effect.fnUntraced(function* (projectId) {
         const settings = yield* Cache.get(projectSettings, projectId)
         return yield* issues({
-          projectId,
+          projectId: settings.project.id,
           labelId: settings.labelId,
           autoMergeLabelId: settings.autoMergeLabelId,
         })
