@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.15
+
+### Patch Changes
+
+- [#270](https://github.com/tim-smart/lalph/pull/270) [`fb602e4`](https://github.com/tim-smart/lalph/commit/fb602e428aa36989b358655627b4df56d9036b8f) Thanks [@tim-smart](https://github.com/tim-smart)! - Move PR review feedback line numbers from the `comment` attribute into a dedicated `<lineNumber>` XML tag.
+
 ## 0.3.14
 
 ### Patch Changes
