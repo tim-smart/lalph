@@ -148,6 +148,21 @@ But you **do not** need to git push your changes or switch branches.
           )
         }
         const prd = yield* Prd
+        const unstagedChangesResult = yield* worktree.exec`git diff --quiet`
+        const hasUnstagedChanges = unstagedChangesResult !== 0
+
+        if (hasUnstagedChanges) {
+          const stashResult =
+            yield* worktree.exec`git stash push --keep-index --message ${`lalph/${issueId}: clear unstaged changes before rebase`}`
+
+          if (stashResult !== 0) {
+            yield* prd.flagUnmergable({ issueId })
+            return yield* new GitFlowError({
+              message:
+                "Failed to clear unstaged changes before rebasing. Aborting task.",
+            })
+          }
+        }
 
         const parsed = parseBranch(targetBranch)
         yield* worktree.exec`git fetch ${parsed.remote}`
@@ -167,6 +182,15 @@ But you **do not** need to git push your changes or switch branches.
           return yield* new GitFlowError({
             message: `Failed to push changes to ${parsed.branchWithRemote}. Aborting task.`,
           })
+        }
+
+        if (hasUnstagedChanges) {
+          const unstashResult = yield* worktree.exec`git stash pop`
+          if (unstashResult !== 0) {
+            yield* Effect.logWarning(
+              "Unable to re-apply unstaged changes after rebase. The stash entry was left in place.",
+            )
+          }
         }
       }),
       autoMerge: Effect.fnUntraced(function* (options) {
