@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.20
+
+### Patch Changes
+
+- [`e264ca5`](https://github.com/tim-smart/lalph/commit/e264ca5c606d05b51a66342b3fd66a03c7214b17) Thanks [@tim-smart](https://github.com/tim-smart)! - ignore dispose errors
+
 ## 0.3.19
 
 ### Patch Changes
