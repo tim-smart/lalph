@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.18
+
+### Patch Changes
+
+- [#276](https://github.com/tim-smart/lalph/pull/276) [`6ed2875`](https://github.com/tim-smart/lalph/commit/6ed2875e25d8d8fcd21f597be58740c3c89a4215) Thanks [@tim-smart](https://github.com/tim-smart)! - Clear unstaged working tree changes before commit-mode rebases so post-work rebasing no longer fails on a dirty worktree.
+
 ## 0.3.17
 
 ### Patch Changes
