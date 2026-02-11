@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.17
+
+### Patch Changes
+
+- [`1931cde`](https://github.com/tim-smart/lalph/commit/1931cde0d81448aadee65474012d72212951c661) Thanks [@tim-smart](https://github.com/tim-smart)! - try to ensure commit mode review commits changes
+
 ## 0.3.16
 
 ### Patch Changes
