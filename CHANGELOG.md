@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.21
+
+### Patch Changes
+
+- [`fda1b34`](https://github.com/tim-smart/lalph/commit/fda1b346a71cd433f16a27f2b8bf2e59ec8b9f43) Thanks [@tim-smart](https://github.com/tim-smart)! - review prompt tweaks
+
 ## 0.3.20
 
 ### Patch Changes
