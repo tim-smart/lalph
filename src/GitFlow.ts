@@ -148,21 +148,11 @@ But you **do not** need to git push your changes or switch branches.
           )
         }
         const prd = yield* Prd
-        const unstagedChangesResult = yield* worktree.exec`git diff --quiet`
-        if (unstagedChangesResult !== 0) {
-          const clearResult = yield* worktree.exec`git restore --worktree .`
-
-          if (clearResult !== 0) {
-            yield* prd.flagUnmergable({ issueId })
-            return yield* new GitFlowError({
-              message:
-                "Failed to clear unstaged changes before rebasing. Aborting task.",
-            })
-          }
-        }
 
         const parsed = parseBranch(targetBranch)
         yield* worktree.exec`git fetch ${parsed.remote}`
+
+        yield* worktree.exec`git restore --worktree .`
         const rebaseResult =
           yield* worktree.exec`git rebase ${parsed.branchWithRemote}`
         if (rebaseResult !== 0) {
