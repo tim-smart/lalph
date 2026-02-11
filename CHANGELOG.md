@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.19
+
+### Patch Changes
+
+- [`66d2b52`](https://github.com/tim-smart/lalph/commit/66d2b52455c10e7ce11bd24e36a1cfb2e27edff1) Thanks [@tim-smart](https://github.com/tim-smart)! - catch RunnerStalled errors if the task has moved to in-review
+
 ## 0.3.18
 
 ### Patch Changes
