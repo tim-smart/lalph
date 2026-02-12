@@ -22,15 +22,19 @@ import { AtomRegistry } from "effect/unstable/reactivity"
 import { CurrentProjectId } from "./Settings.ts"
 import { projectById } from "./Projects.ts"
 import { parseBranch } from "./shared/git.ts"
+import { resolveLalphDirectory } from "./shared/lalphDirectory.ts"
 
 export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   make: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
 
-    const inExisting = yield* fs.exists(pathService.join(".lalph", "prd.yml"))
+    const directoryWithLalph = yield* resolveLalphDirectory()
+    const inExisting = yield* fs.exists(
+      pathService.join(directoryWithLalph, ".lalph", "prd.yml"),
+    )
     if (inExisting) {
-      const directory = pathService.resolve(".")
+      const directory = directoryWithLalph
       return {
         directory,
         inExisting,
@@ -73,12 +77,14 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   static layerLocal = Layer.effect(
     this,
     Effect.gen(function* () {
-      const pathService = yield* Path.Path
       const fs = yield* FileSystem.FileSystem
-      const directory = pathService.resolve(".")
+      const pathService = yield* Path.Path
+      const directory = yield* resolveLalphDirectory()
       return {
         directory,
-        inExisting: yield* fs.exists(pathService.join(".lalph", "prd.yml")),
+        inExisting: yield* fs.exists(
+          pathService.join(directory, ".lalph", "prd.yml"),
+        ),
         ...(yield* makeExecHelpers({ directory })),
       } as const
     }),
