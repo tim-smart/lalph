@@ -171,11 +171,7 @@ export const currentIssuesAtom = Atom.family((projectId: ProjectId) =>
           Effect.withSpan("currentIssuesAtom.refresh"),
         )
         const handle = setTimeout(() => {
-          try {
-            get.refreshSelf()
-          } catch {
-            // ignore - if the atom is no longer in use, refreshing will throw an error, which we can safely ignore
-          }
+          get.refreshSelf()
         }, 30_000)
         get.addFinalizer(() => clearTimeout(handle))
         return issues
