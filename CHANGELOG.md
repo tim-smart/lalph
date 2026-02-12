@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.22
+
+### Patch Changes
+
+- [`0075456`](https://github.com/tim-smart/lalph/commit/00754562b14408d7902c5f934fe94621b1a20ec4) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
 ## 0.3.21
 
 ### Patch Changes
