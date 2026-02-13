@@ -4,6 +4,7 @@ import { ChildProcess } from "effect/unstable/process"
 import { Prd } from "../Prd.ts"
 import { Worktree } from "../Worktree.ts"
 import { layerProjectIdPrompt } from "../Projects.ts"
+import { resolveLalphDirectory } from "../shared/lalphDirectory.ts"
 
 export const commandSh = Command.make("sh").pipe(
   Command.withDescription(
@@ -15,14 +16,15 @@ export const commandSh = Command.make("sh").pipe(
         const worktree = yield* Worktree
         const fs = yield* FileSystem.FileSystem
         const pathService = yield* Path.Path
+        const lalphDirectory = yield* resolveLalphDirectory()
 
         // link to lalph config
         yield* fs.symlink(
-          pathService.resolve(pathService.join(".lalph", "config")),
+          pathService.join(lalphDirectory, ".lalph", "config"),
           pathService.join(worktree.directory, ".lalph", "config"),
         )
         yield* fs.symlink(
-          pathService.resolve(pathService.join(".lalph", "projects")),
+          pathService.join(lalphDirectory, ".lalph", "projects"),
           pathService.join(worktree.directory, ".lalph", "projects"),
         )
 
