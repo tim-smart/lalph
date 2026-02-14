@@ -150,7 +150,9 @@ const renderReviewComments = (
   comment: ReviewComment,
   followup: Array<ReviewComment>,
 ) => `<comment author="${comment.author.login}" path="${comment.path}">
-  <diffHunk>${comment.diffHunk}</diffHunk>
+  <diffHunk><![CDATA[
+${comment.diffHunk}
+  ]]></diffHunk>
   ${comment.originalLine ? `<lineNumber>${comment.originalLine}</lineNumber>` : ""}
   <body>${comment.body}</body>${
     followup.length > 0
