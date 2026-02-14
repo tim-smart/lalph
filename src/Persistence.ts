@@ -6,7 +6,7 @@ import { resolveLalphDirectory } from "./shared/lalphDirectory.ts"
 export const layerPersistence = Layer.unwrap(
   Effect.gen(function* () {
     const pathService = yield* Path.Path
-    const directory = yield* resolveLalphDirectory()
+    const directory = yield* resolveLalphDirectory
     return Persistence.layerKvs.pipe(
       Layer.provide(
         KeyValueStore.layerFileSystem(

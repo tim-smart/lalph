@@ -7,7 +7,7 @@ import { resolveLalphDirectory } from "./shared/lalphDirectory.ts"
 export const layerKvs = Layer.unwrap(
   Effect.gen(function* () {
     const pathService = yield* Path.Path
-    const directory = yield* resolveLalphDirectory()
+    const directory = yield* resolveLalphDirectory
     return KeyValueStore.layerFileSystem(
       pathService.join(directory, ".lalph", "config"),
     )
@@ -21,7 +21,7 @@ export class ProjectsKvs extends LayerMap.Service<ProjectsKvs>()(
       Layer.unwrap(
         Effect.gen(function* () {
           const pathService = yield* Path.Path
-          const directory = yield* resolveLalphDirectory()
+          const directory = yield* resolveLalphDirectory
           return KeyValueStore.layerFileSystem(
             pathService.join(
               directory,

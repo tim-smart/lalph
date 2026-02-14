@@ -19,7 +19,7 @@ const findProjectRoot = Effect.fnUntraced(function* (cwd: string) {
   }
 })
 
-export const resolveLalphDirectory = Effect.fnUntraced(function* () {
+export const resolveLalphDirectory = Effect.gen(function* () {
   const fs = yield* FileSystem.FileSystem
   const pathService = yield* Path.Path
   const cwd = pathService.resolve(".")

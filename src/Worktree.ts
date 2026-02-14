@@ -22,6 +22,7 @@ import { AtomRegistry } from "effect/unstable/reactivity"
 import { CurrentProjectId } from "./Settings.ts"
 import { projectById } from "./Projects.ts"
 import { parseBranch } from "./shared/git.ts"
+import { resolveLalphDirectory } from "./shared/lalphDirectory.ts"
 
 export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   make: Effect.gen(function* () {
@@ -75,7 +76,7 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     Effect.gen(function* () {
       const pathService = yield* Path.Path
       const fs = yield* FileSystem.FileSystem
-      const directory = pathService.resolve(".")
+      const directory = yield* resolveLalphDirectory
       return {
         directory,
         inExisting: yield* fs.exists(pathService.join(".lalph", "prd.yml")),

@@ -16,7 +16,7 @@ export const commandSh = Command.make("sh").pipe(
         const worktree = yield* Worktree
         const fs = yield* FileSystem.FileSystem
         const pathService = yield* Path.Path
-        const lalphDirectory = yield* resolveLalphDirectory()
+        const lalphDirectory = yield* resolveLalphDirectory
 
         // link to lalph config
         yield* fs.symlink(
