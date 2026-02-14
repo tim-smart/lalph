@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.23
+
+### Patch Changes
+
+- [`0f9a153`](https://github.com/tim-smart/lalph/commit/0f9a153aea1afc5c9d3aaf52ae6597c12f27384a) Thanks [@tim-smart](https://github.com/tim-smart)! - wrap diff hunks with CDATA
+
+- [#282](https://github.com/tim-smart/lalph/pull/282) [`9e16536`](https://github.com/tim-smart/lalph/commit/9e16536aa9109c21776a14e16900948c9feaea84) Thanks [@tim-smart](https://github.com/tim-smart)! - Prefer the current working directory for `.lalph` lookups, then fall back to the project root when running from subdirectories. This keeps settings, cache, and worktree behavior aligned with the main project `.lalph` directory.
+
 ## 0.3.22
 
 ### Patch Changes
