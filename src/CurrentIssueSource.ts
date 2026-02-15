@@ -164,21 +164,12 @@ export const issueSourceRuntime = atomRuntime(
 export const currentIssuesAtom = Atom.family((projectId: ProjectId) =>
   pipe(
     issueSourceRuntime.atom(
-      Effect.fnUntraced(function* (get) {
-        const source = yield* IssueSource
-        const issues = yield* pipe(
-          source.issues(projectId),
-          Effect.withSpan("currentIssuesAtom.refresh"),
-        )
-        const handle = setTimeout(() => {
-          get.refreshSelf()
-        }, 30_000)
-        get.addFinalizer(() => clearTimeout(handle))
-        return issues
-      }),
-      { uninterruptible: true },
+      IssueSource.use((s) => s.issues(projectId)).pipe(
+        Effect.withSpan("currentIssuesAtom"),
+      ),
     ),
     atomRuntime.withReactivity([`issues:${projectId}`]),
+    Atom.withRefresh("30 seconds"),
     Atom.keepAlive,
   ),
 )
