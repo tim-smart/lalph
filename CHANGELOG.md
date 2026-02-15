@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.24
+
+### Patch Changes
+
+- [`8d69efc`](https://github.com/tim-smart/lalph/commit/8d69efc81f6e93ed970717d47fb4825dbeadf1bc) Thanks [@tim-smart](https://github.com/tim-smart)! - fix local worktree layer
+
+- [`2b9c331`](https://github.com/tim-smart/lalph/commit/2b9c3312303f9397ca9e0c8bac58876d67082b94) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
 ## 0.3.23
 
 ### Patch Changes
