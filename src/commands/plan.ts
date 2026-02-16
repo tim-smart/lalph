@@ -29,20 +29,32 @@ const withNewProject = Flag.boolean("new").pipe(
   ),
 )
 
+const file = Flag.file("file", { mustExist: true }).pipe(
+  Flag.withAlias("f"),
+  Flag.withDescription(
+    "Read the plan from a markdown file instead of opening an editor",
+  ),
+  Flag.optional,
+)
+
 export const commandPlan = Command.make("plan", {
   dangerous,
   withNewProject,
+  file,
 }).pipe(
   Command.withDescription(
-    "Open an editor to draft a plan; on save, generate a specification under --specs and then create PRD tasks from it. Use --new to create a project first; use --dangerous to skip permission prompts during spec generation.",
+    "Draft a plan in your editor (or use --file); then generate a specification under --specs and create PRD tasks from it. Use --new to create a project first, and --dangerous to skip permission prompts during spec generation.",
   ),
   Command.withHandler(
-    Effect.fnUntraced(function* ({ dangerous, withNewProject }) {
+    Effect.fnUntraced(function* ({ dangerous, withNewProject, file }) {
       const editor = yield* Editor
+      const fs = yield* FileSystem.FileSystem
 
-      const thePlan = yield* editor.editTemp({
-        suffix: ".md",
+      const thePlan = yield* Effect.matchEffect(file.asEffect(), {
+        onFailure: () => editor.editTemp({ suffix: ".md" }),
+        onSuccess: (path) => fs.readFileString(path).pipe(Effect.asSome),
       })
+
       if (Option.isNone(thePlan)) return
 
       // We nest this effect, so we can launch the editor first as fast as
