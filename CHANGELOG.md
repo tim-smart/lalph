@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.26
+
+### Patch Changes
+
+- [#291](https://github.com/tim-smart/lalph/pull/291) [`cd7a394`](https://github.com/tim-smart/lalph/commit/cd7a394ab5b95f536e1f5a2003f2cac779587bf4) Thanks [@tim-smart](https://github.com/tim-smart)! - Preserve existing GitHub issue labels during `updateIssue` and only apply explicit label changes for workflow state and auto-merge labels.
+
+- [#290](https://github.com/tim-smart/lalph/pull/290) [`a3a2e7b`](https://github.com/tim-smart/lalph/commit/a3a2e7b2ffe1fcf9c3cfcb47b9fbb10d5f471fb4) Thanks [@tim-smart](https://github.com/tim-smart)! - Fix Claude chooser invocation by inserting `--` before the prompt argument when using `--disallowed-tools`. This prevents variadic tool parsing from swallowing the positional prompt and restores chooser task selection.
+
 ## 0.3.25
 
 ### Patch Changes
