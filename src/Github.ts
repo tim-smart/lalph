@@ -325,6 +325,25 @@ export const GithubIssueSource = Layer.effect(
             options.projectId,
           )
           const issueNumber = Number(options.issueId.slice(1))
+          const currentIssue = yield* github.request((rest) =>
+            rest.issues.get({
+              owner: cli.owner,
+              repo: cli.repo,
+              issue_number: issueNumber,
+            }),
+          )
+          const labels = Array.from(
+            new Set([
+              ...currentIssue.data.labels.flatMap((label) =>
+                typeof label === "string"
+                  ? [label]
+                  : label.name
+                    ? [label.name]
+                    : [],
+              ),
+              ...Option.toArray(labelFilter),
+            ]),
+          )
           const update: {
             owner: string
             repo: string
@@ -337,7 +356,7 @@ export const GithubIssueSource = Layer.effect(
             owner: cli.owner,
             repo: cli.repo,
             issue_number: issueNumber,
-            labels: Option.toArray(labelFilter),
+            labels,
           }
 
           if (options.title) {
@@ -349,15 +368,28 @@ export const GithubIssueSource = Layer.effect(
           if (options.state) {
             update.state = options.state === "done" ? "closed" : "open"
 
+            update.labels = update.labels.filter(
+              (label) => label !== "in-review" && label !== "in-progress",
+            )
+
             if (options.state === "in-review") {
               update.labels.push("in-review")
             } else if (options.state === "in-progress") {
               update.labels.push("in-progress")
             }
           }
-          if (options.autoMerge !== undefined) {
+          if (
+            options.autoMerge !== undefined &&
+            Option.isSome(autoMergeLabelName)
+          ) {
             if (options.autoMerge) {
-              update.labels.push(...Option.toArray(autoMergeLabelName))
+              if (!update.labels.includes(autoMergeLabelName.value)) {
+                update.labels.push(autoMergeLabelName.value)
+              }
+            } else {
+              update.labels = update.labels.filter(
+                (label) => label !== autoMergeLabelName.value,
+              )
             }
           }
 
