@@ -84,6 +84,7 @@ const claude = new CliAgent({
         "--disallowed-tools",
         "AskUserQuestion",
         ...extraArgs,
+        "--",
         `@${prdFilePath}
 
 ${prompt}`,
