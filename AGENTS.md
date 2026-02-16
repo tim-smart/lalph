@@ -21,3 +21,22 @@ The full source code for the `effect` library is in `.repos/effect/`.
 
 Use this for learning more about the library, rather than browsing the code in
 `node_modules/`.
+
+## Prefer `Effect.fnUntraced` over functions that return `Effect.gen`
+
+Instead of writing:
+
+```ts
+const fn = (param: string) =>
+  Effect.gen(function* () {
+    // ...
+  })
+```
+
+Prefer:
+
+```ts
+const fn = Effect.fnUntraced(function* (param: string) {
+  // ...
+})
+```
