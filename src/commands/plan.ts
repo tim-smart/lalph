@@ -47,20 +47,17 @@ export const commandPlan = Command.make("plan", {
   ),
   Command.withHandler(
     Effect.fnUntraced(function* ({ dangerous, withNewProject, file }) {
-      const thePlan = yield* Option.match(file, {
-        onNone: () =>
-          Effect.gen(function* () {
-            const editor = yield* Editor
-            return yield* editor.editTemp({
-              suffix: ".md",
-            })
+      const editor = yield* Editor
+      const fs = yield* FileSystem.FileSystem
+
+      const thePlan = yield* Effect.match(file.asEffect(), {
+        onFailure: () =>
+          editor.editTemp({
+            suffix: ".md",
           }),
-        onSome: (path) =>
-          Effect.gen(function* () {
-            const fs = yield* FileSystem.FileSystem
-            return Option.some(yield* fs.readFileString(path))
-          }),
-      })
+        onSuccess: (path) =>
+          fs.readFileString(path).pipe(Effect.map(Option.some)),
+      }).pipe(Effect.flatten)
       if (Option.isNone(thePlan)) return
 
       // We nest this effect, so we can launch the editor first as fast as
