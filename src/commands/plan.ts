@@ -29,19 +29,37 @@ const withNewProject = Flag.boolean("new").pipe(
   ),
 )
 
+const file = Flag.file("file", { mustExist: true }).pipe(
+  Flag.withAlias("f"),
+  Flag.withDescription(
+    "Read the plan from a markdown file instead of opening an editor",
+  ),
+  Flag.optional,
+)
+
 export const commandPlan = Command.make("plan", {
   dangerous,
   withNewProject,
+  file,
 }).pipe(
   Command.withDescription(
-    "Open an editor to draft a plan; on save, generate a specification under --specs and then create PRD tasks from it. Use --new to create a project first; use --dangerous to skip permission prompts during spec generation.",
+    "Draft a plan in your editor (or use --file); then generate a specification under --specs and create PRD tasks from it. Use --new to create a project first, and --dangerous to skip permission prompts during spec generation.",
   ),
   Command.withHandler(
-    Effect.fnUntraced(function* ({ dangerous, withNewProject }) {
-      const editor = yield* Editor
-
-      const thePlan = yield* editor.editTemp({
-        suffix: ".md",
+    Effect.fnUntraced(function* ({ dangerous, withNewProject, file }) {
+      const thePlan = yield* Option.match(file, {
+        onNone: () =>
+          Effect.gen(function* () {
+            const editor = yield* Editor
+            return yield* editor.editTemp({
+              suffix: ".md",
+            })
+          }),
+        onSome: (path) =>
+          Effect.gen(function* () {
+            const fs = yield* FileSystem.FileSystem
+            return Option.some(yield* fs.readFileString(path))
+          }),
       })
       if (Option.isNone(thePlan)) return
 

@@ -70,14 +70,17 @@ lalph projects toggle
 
 ## Plan mode
 
-Plan mode opens an editor so you can write a high-level plan. On save, lalph
-generates a specification under `--specs` and then creates PRD tasks from it.
+Plan mode opens an editor so you can write a high-level plan. You can also pass
+`--file` / `-f` with a markdown file path to skip the editor. On save (or file
+read), lalph generates a specification under `--specs` and then creates PRD
+tasks from it.
 
 Use `--dangerous` to skip permission prompts during spec generation, and `--new`
 to create a project before starting plan mode.
 
 ```bash
 lalph plan
+lalph plan --file ./my-plan.md
 lalph plan tasks .specs/my-spec.md
 ```
 
