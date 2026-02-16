@@ -50,14 +50,11 @@ export const commandPlan = Command.make("plan", {
       const editor = yield* Editor
       const fs = yield* FileSystem.FileSystem
 
-      const thePlan = yield* Effect.match(file.asEffect(), {
-        onFailure: () =>
-          editor.editTemp({
-            suffix: ".md",
-          }),
-        onSuccess: (path) =>
-          fs.readFileString(path).pipe(Effect.map(Option.some)),
-      }).pipe(Effect.flatten)
+      const thePlan = yield* Effect.matchEffect(file.asEffect(), {
+        onFailure: () => editor.editTemp({ suffix: ".md" }),
+        onSuccess: (path) => fs.readFileString(path).pipe(Effect.asSome),
+      })
+
       if (Option.isNone(thePlan)) return
 
       // We nest this effect, so we can launch the editor first as fast as
