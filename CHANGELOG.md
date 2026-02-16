@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.25
+
+### Patch Changes
+
+- [#286](https://github.com/tim-smart/lalph/pull/286) [`2cc7b87`](https://github.com/tim-smart/lalph/commit/2cc7b87f1562c8cf47a887270b4130cf151749ff) Thanks [@tim-smart](https://github.com/tim-smart)! - Add a `--file` / `-f` flag to `lalph plan` to load plan content from a markdown file and skip opening the interactive editor.
+
 ## 0.3.24
 
 ### Patch Changes
