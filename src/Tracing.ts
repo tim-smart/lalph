@@ -41,21 +41,16 @@ const TracerLogger = Effect.gen(function* () {
   }
 
   return Tracer.make({
-    span(name, parent, annotations, links, startTime, kind, options) {
-      const span = tracer.span(
-        name,
-        parent,
-        annotations,
-        links,
-        startTime,
-        kind,
-        options,
-      )
-      log(`${name}: started`, startTime)
+    span(options) {
+      const span = tracer.span(options)
+      log(`${options.name}: started`, options.startTime)
       const oldEnd = span.end
       span.end = (endTime, cause) => {
         const duration = Duration.nanos(endTime - span.status.startTime)
-        log(`${name}: completed. Took ${Duration.format(duration)}`, endTime)
+        log(
+          `${options.name}: completed. Took ${Duration.format(duration)}`,
+          endTime,
+        )
         return oldEnd.call(span, endTime, cause)
       }
       return span

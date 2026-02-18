@@ -103,6 +103,7 @@ export const withWorkerState =
           unmountState()
           unmountOutput()
           registry.update(activeWorkersAtom, HashMap.remove(workerId))
+          return Effect.void
         }),
         Effect.provideService(CurrentWorkerState, { state, output }),
       )
