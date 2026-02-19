@@ -45,7 +45,7 @@ export class GithubCli extends ServiceMap.Service<GithubCli>()(
           Effect.map((data) => {
             const comments =
               data.data.repository.pullRequest.comments.nodes.filter(
-                (c) => !c.author.login.startsWith("github"),
+                (c) => !c.isBot,
               )
             const reviews =
               data.data.repository.pullRequest.reviews.nodes.filter(

@@ -4,12 +4,29 @@ export class Author extends S.Class<Author>("Author")({
   login: S.String,
 }) {}
 
+// Prefixes of bot users that we want to ignore when determining if a comment is
+// from a bot or not. This is not an exhaustive list, but covers some common
+// cases.
+const commonBotUserPrefixes = [
+  "dependabot",
+  "github",
+  "changeset",
+  "renovate",
+  "snyk",
+  "coderabbit",
+]
+
 export class Comment extends S.Class<Comment>("Comment")({
   id: S.String,
   body: S.String,
   author: Author,
   createdAt: S.String,
-}) {}
+}) {
+  get isBot() {
+    const login = this.author.login.toLowerCase()
+    return commonBotUserPrefixes.some((prefix) => login.startsWith(prefix))
+  }
+}
 
 export class PullRequestComments extends S.Class<PullRequestComments>(
   "PullRequestComments",
