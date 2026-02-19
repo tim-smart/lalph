@@ -108,3 +108,4 @@ lalph i
 
 - Install dependencies: `pnpm install`
 - Build the CLI: `pnpm build`
+- Run validations: `pnpm check`
