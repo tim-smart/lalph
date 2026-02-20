@@ -31,69 +31,87 @@ export class GithubError extends Data.TaggedError("GithubError")<{
   readonly cause: unknown
 }> {}
 
-export class Github extends ServiceMap.Service<Github>()("lalph/Github", {
-  make: Effect.gen(function* () {
-    const tokens = yield* TokenManager
-    const clients = yield* RcMap.make({
-      lookup: (token: string) =>
-        Effect.succeed(new Octokit({ auth: token }).rest),
-      idleTimeToLive: "1 minute",
-    })
-    const getClient = tokens.get.pipe(
-      Effect.flatMap(({ token }) => RcMap.get(clients, token)),
-      Effect.mapError((cause) => new GithubError({ cause })),
-    )
+export type GithubApi = Api["rest"]
+export type GithubResponse<A> = OctokitResponse<A>
 
-    const request = <A>(f: (_: Api["rest"]) => Promise<A>) =>
-      getClient.pipe(
-        Effect.flatMap((rest) =>
-          Effect.tryPromise({
-            try: () => f(rest),
-            catch: (cause) => new GithubError({ cause }),
-          }),
-        ),
-        Effect.scoped,
-        Effect.withSpan("Github.request"),
+export interface GithubService {
+  readonly request: <A>(
+    f: (_: GithubApi) => Promise<A>,
+  ) => Effect.Effect<A, GithubError, never>
+  readonly wrap: <A, Args extends Array<unknown>>(
+    f: (_: GithubApi) => (...args: Args) => Promise<GithubResponse<A>>,
+  ) => (...args: Args) => Effect.Effect<A, GithubError, never>
+  readonly stream: <A>(
+    f: (_: GithubApi, page: number) => Promise<GithubResponse<Array<A>>>,
+  ) => Stream.Stream<A, GithubError, never>
+}
+
+export class Github extends ServiceMap.Service<Github, GithubService>()(
+  "lalph/Github",
+  {
+    make: Effect.gen(function* () {
+      const tokens = yield* TokenManager
+      const clients = yield* RcMap.make({
+        lookup: (token: string) =>
+          Effect.succeed(new Octokit({ auth: token }).rest),
+        idleTimeToLive: "1 minute",
+      })
+      const getClient = tokens.get.pipe(
+        Effect.flatMap(({ token }) => RcMap.get(clients, token)),
+        Effect.mapError((cause) => new GithubError({ cause })),
       )
 
-    const wrap =
-      <A, Args extends Array<unknown>>(
-        f: (_: Api["rest"]) => (...args: Args) => Promise<OctokitResponse<A>>,
-      ) =>
-      (...args: Args) =>
+      const request = <A>(f: (_: GithubApi) => Promise<A>) =>
         getClient.pipe(
           Effect.flatMap((rest) =>
             Effect.tryPromise({
-              try: () => f(rest)(...args),
+              try: () => f(rest),
               catch: (cause) => new GithubError({ cause }),
             }),
           ),
           Effect.scoped,
-          Effect.map((_) => _.data),
-          Effect.withSpan("Github.wrap"),
+          Effect.withSpan("Github.request"),
         )
 
-    const stream = <A>(
-      f: (_: Api["rest"], page: number) => Promise<OctokitResponse<Array<A>>>,
-    ) =>
-      Stream.paginate(0, (page) =>
-        getClient.pipe(
-          Effect.flatMap((rest) =>
-            Effect.tryPromise({
-              try: () => f(rest, page),
-              catch: (cause) => new GithubError({ cause }),
-            }),
-          ),
-          Effect.scoped,
-          Effect.map(
-            (_) => [_.data, maybeNextPage(page, _.headers.link)] as const,
-          ),
-        ),
-      )
+      const wrap =
+        <A, Args extends Array<unknown>>(
+          f: (_: GithubApi) => (...args: Args) => Promise<OctokitResponse<A>>,
+        ) =>
+        (...args: Args) =>
+          getClient.pipe(
+            Effect.flatMap((rest) =>
+              Effect.tryPromise({
+                try: () => f(rest)(...args),
+                catch: (cause) => new GithubError({ cause }),
+              }),
+            ),
+            Effect.scoped,
+            Effect.map((_) => _.data),
+            Effect.withSpan("Github.wrap"),
+          )
 
-    return { request, wrap, stream } as const
-  }),
-}) {
+      const stream = <A>(
+        f: (_: GithubApi, page: number) => Promise<OctokitResponse<Array<A>>>,
+      ) =>
+        Stream.paginate(0, (page) =>
+          getClient.pipe(
+            Effect.flatMap((rest) =>
+              Effect.tryPromise({
+                try: () => f(rest, page),
+                catch: (cause) => new GithubError({ cause }),
+              }),
+            ),
+            Effect.scoped,
+            Effect.map(
+              (_) => [_.data, maybeNextPage(page, _.headers.link)] as const,
+            ),
+          ),
+        )
+
+      return { request, wrap, stream } as const
+    }),
+  },
+) {
   static layer = Layer.effect(this, this.make).pipe(
     Layer.provide(TokenManager.layer),
   )

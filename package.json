@@ -10,7 +10,7 @@
   },
   "scripts": {
     "prepare": "husky && effect-language-service patch",
-    "check": "concurrently \"tsc --noEmit\" \"oxlint -c .oxlintrc.json\" \"pnpm build\"",
+    "check": "concurrently \"pnpm tsgo --noEmit\" \"pnpm oxlint -c .oxlintrc.json\" \"pnpm build\"",
     "build": "tsdown",
     "prepublishOnly": "pnpm build"
   },
@@ -34,6 +34,7 @@
     "@linear/sdk": "^75.0.0",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@octokit/types": "^16.0.0",
+    "@typescript/native-preview": "7.0.0-dev.20260219.1",
     "concurrently": "^9.2.1",
     "effect": "4.0.0-beta.6",
     "husky": "^9.1.7",
