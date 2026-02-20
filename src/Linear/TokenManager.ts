@@ -2,10 +2,12 @@ import {
   DateTime,
   Deferred,
   Effect,
+  Encoding,
   Layer,
   Option,
   Schedule,
   Schema,
+  Semaphore,
   ServiceMap,
 } from "effect"
 import {
@@ -18,7 +20,6 @@ import {
   HttpServerRequest,
   HttpServerResponse,
 } from "effect/unstable/http"
-import { Base64Url } from "effect/encoding"
 import { NodeHttpServer } from "@effect/platform-node"
 import { createServer } from "node:http"
 import { KeyValueStore } from "effect/unstable/persistence"
@@ -80,7 +81,7 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
           return currentToken.value
         }),
       )
-      const get = Effect.makeSemaphoreUnsafe(1).withPermit(getNoLock)
+      const get = Semaphore.makeUnsafe(1).withPermit(getNoLock)
 
       const pkce = Effect.gen(function* () {
         const deferred = yield* Deferred.make<typeof CallbackParams.Type>()
@@ -116,7 +117,9 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
         const verifierSha256 = yield* Effect.promise(() =>
           crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
         )
-        const challenge = Base64Url.encode(new Uint8Array(verifierSha256))
+        const challenge = Encoding.encodeBase64Url(
+          new Uint8Array(verifierSha256),
+        )
 
         const url = `https://linear.app/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=read,write&code_challenge=${challenge}&code_challenge_method=S256`
 

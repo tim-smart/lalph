@@ -8,6 +8,7 @@ import {
   Iterable,
   Option,
   Path,
+  Semaphore,
   Stream,
 } from "effect"
 import { PromptGen } from "../PromptGen.ts"
@@ -248,7 +249,7 @@ const runProject = Effect.fnUntraced(
   }) {
     const isFinite = Number.isFinite(options.iterations)
     const iterationsDisplay = isFinite ? options.iterations : "unlimited"
-    const semaphore = Effect.makeSemaphoreUnsafe(options.project.concurrency)
+    const semaphore = Semaphore.makeUnsafe(options.project.concurrency)
     const fibers = yield* FiberSet.make()
 
     yield* resetInProgress.pipe(Effect.withSpan("Main.resetInProgress"))

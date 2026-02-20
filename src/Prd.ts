@@ -7,6 +7,7 @@ import {
   Path,
   PlatformError,
   Schedule,
+  Semaphore,
   ServiceMap,
   Stream,
 } from "effect"
@@ -65,7 +66,7 @@ export class Prd extends ServiceMap.Service<
       { suspendOnWaiting: true },
     )
 
-    const syncSemaphore = Effect.makeSemaphoreUnsafe(1)
+    const syncSemaphore = Semaphore.makeUnsafe(1)
 
     const maybeRevertIssue = Effect.fnUntraced(function* (options: {
       readonly issueId: string

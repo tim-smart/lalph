@@ -5,6 +5,7 @@ import {
   Option,
   Schedule,
   Schema,
+  Semaphore,
   ServiceMap,
 } from "effect"
 import {
@@ -64,7 +65,7 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
         }
         return currentToken.value
       })
-      const get = Effect.makeSemaphoreUnsafe(1).withPermit(getNoLock)
+      const get = Semaphore.makeUnsafe(1).withPermit(getNoLock)
 
       const deviceCode = Effect.gen(function* () {
         const code = yield* HttpClientRequest.post(
