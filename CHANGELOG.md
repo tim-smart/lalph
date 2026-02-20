@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.28
+
+### Patch Changes
+
+- [`5e28ecc`](https://github.com/tim-smart/lalph/commit/5e28ecc7a16fb0ee9bb446bc3d2ac750dc6319d8) Thanks [@tim-smart](https://github.com/tim-smart)! - hide PR comments from common bot accounts
+
 ## 0.3.27
 
 ### Patch Changes
