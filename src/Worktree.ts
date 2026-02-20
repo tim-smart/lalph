@@ -264,7 +264,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
         if (DateTime.isLessThan(deadline, now)) {
           return Effect.fail(new RunnerStalled())
         }
-        const timeUntilDeadline = DateTime.distanceDuration(deadline, now)
+        const timeUntilDeadline = DateTime.distance(deadline, now)
         return Effect.flatMap(Effect.sleep(timeUntilDeadline), loop)
       })
 
