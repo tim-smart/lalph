@@ -199,7 +199,6 @@ query FetchPRComments($owner: String!, $repo: String!, $pr: Int!) {
       reviewThreads(first: 100) {
         nodes {
           isCollapsed
-          isOutdated
           isResolved
           comments(first: 100) {
             nodes {

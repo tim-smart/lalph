@@ -84,12 +84,11 @@ export class ReviewThreadsNode extends S.Class<ReviewThreadsNode>(
   "ReviewThreadsNode",
 )({
   isCollapsed: S.Boolean,
-  isOutdated: S.Boolean,
   isResolved: S.Boolean,
   comments: NodeComments,
 }) {
   readonly commentNodes = this.comments.nodes
-  readonly shouldDisplayThread = !this.isCollapsed && !this.isOutdated
+  readonly shouldDisplayThread = !this.isCollapsed && !this.isResolved
 }
 
 export class ReviewThreads extends S.Class<ReviewThreads>("ReviewThreads")({
