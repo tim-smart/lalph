@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.31
+
+### Patch Changes
+
+- [`bedc2b3`](https://github.com/tim-smart/lalph/commit/bedc2b3a98e583a3b86b3d09c528b78830ffc831) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
 ## 0.3.30
 
 ### Patch Changes
