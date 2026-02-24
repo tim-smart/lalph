@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.32
+
+### Patch Changes
+
+- [`03bcac7`](https://github.com/tim-smart/lalph/commit/03bcac7ff24eeef47846263dfc190bcdb9e4c219) Thanks [@tim-smart](https://github.com/tim-smart)! - allow some fields to be missing in prd.yml, or creating from strings only
+
 ## 0.3.31
 
 ### Patch Changes
