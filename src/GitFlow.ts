@@ -81,6 +81,8 @@ After making any changes, commit and push them to the same pull request.
     postWork: () => Effect.void,
     autoMerge: Effect.fnUntraced(function* (options) {
       const prd = yield* Prd
+      const source = yield* IssueSource
+      const projectId = yield* CurrentProjectId
       const worktree = options.worktree
 
       let prState = (yield* worktree.viewPrState()).pipe(
@@ -101,6 +103,14 @@ After making any changes, commit and push them to the same pull request.
       prState = yield* worktree.viewPrState(prState.value.number)
       yield* Effect.log("PR state after merge", prState)
       if (Option.isSome(prState) && prState.value.state === "MERGED") {
+        const issue = yield* prd.findById(options.issueId)
+        if (issue && issue.state !== "done") {
+          yield* source.updateIssue({
+            projectId,
+            issueId: options.issueId,
+            state: "done",
+          })
+        }
         return
       }
       yield* Effect.log("Flagging unmergable PR")
