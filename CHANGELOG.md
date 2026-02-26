@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.33
+
+### Patch Changes
+
+- [`179a481`](https://github.com/tim-smart/lalph/commit/179a481db7db4232e0af8369ba094b741694230a) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
+- [#301](https://github.com/tim-smart/lalph/pull/301) [`1539da1`](https://github.com/tim-smart/lalph/commit/1539da1e843da97407c3902b5653e5c92018aba4) Thanks [@tim-smart](https://github.com/tim-smart)! - Mark tasks as done when PR auto-merge succeeds in PR git flow.
+
 ## 0.3.32
 
 ### Patch Changes
