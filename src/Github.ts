@@ -33,6 +33,7 @@ export class GithubError extends Data.TaggedError("GithubError")<{
 
 export type GithubApi = Api["rest"]
 export type GithubResponse<A> = OctokitResponse<A>
+type GithubResponseHeaders = OctokitResponse<unknown>["headers"]
 
 export interface GithubService {
   readonly request: <A>(
@@ -46,6 +47,13 @@ export interface GithubService {
   ) => Stream.Stream<A, GithubError, never>
 }
 
+type CachedGetResponse = {
+  readonly etag: string
+  readonly data: unknown
+  readonly headers: GithubResponseHeaders
+  readonly url: string
+}
+
 export class Github extends ServiceMap.Service<Github, GithubService>()(
   "lalph/Github",
   {
@@ -53,7 +61,54 @@ export class Github extends ServiceMap.Service<Github, GithubService>()(
       const tokens = yield* TokenManager
       const clients = yield* RcMap.make({
         lookup: (token: string) =>
-          Effect.succeed(new Octokit({ auth: token }).rest),
+          Effect.sync(() => {
+            const octokit = new Octokit({ auth: token })
+            const etagCache = new Map<string, CachedGetResponse>()
+
+            octokit.hook.wrap("request", async (request, options) => {
+              if (requestMethod(options) !== "GET") {
+                return request(options)
+              }
+
+              const key = requestCacheKey(options)
+              const cached = etagCache.get(key)
+              const ifNoneMatchHeader = cached
+                ? {
+                    ...options.headers,
+                    "if-none-match": cached.etag,
+                  }
+                : options.headers
+
+              try {
+                const response = await request({
+                  ...options,
+                  headers: ifNoneMatchHeader,
+                })
+                const etag = etagHeaderValue(response.headers)
+                if (etag !== undefined) {
+                  etagCache.set(key, {
+                    etag,
+                    data: response.data,
+                    headers: response.headers,
+                    url: response.url,
+                  })
+                }
+                return response
+              } catch (cause) {
+                if (isNotModifiedError(cause) && cached) {
+                  return {
+                    status: 200,
+                    headers: cached.headers,
+                    url: cached.url,
+                    data: cached.data,
+                  }
+                }
+                throw cause
+              }
+            })
+
+            return octokit.rest
+          }),
         idleTimeToLive: "1 minute",
       })
       const getClient = tokens.get.pipe(
@@ -620,3 +675,36 @@ const maybeNextPage = (page: number, linkHeader?: string) =>
     Option.filter((_) => _.includes(`rel="next"`)),
     Option.as(page + 1),
   )
+
+const requestMethod = (options: { readonly method?: string }) =>
+  options.method?.toUpperCase() ?? "GET"
+
+const requestCacheKey = (options: {
+  readonly method?: string
+  readonly url?: string
+  readonly headers?: Record<string, unknown>
+}) => {
+  const method = requestMethod(options)
+  const url = options.url ?? ""
+  const acceptHeader = options.headers?.accept
+  const accept = typeof acceptHeader === "string" ? acceptHeader : ""
+  return `${method}:${url}:${accept}`
+}
+
+const etagHeaderValue = (
+  headers: GithubResponseHeaders,
+): string | undefined => {
+  const etag = headers.etag
+  if (typeof etag === "string" && etag.length > 0) {
+    return etag
+  }
+  return undefined
+}
+
+const isNotModifiedError = (
+  cause: unknown,
+): cause is { readonly status: number } =>
+  typeof cause === "object" &&
+  cause !== null &&
+  "status" in cause &&
+  (cause as { readonly status: unknown }).status === 304
