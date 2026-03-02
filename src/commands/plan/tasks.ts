@@ -7,7 +7,7 @@ import { PromptGen } from "../../PromptGen.ts"
 import { Settings } from "../../Settings.ts"
 import { Worktree } from "../../Worktree.ts"
 import { commandRoot } from "../root.ts"
-import { getDefaultCliAgentPreset } from "../../Presets.ts"
+import { selectCliAgentPreset } from "../../Presets.ts"
 import { CurrentIssueSource } from "../../CurrentIssueSource.ts"
 
 const specificationPath = Argument.path("spec", {
@@ -32,7 +32,7 @@ export const commandPlanTasks = Command.make("tasks", {
         const fs = yield* FileSystem.FileSystem
         const pathService = yield* Path.Path
         const worktree = yield* Worktree
-        const preset = yield* getDefaultCliAgentPreset
+        const preset = yield* selectCliAgentPreset
 
         const content = yield* fs.readFileString(specificationPath)
         const relative = pathService.relative(

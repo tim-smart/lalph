@@ -77,6 +77,8 @@ tasks from it.
 
 Use `--dangerous` to skip permission prompts during spec generation, and `--new`
 to create a project before starting plan mode.
+If you have multiple agent presets, plan commands prompt you to choose which
+preset to run before launching the CLI agent.
 
 ```bash
 lalph plan

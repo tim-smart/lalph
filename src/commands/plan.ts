@@ -11,7 +11,7 @@ import { agentPlanner } from "../Agents/planner.ts"
 import { agentTasker } from "../Agents/tasker.ts"
 import { commandPlanTasks } from "./plan/tasks.ts"
 import { Editor } from "../Editor.ts"
-import { getDefaultCliAgentPreset } from "../Presets.ts"
+import { selectCliAgentPreset } from "../Presets.ts"
 import { ChildProcess } from "effect/unstable/process"
 import { parseBranch } from "../shared/git.ts"
 
@@ -87,7 +87,7 @@ const plan = Effect.fnUntraced(
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
     const worktree = yield* Worktree
-    const preset = yield* getDefaultCliAgentPreset
+    const preset = yield* selectCliAgentPreset
 
     yield* agentPlanner({
       plan: options.plan,
