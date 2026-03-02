@@ -1,5 +1,15 @@
 # lalph
 
+## 0.3.34
+
+### Patch Changes
+
+- [#306](https://github.com/tim-smart/lalph/pull/306) [`da198db`](https://github.com/tim-smart/lalph/commit/da198db10821b8da31bb36665a6dba9d74d513da) Thanks [@tim-smart](https://github.com/tim-smart)! - Prompt to choose an agent preset when running plan flows so `lalph plan` and
+  `lalph plan tasks` can use any configured preset instead of always using the
+  default.
+
+- [#305](https://github.com/tim-smart/lalph/pull/305) [`b29813e`](https://github.com/tim-smart/lalph/commit/b29813e8f3b6651a55a0c4768c2f02c70b2393a6) Thanks [@tim-smart](https://github.com/tim-smart)! - Add ETag-based conditional request caching to the GitHub API client so repeated GET calls can reuse cached responses when GitHub returns `304 Not Modified`, reducing API rate limit usage.
+
 ## 0.3.33
 
 ### Patch Changes
