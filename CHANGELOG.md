@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.35
+
+### Patch Changes
+
+- [#309](https://github.com/tim-smart/lalph/pull/309) [`645c563`](https://github.com/tim-smart/lalph/commit/645c56373481711e3fae568355e8479076d85186) Thanks [@tim-smart](https://github.com/tim-smart)! - Prompt for the plan-mode agent preset before creating or accessing the worktree.
+
 ## 0.3.34
 
 ### Patch Changes
