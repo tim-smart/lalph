@@ -9,6 +9,7 @@ import { Worktree } from "../../Worktree.ts"
 import { commandRoot } from "../root.ts"
 import { selectCliAgentPreset } from "../../Presets.ts"
 import { CurrentIssueSource } from "../../CurrentIssueSource.ts"
+import type { CliAgentPreset } from "../../domain/CliAgentPreset.ts"
 
 const specificationPath = Argument.path("spec", {
   pathType: "file",
@@ -26,37 +27,51 @@ export const commandPlanTasks = Command.make("tasks", {
     "Convert an existing specification file into PRD tasks (without re-running plan mode)",
   ),
   Command.withHandler(
-    Effect.fnUntraced(
-      function* ({ specificationPath }) {
-        const { specsDirectory } = yield* commandRoot
-        const fs = yield* FileSystem.FileSystem
-        const pathService = yield* Path.Path
-        const preset = yield* selectCliAgentPreset
-        const worktree = yield* Worktree
-
-        const content = yield* fs.readFileString(specificationPath)
-        const relative = pathService.relative(
-          pathService.resolve("."),
-          specificationPath,
-        )
-        const worktreeSpecPath = pathService.join(worktree.directory, relative)
-        yield* fs.makeDirectory(pathService.dirname(worktreeSpecPath), {
-          recursive: true,
-        })
-        yield* fs.writeFileString(worktreeSpecPath, content)
-
-        yield* agentTasker({
-          specsDirectory,
-          specificationPath: relative,
-          preset,
-        })
-      },
-      Effect.provide([
-        Settings.layer,
-        PromptGen.layer,
-        Prd.layerProvided.pipe(Layer.provide(layerProjectIdPrompt)),
-        CurrentIssueSource.layer,
-      ]),
-    ),
+    Effect.fnUntraced(function* ({ specificationPath }) {
+      const { specsDirectory } = yield* commandRoot
+      const preset = yield* selectCliAgentPreset
+      yield* generateTasks({
+        specsDirectory,
+        specificationPath,
+        preset,
+      })
+    }, Effect.provide(CurrentIssueSource.layer)),
   ),
+)
+const generateTasks = Effect.fnUntraced(
+  function* ({
+    specsDirectory,
+    specificationPath,
+    preset,
+  }: {
+    readonly specsDirectory: string
+    readonly specificationPath: string
+    readonly preset: CliAgentPreset
+  }) {
+    const fs = yield* FileSystem.FileSystem
+    const pathService = yield* Path.Path
+    const worktree = yield* Worktree
+
+    const content = yield* fs.readFileString(specificationPath)
+    const relative = pathService.relative(
+      pathService.resolve("."),
+      specificationPath,
+    )
+    const worktreeSpecPath = pathService.join(worktree.directory, relative)
+    yield* fs.makeDirectory(pathService.dirname(worktreeSpecPath), {
+      recursive: true,
+    })
+    yield* fs.writeFileString(worktreeSpecPath, content)
+
+    yield* agentTasker({
+      specsDirectory,
+      specificationPath: relative,
+      preset,
+    })
+  },
+  Effect.provide([
+    Settings.layer,
+    PromptGen.layer,
+    Prd.layerProvided.pipe(Layer.provide(layerProjectIdPrompt)),
+  ]),
 )

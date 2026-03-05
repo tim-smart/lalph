@@ -14,6 +14,7 @@ import { Editor } from "../Editor.ts"
 import { selectCliAgentPreset } from "../Presets.ts"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { parseBranch } from "../shared/git.ts"
+import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 
 const dangerous = Flag.boolean("dangerous").pipe(
   Flag.withAlias("d"),
@@ -64,12 +65,14 @@ export const commandPlan = Command.make("plan", {
           ? yield* addOrUpdateProject()
           : yield* selectProject
         const { specsDirectory } = yield* commandRoot
+        const preset = yield* selectCliAgentPreset
 
         yield* plan({
           plan: thePlan.value,
           specsDirectory,
           targetBranch: project.targetBranch,
           dangerous,
+          preset,
         }).pipe(Effect.provideService(CurrentProjectId, project.id))
       }).pipe(Effect.provide([Settings.layer, CurrentIssueSource.layer]))
     }, Effect.provide(Editor.layer)),
@@ -83,17 +86,17 @@ const plan = Effect.fnUntraced(
     readonly specsDirectory: string
     readonly targetBranch: Option.Option<string>
     readonly dangerous: boolean
+    readonly preset: CliAgentPreset
   }) {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
-    const preset = yield* selectCliAgentPreset
     const worktree = yield* Worktree
 
     yield* agentPlanner({
       plan: options.plan,
       specsDirectory: options.specsDirectory,
       dangerous: options.dangerous,
-      preset,
+      preset: options.preset,
     })
 
     const planDetails = yield* pipe(
@@ -116,7 +119,7 @@ const plan = Effect.fnUntraced(
     yield* agentTasker({
       specificationPath: planDetails.specification,
       specsDirectory: options.specsDirectory,
-      preset,
+      preset: options.preset,
     })
 
     if (!worktree.inExisting) {
