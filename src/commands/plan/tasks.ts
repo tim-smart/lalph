@@ -31,8 +31,8 @@ export const commandPlanTasks = Command.make("tasks", {
         const { specsDirectory } = yield* commandRoot
         const fs = yield* FileSystem.FileSystem
         const pathService = yield* Path.Path
-        const worktree = yield* Worktree
         const preset = yield* selectCliAgentPreset
+        const worktree = yield* Worktree
 
         const content = yield* fs.readFileString(specificationPath)
         const relative = pathService.relative(

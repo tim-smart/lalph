@@ -86,8 +86,8 @@ const plan = Effect.fnUntraced(
   }) {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
-    const worktree = yield* Worktree
     const preset = yield* selectCliAgentPreset
+    const worktree = yield* Worktree
 
     yield* agentPlanner({
       plan: options.plan,
