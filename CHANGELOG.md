@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.36
+
+### Patch Changes
+
+- [#313](https://github.com/tim-smart/lalph/pull/313) [`080e1d0`](https://github.com/tim-smart/lalph/commit/080e1d0d6caa36b74ea8869bfb347997a2734fa9) Thanks [@tim-smart](https://github.com/tim-smart)! - Add an optional GitHub project filter to project setup and issue syncing.
+
 ## 0.3.35
 
 ### Patch Changes
