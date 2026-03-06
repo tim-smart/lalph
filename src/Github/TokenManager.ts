@@ -73,7 +73,7 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
         ).pipe(
           HttpClientRequest.bodyUrlParams({
             client_id: clientId,
-            scope: "repo read:user",
+            scope: "repo read:user read:project",
           }),
           httpClient.execute,
           Effect.flatMap(
