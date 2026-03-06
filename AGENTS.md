@@ -15,28 +15,12 @@ There should one be ONE changeset per pull request.
 To learn more about previous and current specifications for this project, see
 the `.specs/README.md` file.
 
-# Learning more about the "effect" library
+# Learning more about the "effect" & "@effect/\*" packages
 
-The full source code for the `effect` library is in `.repos/effect/`.
+`.repos/effect/LLMS.md` is an authoritative source of information about the
+"effect" and "@effect/\*" packages. Read this before looking elsewhere for
+information about these packages. It contains the best practices for using
+effect.
 
 Use this for learning more about the library, rather than browsing the code in
 `node_modules/`.
-
-## Prefer `Effect.fnUntraced` over functions that return `Effect.gen`
-
-Instead of writing:
-
-```ts
-const fn = (param: string) =>
-  Effect.gen(function* () {
-    // ...
-  })
-```
-
-Prefer:
-
-```ts
-const fn = Effect.fnUntraced(function* (param: string) {
-  // ...
-})
-```
