@@ -221,6 +221,20 @@ export const GithubIssueSource = Layer.effect(
     ): boolean =>
       label.some((l) => (typeof l === "string" ? l === name : l.name === name))
 
+    const matchesLabelFilter = (
+      labels: ReadonlyArray<
+        | string
+        | {
+            readonly name?: string
+          }
+      >,
+      labelFilter: Option.Option<string>,
+    ): boolean =>
+      labelFilter.pipe(
+        Option.map((label) => hasLabel(labels, label)),
+        Option.getOrElse(() => true),
+      )
+
     const listOpenBlockedBy = (issueId: number) =>
       pipe(
         github.stream((rest, page) =>
@@ -308,14 +322,17 @@ export const GithubIssueSource = Layer.effect(
 
     const repository = `${cli.owner}/${cli.repo}`.toLowerCase()
 
-    const projectIssues = (project: GithubProject) => {
+    const projectIssues = (options: {
+      readonly project: GithubProject
+      readonly labelFilter: Option.Option<string>
+    }) => {
       const threeDaysAgo = DateTime.nowUnsafe().pipe(
         DateTime.subtract({ days: 3 }),
       )
       return Stream.paginate(null, (cursor: string | null) =>
         github
           .graphql<GithubProjectItemsQuery>(githubProjectItemsQuery, {
-            projectId: project.id,
+            projectId: options.project.id,
             after: cursor,
           })
           .pipe(
@@ -338,6 +355,9 @@ export const GithubIssueSource = Layer.effect(
           state: issue.state.toLowerCase(),
           labels: issue.labels.nodes.map((label) => label.name),
         })),
+        Stream.filter((issue) =>
+          matchesLabelFilter(issue.labels, options.labelFilter),
+        ),
       )
     }
 
@@ -357,6 +377,9 @@ export const GithubIssueSource = Layer.effect(
         ),
         Stream.merge(recentlyClosed),
         Stream.filter((issue) => issue.pull_request === undefined),
+        Stream.filter((issue) =>
+          matchesLabelFilter(issue.labels, options.labelFilter),
+        ),
       )
 
     const issues = (options: {
@@ -366,7 +389,10 @@ export const GithubIssueSource = Layer.effect(
     }) => {
       const source = Unify.unify(
         Option.isSome(options.projectFilter)
-          ? projectIssues(options.projectFilter.value)
+          ? projectIssues({
+              project: options.projectFilter.value,
+              labelFilter: options.labelFilter,
+            })
           : repoIssues(options),
       )
 
