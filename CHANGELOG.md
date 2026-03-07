@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.37
+
+### Patch Changes
+
+- [#316](https://github.com/tim-smart/lalph/pull/316) [`c4eaf0b`](https://github.com/tim-smart/lalph/commit/c4eaf0b57d3e481257f55240a656d75d4a83fc03) Thanks [@tim-smart](https://github.com/tim-smart)! - Ensure GitHub label filters still apply when syncing issues through a selected project.
+
+- [#317](https://github.com/tim-smart/lalph/pull/317) [`4e0ff40`](https://github.com/tim-smart/lalph/commit/4e0ff40e3dffec0694235128272183303b6fb58b) Thanks [@tim-smart](https://github.com/tim-smart)! - Ignore non-issue GitHub project items when syncing issues from a selected project.
+
 ## 0.3.36
 
 ### Patch Changes
