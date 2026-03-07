@@ -320,16 +320,18 @@ export const GithubIssueSource = Layer.effect(
           })
           .pipe(
             Effect.map((data) => [
-              data.node.items.nodes.map((item) => item.content),
+              data.node.items.nodes.flatMap((item) =>
+                isGithubProjectIssue(item.content) ? [item.content] : [],
+              ),
               Option.fromNullOr(data.node.items.pageInfo.endCursor),
             ]),
           ),
       ).pipe(
         Stream.filter(
-          (_) =>
-            _.repository.nameWithOwner.toLowerCase() === repository &&
-            (!_.closedAt ||
-              DateTime.makeUnsafe(_.closedAt).pipe(
+          (issue) =>
+            issue.repository.nameWithOwner.toLowerCase() === repository &&
+            (!issue.closedAt ||
+              DateTime.makeUnsafe(issue.closedAt).pipe(
                 DateTime.isGreaterThan(threeDaysAgo),
               )),
         ),
@@ -827,26 +829,35 @@ type GithubProjectsQuery = {
   }
 }
 
+type GithubProjectIssue = {
+  readonly __typename: "Issue"
+  readonly number: number
+  readonly repository: {
+    readonly nameWithOwner: string
+  }
+  readonly title: string
+  readonly body: string
+  readonly state: string
+  readonly labels: {
+    readonly nodes: ReadonlyArray<{
+      readonly name: string
+    }>
+  }
+  readonly closedAt: string | null
+}
+
+type GithubProjectItemContent =
+  | GithubProjectIssue
+  | {
+      readonly __typename: string
+    }
+  | null
+
 type GithubProjectItemsQuery = {
   readonly node: {
     readonly items: {
       readonly nodes: ReadonlyArray<{
-        readonly content: {
-          readonly __typename: string
-          readonly number: number
-          readonly repository: {
-            readonly nameWithOwner: string
-          }
-          readonly title: string
-          readonly body: string
-          readonly state: string
-          readonly labels: {
-            readonly nodes: ReadonlyArray<{
-              readonly name: string
-            }>
-          }
-          readonly closedAt: string | null
-        }
+        readonly content: GithubProjectItemContent
       }>
       readonly pageInfo: {
         readonly endCursor: string | null
@@ -857,6 +868,11 @@ type GithubProjectItemsQuery = {
 }
 
 // == helpers
+
+const isGithubProjectIssue = (
+  content: GithubProjectItemContent,
+): content is GithubProjectIssue =>
+  content !== null && content.__typename === "Issue"
 
 const githubProjectsQuery = `
 query GithubProjects($after: String) {
