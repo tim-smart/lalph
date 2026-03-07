@@ -249,22 +249,24 @@ export const GithubIssueSource = Layer.effect(
         Stream.filter((issue) => issue.state === "open"),
       )
 
-    const recentlyClosed = pipe(
-      github.stream((rest, page) =>
-        rest.issues.listForRepo({
-          owner: cli.owner,
-          repo: cli.repo,
-          state: "closed",
-          per_page: 100,
-          page,
-          since: DateTime.nowUnsafe().pipe(
-            DateTime.subtract({ days: 3 }),
-            DateTime.formatIso,
-          ),
-        }),
-      ),
-      Stream.filter((issue) => issue.state_reason !== "not_planned"),
-    )
+    const recentlyClosed = (labelFilter: Option.Option<string>) =>
+      pipe(
+        github.stream((rest, page) =>
+          rest.issues.listForRepo({
+            owner: cli.owner,
+            repo: cli.repo,
+            state: "closed",
+            per_page: 100,
+            page,
+            since: DateTime.nowUnsafe().pipe(
+              DateTime.subtract({ days: 3 }),
+              DateTime.formatIso,
+            ),
+            labels: Option.getOrUndefined(labelFilter),
+          }),
+        ),
+        Stream.filter((issue) => issue.state_reason !== "not_planned"),
+      )
 
     const presets = yield* getPresetsWithMetadata("github", PresetMetadata)
     const issuePresetMap = new Map<string, CliAgentPreset>()
@@ -375,11 +377,8 @@ export const GithubIssueSource = Layer.effect(
             labels: Option.getOrUndefined(options.labelFilter),
           }),
         ),
-        Stream.merge(recentlyClosed),
+        Stream.merge(recentlyClosed(options.labelFilter)),
         Stream.filter((issue) => issue.pull_request === undefined),
-        Stream.filter((issue) =>
-          matchesLabelFilter(issue.labels, options.labelFilter),
-        ),
       )
 
     const issues = (options: {
