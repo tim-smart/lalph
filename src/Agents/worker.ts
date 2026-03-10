@@ -1,4 +1,4 @@
-import { Duration, Effect, Path, pipe } from "effect"
+import { Duration, Effect, Path, pipe, Stream } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
@@ -10,6 +10,7 @@ export const agentWorker = Effect.fnUntraced(function* (options: {
   readonly preset: CliAgentPreset
   readonly system?: string
   readonly prompt: string
+  readonly steer?: Stream.Stream<string>
 }) {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
@@ -22,6 +23,7 @@ export const agentWorker = Effect.fnUntraced(function* (options: {
       system: options.system,
       prompt: options.prompt,
       stallTimeout: options.stallTimeout,
+      steer: options.steer,
     })
     return ExitCode(0)
   }

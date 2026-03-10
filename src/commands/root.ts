@@ -48,6 +48,7 @@ import type { TimeoutError } from "effect/Cause"
 import type { ChildProcessSpawner } from "effect/unstable/process"
 import { ClankaModels } from "../ClankaModels.ts"
 import type { AiError } from "effect/unstable/ai/AiError"
+import type { PrdIssue } from "../domain/PrdIssue.ts"
 
 // Main iteration run logic
 
@@ -217,10 +218,13 @@ const run = Effect.fnUntraced(
             gitFlow,
           })
 
+      const steer = yield* taskUpdateSteer({ issueId: taskId })
+
       const exitCode = yield* agentWorker({
         stallTimeout: options.stallTimeout,
         preset: taskPreset,
         prompt: instructions,
+        steer,
       }).pipe(catchStallInReview, Effect.withSpan("Main.agentWorker"))
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
@@ -513,5 +517,55 @@ const watchTaskState = Effect.fnUntraced(function* (options: {
       )
     }),
     Effect.withSpan("Main.watchTaskState"),
+  )
+})
+
+const taskUpdateSteer = Effect.fnUntraced(function* (options: {
+  readonly issueId: string
+}) {
+  const registry = yield* AtomRegistry.AtomRegistry
+  const projectId = yield* CurrentProjectId
+
+  return AtomRegistry.toStreamResult(
+    registry,
+    currentIssuesAtom(projectId),
+  ).pipe(
+    Stream.catchTag("IssueSourceError", () => Stream.empty),
+    Stream.map(
+      (issues) => issues.find((entry) => entry.id === options.issueId) ?? null,
+    ),
+    Stream.mapAccum(
+      () => null as Pick<PrdIssue, "title" | "description" | "state"> | null,
+      (previous, issue) => {
+        if (issue === null) {
+          return [previous, []] as const
+        }
+        const current = {
+          title: issue.title,
+          description: issue.description,
+          state: issue.state,
+        }
+        if (
+          previous !== null &&
+          (previous.title !== current.title ||
+            previous.description !== current.description ||
+            previous.state !== current.state)
+        ) {
+          return [
+            current,
+            [
+              `The task has been updated by the user. Here is the latest task state:
+
+Title: ${issue.title}
+State: ${issue.state}
+
+Description:
+${issue.description}`,
+            ],
+          ] as const
+        }
+        return [current, []] as const
+      },
+    ),
   )
 })

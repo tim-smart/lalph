@@ -18,6 +18,7 @@ export const runClanka = Effect.fnUntraced(
     readonly prompt: string
     readonly system?: string | undefined
     readonly stallTimeout?: Duration.Input | undefined
+    readonly steer?: Stream.Stream<string> | undefined
     readonly withChoose?: boolean | undefined
   }) {
     const models = yield* ClankaModels
@@ -32,6 +33,13 @@ export const runClanka = Effect.fnUntraced(
     let stream = options.stallTimeout
       ? withStallTimeout(options.stallTimeout)(agent.output)
       : agent.output
+
+    if (options.steer) {
+      yield* options.steer.pipe(
+        Stream.runForEach((message) => agent.steer(message)),
+        Effect.forkScoped,
+      )
+    }
 
     return yield* stream.pipe(
       OutputFormatter.pretty,
