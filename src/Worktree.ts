@@ -1,6 +1,5 @@
 import {
   Chunk,
-  DateTime,
   Duration,
   Effect,
   FileSystem,
@@ -15,7 +14,6 @@ import {
   Stream,
 } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
-import { RunnerStalled } from "./domain/Errors.ts"
 import type { AnyCliAgent } from "./domain/CliAgent.ts"
 import { constWorkerMaxOutputChunks, CurrentWorkerState } from "./Workers.ts"
 import { AtomRegistry } from "effect/unstable/reactivity"
@@ -23,6 +21,7 @@ import { CurrentProjectId } from "./Settings.ts"
 import { projectById } from "./Projects.ts"
 import { parseBranch } from "./shared/git.ts"
 import { resolveLalphDirectory } from "./shared/lalphDirectory.ts"
+import { withStallTimeout } from "./shared/stream.ts"
 
 export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
   make: Effect.gen(function* () {
@@ -255,23 +254,6 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
     Effect.fnUntraced(function* (command: ChildProcess.Command) {
       const registry = yield* AtomRegistry.AtomRegistry
       const worker = yield* CurrentWorkerState
-      let lastOutputAt = yield* DateTime.now
-
-      const stallTimeout = Effect.suspend(function loop(): Effect.Effect<
-        never,
-        RunnerStalled
-      > {
-        const now = DateTime.nowUnsafe()
-        const deadline = DateTime.addDuration(
-          lastOutputAt,
-          options.stallTimeout,
-        )
-        if (DateTime.isLessThan(deadline, now)) {
-          return Effect.fail(new RunnerStalled())
-        }
-        const timeUntilDeadline = DateTime.distance(deadline, now)
-        return Effect.flatMap(Effect.sleep(timeUntilDeadline), loop)
-      })
 
       const handle = yield* provide(command.asEffect())
 
@@ -280,8 +262,8 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
         options.cliAgent.outputTransformer
           ? options.cliAgent.outputTransformer
           : identity,
+        withStallTimeout(options.stallTimeout),
         Stream.runForEachArray((output) => {
-          lastOutputAt = DateTime.nowUnsafe()
           for (const chunk of output) {
             process.stdout.write(chunk)
           }
@@ -294,7 +276,6 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
           )
           return Effect.void
         }),
-        Effect.raceFirst(stallTimeout),
       )
       return yield* handle.exitCode
     }, Effect.scoped)

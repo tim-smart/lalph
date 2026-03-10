@@ -22,11 +22,11 @@ export class IssueSource extends ServiceMap.Service<
     readonly updateIssue: (options: {
       readonly projectId: ProjectId
       readonly issueId: string
-      readonly title?: string
-      readonly description?: string
-      readonly state?: PrdIssue["state"]
-      readonly blockedBy?: ReadonlyArray<string>
-      readonly autoMerge?: boolean
+      readonly title?: string | undefined
+      readonly description?: string | undefined
+      readonly state?: PrdIssue["state"] | undefined
+      readonly blockedBy?: ReadonlyArray<string> | undefined
+      readonly autoMerge?: boolean | undefined
     }) => Effect.Effect<void, IssueSourceError>
 
     readonly cancelIssue: (

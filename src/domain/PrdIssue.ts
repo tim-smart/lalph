@@ -7,6 +7,7 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
     .annotate({
       description:
         "The unique identifier of the issue. If null, it is considered a new issue.",
+      documentation: "The unique identifier of the issue.",
     })
     .pipe(withEncodeDefault(() => null)),
   title: Schema.String.annotate({
@@ -18,11 +19,15 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
   priority: Schema.Finite.annotate({
     description:
       "The priority of the issue. 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.",
+    documentation:
+      "The priority of the issue. 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.",
   }).pipe(withEncodeDefault(() => 3)),
   estimate: Schema.NullOr(Schema.Finite)
     .annotate({
       description:
         "The estimate of the issue in points. Null if no estimate is set. Roughly 1 point = 1 hour of work.",
+      documentation:
+        "Null if no estimate is set. Roughly 1 point = 1 hour of work.",
     })
     .pipe(withEncodeDefault(() => null)),
   state: Schema.Literals([
@@ -34,12 +39,14 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
   ])
     .annotate({
       description: "The state of the issue.",
+      documentation: "The state of the issue.",
     })
     .pipe(withEncodeDefault(() => "todo")),
   blockedBy: Schema.Array(Schema.String)
     .annotate({
       description:
         "An array of issue IDs that block this issue. These issues must be completed before this issue can be worked on.",
+      documentation: "An array of issue IDs that block this issue.",
     })
     .pipe(withEncodeDefault(() => [])),
   autoMerge: Schema.Boolean.annotate({

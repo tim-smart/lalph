@@ -5,6 +5,7 @@ import { Prompt } from "effect/unstable/cli"
 import { allCliAgents, type AnyCliAgent } from "./domain/CliAgent.ts"
 import { parseCommand } from "./shared/child-process.ts"
 import { IssueSource } from "./IssueSource.ts"
+import { ClankaModel, clankaModels } from "./ClankaModels.ts"
 
 export const allCliAgentPresets = new Setting(
   "cliAgentPresets",
@@ -119,12 +120,29 @@ export const addOrUpdatePreset = Effect.fnUntraced(function* (options?: {
     options?.existing?.commandPrefix,
   )
 
+  const clankaModel = yield* Prompt.select<ClankaModel | undefined>({
+    message: "clanka model?",
+    choices: [
+      {
+        title: "none",
+        value: undefined,
+        selected: options?.existing?.clankaModel === undefined,
+      },
+      ...(Object.keys(clankaModels) as Array<ClankaModel>).map((key) => ({
+        title: key,
+        value: key,
+        selected: options?.existing?.clankaModel === key,
+      })),
+    ],
+  })
+
   let preset = new CliAgentPreset({
     id,
     cliAgent,
     commandPrefix,
     extraArgs,
     sourceMetadata: {},
+    ...(clankaModel ? { clankaModel } : {}),
   })
 
   if (id !== CliAgentPreset.defaultId) {

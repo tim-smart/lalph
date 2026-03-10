@@ -61,7 +61,7 @@ export const GitFlowPR = Layer.succeed(
     setupInstructions: ({ githubPrNumber }) =>
       githubPrNumber
         ? `The Github PR #${githubPrNumber} has been detected for this task and the branch has been checked out.
-   - Review feedback in the .lalph/feedback.md file (same folder as the prd.yml file).`
+   - Review feedback in the .lalph/feedback.md file.`
         : `Create a new branch for the task using the format \`{task id}/description\`, using the current HEAD as the base (don't checkout any other branches first).`,
 
     commitInstructions: (

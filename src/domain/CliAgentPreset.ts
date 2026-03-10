@@ -1,6 +1,7 @@
 import { Array, Effect, identity, Option, Schema } from "effect"
 import { CliAgentFromId } from "./CliAgent.ts"
 import { ChildProcess } from "effect/unstable/process"
+import { ClankaModel } from "../ClankaModels.ts"
 
 export const CliAgentPresetId = Schema.NonEmptyString.pipe(
   Schema.brand("lalph/CliAgentPresetId"),
@@ -15,6 +16,7 @@ export class CliAgentPreset extends Schema.Class<CliAgentPreset>(
   commandPrefix: Schema.Array(Schema.String),
   extraArgs: Schema.Array(Schema.String),
   sourceMetadata: Schema.Record(Schema.String, Schema.Any),
+  clankaModel: Schema.optionalKey(ClankaModel),
 }) {
   static defaultId = CliAgentPresetId.makeUnsafe("default")
 

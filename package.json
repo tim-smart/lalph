@@ -27,22 +27,24 @@
   },
   "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48",
   "devDependencies": {
-    "@changesets/changelog-github": "^0.5.2",
-    "@changesets/cli": "^2.29.8",
-    "@effect/language-service": "^0.75.1",
-    "@effect/platform-node": "4.0.0-beta.28",
-    "@linear/sdk": "^75.0.0",
+    "@changesets/changelog-github": "^0.6.0",
+    "@changesets/cli": "^2.30.0",
+    "@effect/ai-openai": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@d440fd4",
+    "@effect/language-service": "^0.79.0",
+    "@effect/platform-node": "4.0.0-beta.29",
+    "@linear/sdk": "^76.0.0",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@octokit/types": "^16.0.0",
-    "@typescript/native-preview": "7.0.0-dev.20260219.1",
+    "@typescript/native-preview": "7.0.0-dev.20260308.1",
+    "clanka": "^0.0.7",
     "concurrently": "^9.2.1",
-    "effect": "4.0.0-beta.28",
+    "effect": "4.0.0-beta.29",
     "husky": "^9.1.7",
-    "lint-staged": "^16.2.7",
+    "lint-staged": "^16.3.2",
     "octokit": "^5.0.5",
-    "oxlint": "^1.49.0",
+    "oxlint": "^1.51.0",
     "prettier": "^3.8.1",
-    "tsdown": "^0.20.3",
+    "tsdown": "^0.21.1",
     "typescript": "^5.9.3",
     "yaml": "^2.8.2"
   },
@@ -53,6 +55,11 @@
     ],
     "*.{json,md,yml,yaml}": [
       "prettier --write"
+    ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@vscode/ripgrep"
     ]
   }
 }

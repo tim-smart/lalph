@@ -39,28 +39,7 @@ prd.yml file with a new id for the task.
 
 After adding a new task, you can setup dependencies using the \`blockedBy\` field
 
-#### Task creation guidelines
-
-**Important**: When creating tasks, make sure each task is independently shippable
-without failing validation checks (typechecks, linting, tests). If a task would only
-pass validations when combined with another, combine the work into one task.
-
-Each task should be an atomic, committable piece of work.
-Instead of creating tasks like "Refactor the authentication system", create
-smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.${
-        options?.specsDirectory
-          ? `
-
-If you need to add a research task, mention in the description that it needs to:
-- add a specification file in the \`${options.specsDirectory}\` directory with
-  an implementation plan based on the research findings.
-- once the specification file is added, turn the implementation plan into tasks
-  in the prd.yml file. Each task should reference the specification file in its
-  description, and be small, atomic and independently shippable without failing
-  validation checks (typechecks, linting, tests).
-- make sure the follow up tasks include a dependency on the research task.`
-          : ""
-      }
+${taskGuidelines(options)}
 
 ### Removing tasks
 
@@ -80,6 +59,43 @@ ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
 The following instructions should be done without interaction or asking for permission.
 
 - Decide which single task to work on next from the prd.yml file. This should
+  be the task YOU decide as the most important to work on next, not just the
+  first task in the list.
+  - Only start tasks that are in a "todo" state.
+  - You **cannot** start tasks unless they have an empty \`blockedBy\` field.${
+    options.gitFlow.requiresGithubPr
+      ? `
+- Check if there is an open Github PR for the chosen task. If there is, note the PR number for inclusion in the task.json file.
+   - Only include "open" PRs that are not yet merged.
+   - The pull request will contain the task id in the title or description.`
+      : ""
+  }
+- Once you have chosen a task, save its information in a "task.json" file alongside
+  the prd.yml file. Use the following format:
+
+\`\`\`json
+{
+  "id": "task id",
+  "githubPrNumber": null
+}
+\`\`\`${
+        options.gitFlow.requiresGithubPr
+          ? `
+
+Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.
+`
+          : "\n\nLeave `githubPrNumber` as null."
+      }
+`
+
+      const promptChooseClanka = (options: {
+        readonly gitFlow: GitFlow["Service"]
+      }) => `Your job is to choose the next task to work on from the current task list.
+**DO NOT** implement the task yet.
+
+The following instructions should be done without interaction or asking for permission.
+
+- Decide which single task to work on next from the task list. This should
   be the task YOU decide as the most important to work on next, not just the
   first task in the list.
   - Only start tasks that are in a "todo" state.
@@ -139,6 +155,36 @@ challenges faced.
 
 ${prdNotes(options)}`
 
+      const systemClanka = (options: {
+        readonly specsDirectory: string
+      }) => `## Important: Adding new tasks
+
+**If at any point** you discover something that needs fixing, or another task
+that needs doing, immediately add it as a new task.
+
+Read the "### Adding tasks" section below carefully for guidelines on creating tasks.
+
+## Important: Recording key information
+
+This session will time out after a certain period, so make sure to record
+key information that could speed up future work on the task in the description.
+Record the information **in the moment** as you discover it,
+do not wait until the end of the task. Things to record include:
+
+- Important discoveries about the codebase.
+- Any challenges faced and how you overcame them. For example:
+  - If it took multiple attempts to get something working, record what worked.
+  - If you found a library api was renamed or moved, record the new name.
+- Any other information that could help future work on similar tasks.
+
+## Handling blockers
+
+If for any reason you get stuck on a task, mark the task back as "todo" by updating its
+\`state\` and leaving some notes in the task's \`description\` field about the
+challenges faced.
+
+${taskGuidelines(options)}`
+
       const prompt = (options: {
         readonly task: PrdIssue
         readonly targetBranch: string | undefined
@@ -184,6 +230,49 @@ Your job is to implement the task described above.
 
 ${keyInformation(options)}`
 
+      const promptClanka = (options: {
+        readonly task: PrdIssue
+        readonly targetBranch: string | undefined
+        readonly specsDirectory: string
+        readonly githubPrNumber: number | undefined
+        readonly gitFlow: GitFlow["Service"]
+      }) => `# The task
+
+ID: ${options.task.id}
+Task: ${options.task.title}
+Description:
+
+${options.task.description}
+
+# Instructions
+
+Your job is to implement the task described above.
+
+1. Carefully study the current task list to understand the context of the task, and
+   discover any key learnings from previous work.
+   Also read the ${options.specsDirectory}/README.md file (if available), to see
+   if any previous specifications could assist you.
+2. ${options.gitFlow.setupInstructions(options)}
+3. Implement the task.
+   - If this task is a research task, **do not** make any code changes yet.
+   - If this task is a research task and you add follow-up tasks, include (at least) "${options.task.id}" in the new task's \`blockedBy\` field.
+   - **If at any point** you discover something that needs fixing, or another task
+     that needs doing, immediately add it as a new task unless you plan to fix it
+     as part of this task.
+   - Add important discoveries about the codebase, or challenges faced to the task's
+     \`description\`. More details below.
+4. Run any checks / feedback loops, such as type checks, unit tests, or linting.
+5. ${options.gitFlow.commitInstructions({
+        githubPrInstructions: sourceMeta.githubPrInstructions,
+        githubPrNumber: options.githubPrNumber,
+        taskId: options.task.id ?? "unknown",
+        targetBranch: options.targetBranch,
+      })}
+6. **After ${options.gitFlow.requiresGithubPr ? "pushing" : "committing"}**
+   your changes, update current task to reflect any changes in the task state.
+   - Rewrite the notes in the description to include only the key discoveries and information that could speed up future work on other tasks. Make sure to preserve important information such as specification file references.
+   - If you believe the task is complete, update the \`state\` to "in-review".`
+
       const promptReview = (options: {
         readonly prompt: string
         readonly gitFlow: GitFlow["Service"]
@@ -196,8 +285,7 @@ in your review, looking for any potential issues or improvements.
 Once you have completed your review, you should:
 
 - Make any code changes needed to fix issues you find.
-- Add follow-up tasks to the prd.yml file for any work that could not be done,
-  or for remaining issues that need addressing.
+- Add follow-up tasks for any work that could not be done, or for remaining issues that need addressing.
 
 ${options.gitFlow.reviewInstructions}
 
@@ -234,6 +322,25 @@ permission.
 5. If any specifications need updating based on your new understanding, update them.
 
 ${prdNotes(options)}`
+
+      const promptTimeoutClanka = (options: {
+        readonly taskId: string
+        readonly specsDirectory: string
+      }) => `Your earlier attempt to complete the task with id \`${options.taskId}\` took too
+long and has timed out.
+
+The following instructions should be done without interaction or asking for
+permission.
+
+1. Investigate why you think the task took too long. Research the codebase
+   further to understand what is needed to complete the task.
+2. Mark the original task as "done" by updating its \`state\`.
+3. Break down the task into smaller tasks and add them to the prd.yml file.
+   Read the "### Adding tasks" section below **extremely carefully** for guidelines on creating tasks.
+4. Setup task dependencies using the \`blockedBy\` field as needed. You will need
+   to wait 5 seconds after adding tasks to the prd.yml file to allow the system
+   to assign ids to the new tasks before you can setup dependencies.
+5. If any specifications need updating based on your new understanding, update them.`
 
       const planPrompt = (options: {
         readonly plan: string
@@ -321,12 +428,16 @@ ${prdNotes(options)}`
 
       return {
         promptChoose,
+        promptChooseClanka,
         prompt,
+        promptClanka,
         promptReview,
         promptReviewCustom,
         promptTimeout,
+        promptTimeoutClanka,
         planPrompt,
         promptPlanTasks,
+        systemClanka,
       } as const
     }),
   },
@@ -335,3 +446,28 @@ ${prdNotes(options)}`
     Layer.provide(CurrentIssueSource.layer),
   )
 }
+
+const taskGuidelines = (options?: {
+  readonly specsDirectory?: string | undefined
+}) => `#### Task creation guidelines
+
+**Important**: When creating tasks, make sure each task is independently shippable
+without failing validation checks (typechecks, linting, tests). If a task would only
+pass validations when combined with another, combine the work into one task.
+
+Each task should be an atomic, committable piece of work.
+Instead of creating tasks like "Refactor the authentication system", create
+smaller tasks like "Implement OAuth2 login endpoint", "Add JWT token refresh mechanism", etc.${
+  options?.specsDirectory
+    ? `
+
+If you need to add a research task, mention in the description that it needs to:
+- add a specification file in the \`${options.specsDirectory}\` directory with
+  an implementation plan based on the research findings.
+- once the specification file is added, turn the implementation plan into tasks
+  in the prd.yml file. Each task should reference the specification file in its
+  description, and be small, atomic and independently shippable without failing
+  validation checks (typechecks, linting, tests).
+- make sure the follow up tasks include a dependency on the research task.`
+    : ""
+}`
