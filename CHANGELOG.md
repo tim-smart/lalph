@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.45
+
+### Patch Changes
+
+- [`78b7967`](https://github.com/tim-smart/lalph/commit/78b79674e56ed72301f6cf308fb01c39a9564a64) Thanks [@tim-smart](https://github.com/tim-smart)! - move clanka running into agent helpers
+
 ## 0.3.44
 
 ### Patch Changes
