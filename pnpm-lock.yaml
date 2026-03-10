@@ -39,8 +39,8 @@ importers:
         specifier: 7.0.0-dev.20260310.1
         version: 7.0.0-dev.20260310.1
       clanka:
-        specifier: ^0.0.16
-        version: 0.0.16(@effect/ai-openai-compat@4.0.0-beta.30(effect@4.0.0-beta.30))(@effect/ai-openai@4.0.0-beta.30(effect@4.0.0-beta.30))(effect@4.0.0-beta.30)
+        specifier: ^0.0.17
+        version: 0.0.17(@effect/ai-openai-compat@4.0.0-beta.30(effect@4.0.0-beta.30))(@effect/ai-openai@4.0.0-beta.30(effect@4.0.0-beta.30))(effect@4.0.0-beta.30)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -755,8 +755,8 @@ packages:
   chardet@2.1.1:
     resolution: {integrity: sha512-PsezH1rqdV9VvyNhxxOW32/d75r01NY7TQCmOqomRo15ZSOKbpTFVsfjghxo6JloQUCGnH4k1LGu0R4yCLlWQQ==}
 
-  clanka@0.0.16:
-    resolution: {integrity: sha512-HvAwX1NrlRzapVaUiEjrWObxRnXxC3t/AMAtDkGpFAAHslpdkPC5TtTRZxk/oG/T5cLJ3bL5RZGBmhD2xDczRA==}
+  clanka@0.0.17:
+    resolution: {integrity: sha512-SJlGLbppubTQxJqhul7jfWbroOt6iNZXnvaceBcWE9tAb3HWZYTi44JMXMmrZUABZvNYq1bNRWumPfhI45tvew==}
     peerDependencies:
       '@effect/ai-openai': 4.0.0-beta.30
       '@effect/ai-openai-compat': 4.0.0-beta.30
@@ -2247,7 +2247,7 @@ snapshots:
 
   chardet@2.1.1: {}
 
-  clanka@0.0.16(@effect/ai-openai-compat@4.0.0-beta.30(effect@4.0.0-beta.30))(@effect/ai-openai@4.0.0-beta.30(effect@4.0.0-beta.30))(effect@4.0.0-beta.30):
+  clanka@0.0.17(@effect/ai-openai-compat@4.0.0-beta.30(effect@4.0.0-beta.30))(@effect/ai-openai@4.0.0-beta.30(effect@4.0.0-beta.30))(effect@4.0.0-beta.30):
     dependencies:
       '@effect/ai-openai': 4.0.0-beta.30(effect@4.0.0-beta.30)
       '@effect/ai-openai-compat': 4.0.0-beta.30(effect@4.0.0-beta.30)

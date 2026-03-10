@@ -1,9 +1,9 @@
 import {
   Deferred,
   Effect,
-  pipe,
+  MutableRef,
+  Option,
   Schema,
-  Semaphore,
   ServiceMap,
   Struct,
 } from "effect"
@@ -22,12 +22,16 @@ export class ChosenTaskDeferred extends ServiceMap.Reference(
   },
 ) {}
 
-export class UpdateTaskSemaphore extends ServiceMap.Reference(
-  "lalph/TaskTools/UpdateTaskSemaphore",
-  {
-    defaultValue: () => Semaphore.makeUnsafe(1),
-  },
-) {}
+export class CurrentTaskRef extends ServiceMap.Service<
+  CurrentTaskRef,
+  MutableRef.MutableRef<PrdIssue>
+>()("lalph/TaskTools/CurrentTaskRef") {
+  static update(f: (prev: PrdIssue) => PrdIssue) {
+    return Effect.serviceOption(CurrentTaskRef).pipe(
+      Effect.map(Option.map((ref) => MutableRef.updateAndGet(ref, f))),
+    )
+  }
+}
 
 const TaskList = Schema.Array(
   Schema.Struct({
@@ -159,16 +163,12 @@ export const TaskToolsHandlers = TaskToolsWithChoose.toLayer(
           Effect.annotateLogs({ taskId: options.taskId }),
         )
         const projectId = yield* CurrentProjectId
-        const semaphore = yield* UpdateTaskSemaphore
-        yield* pipe(
-          source.updateIssue({
-            projectId,
-            issueId: options.taskId,
-            ...options,
-          }),
-          Effect.andThen(Effect.sleep(50)),
-          semaphore.withPermit,
-        )
+        yield* CurrentTaskRef.update((prev) => prev.update(options))
+        yield* source.updateIssue({
+          projectId,
+          issueId: options.taskId,
+          ...options,
+        })
       }, Effect.orDie),
       removeTask: Effect.fn("TaskTools.removeTask")(function* (taskId) {
         yield* Effect.log(`Calling "removeTask"`).pipe(

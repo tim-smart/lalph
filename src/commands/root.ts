@@ -6,10 +6,12 @@ import {
   FiberSet,
   FileSystem,
   Iterable,
+  MutableRef,
   Option,
   Path,
   PlatformError,
   Result,
+  Schedule,
   Schema,
   Scope,
   Semaphore,
@@ -219,7 +221,15 @@ const run = Effect.fnUntraced(
             gitFlow,
           })
 
-      const steer = yield* taskUpdateSteer({ issueId: taskId })
+      const issueRef = MutableRef.make(
+        chosenTask.prd.update({
+          state: "in-progress",
+        }),
+      )
+      const steer = yield* taskUpdateSteer({
+        issueId: taskId,
+        current: issueRef,
+      })
 
       const exitCode = yield* agentWorker({
         stallTimeout: options.stallTimeout,
@@ -523,6 +533,7 @@ const watchTaskState = Effect.fnUntraced(function* (options: {
 
 const taskUpdateSteer = Effect.fnUntraced(function* (options: {
   readonly issueId: string
+  readonly current: MutableRef.MutableRef<PrdIssue>
 }) {
   const registry = yield* AtomRegistry.AtomRegistry
   const projectId = yield* CurrentProjectId
@@ -531,29 +542,21 @@ const taskUpdateSteer = Effect.fnUntraced(function* (options: {
     registry,
     currentIssuesAtom(projectId),
   ).pipe(
-    Stream.catchTag("IssueSourceError", () => Stream.empty),
+    Stream.drop(1),
+    Stream.retry(Schedule.forever),
+    Stream.orDie,
     Stream.filterMap((issues) => {
       const issue = issues.find((entry) => entry.id === options.issueId)
-      return issue ? Result.succeed(issue) : Result.failVoid
-    }),
-    Stream.mapAccum(Option.none<PrdIssue>, (previous, issue) => {
-      if (Option.isNone(previous)) {
-        return [Option.some(issue), []]
+      if (!issue) return Result.failVoid
+      if (!issue.isChangedComparedTo(options.current.current)) {
+        return Result.failVoid
       }
-      const prev = previous.value
-      if (prev.isChangedComparedTo(issue)) {
-        return [Option.some(issue), [issue]]
-      }
-      return [previous, []]
-    }),
-    Stream.map(
-      (
-        issue,
-      ) => `The task has been updated by the user. Here is the latest information:
+      MutableRef.set(options.current, issue)
+      return Result.succeed(`The task has been updated by the user. Here is the latest information:
 
 # ${issue.title}
 
-${issue.description}`,
-    ),
+${issue.description}`)
+    }),
   )
 })

@@ -105,4 +105,19 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
       autoMerge,
     })
   }
+
+  update(options: {
+    readonly title?: string | undefined
+    readonly description?: string | undefined
+    readonly state?: PrdIssue["state"] | undefined
+    readonly blockedBy?: ReadonlyArray<string> | undefined
+  }): PrdIssue {
+    return new PrdIssue({
+      ...this,
+      title: options.title ?? this.title,
+      description: options.description ?? this.description,
+      state: options.state ?? this.state,
+      blockedBy: options.blockedBy ?? this.blockedBy,
+    })
+  }
 }

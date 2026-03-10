@@ -1,9 +1,10 @@
-import { Duration, Effect, Path, pipe, Stream } from "effect"
+import { Duration, Effect, identity, Path, pipe, Stream } from "effect"
 import { ChildProcess } from "effect/unstable/process"
 import { Worktree } from "../Worktree.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 import { runClanka } from "../Clanka.ts"
 import { ExitCode } from "effect/unstable/process/ChildProcessSpawner"
+import { CurrentTaskRef } from "../TaskTools.ts"
 
 export const agentWorker = Effect.fnUntraced(function* (options: {
   readonly stallTimeout: Duration.Duration
@@ -11,6 +12,7 @@ export const agentWorker = Effect.fnUntraced(function* (options: {
   readonly system?: string
   readonly prompt: string
   readonly steer?: Stream.Stream<string>
+  readonly taskRef?: CurrentTaskRef["Service"]
 }) {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
@@ -24,7 +26,11 @@ export const agentWorker = Effect.fnUntraced(function* (options: {
       prompt: options.prompt,
       stallTimeout: options.stallTimeout,
       steer: options.steer,
-    })
+    }).pipe(
+      options.taskRef
+        ? Effect.provideService(CurrentTaskRef, options.taskRef)
+        : identity,
+    )
     return ExitCode(0)
   }
 
