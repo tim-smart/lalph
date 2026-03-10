@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.38
+
+### Patch Changes
+
+- [#320](https://github.com/tim-smart/lalph/pull/320) [`fd1feef`](https://github.com/tim-smart/lalph/commit/fd1feef4e6f44feae32a69f02980a2809913ec38) Thanks [@tim-smart](https://github.com/tim-smart)! - add poc clanka integration
+
 ## 0.3.37
 
 ### Patch Changes
