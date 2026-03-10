@@ -5,7 +5,6 @@ import {
   TaskToolsHandlers,
   TaskToolsWithChoose,
 } from "./TaskTools.ts"
-import { clankaSubagent } from "./ClankaModels.ts"
 import { withStallTimeout } from "./shared/stream.ts"
 import type { AiError } from "effect/unstable/ai"
 import type { RunnerStalled } from "./domain/Errors.ts"
@@ -24,7 +23,6 @@ export const runClanka = Effect.fnUntraced(
       tools: options.withChoose
         ? TaskToolsWithChoose
         : (TaskTools as unknown as typeof TaskToolsWithChoose),
-      subagentModel: clankaSubagent,
     })
     let stream = options.stallTimeout
       ? withStallTimeout(options.stallTimeout)(agent.output)

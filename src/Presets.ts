@@ -5,7 +5,7 @@ import { Prompt } from "effect/unstable/cli"
 import { allCliAgents, type AnyCliAgent } from "./domain/CliAgent.ts"
 import { parseCommand } from "./shared/child-process.ts"
 import { IssueSource } from "./IssueSource.ts"
-import { ClankaModel, clankaModels } from "./ClankaModels.ts"
+import { ClankaProvider } from "./ClankaModels.ts"
 
 export const allCliAgentPresets = new Setting(
   "cliAgentPresets",
@@ -119,22 +119,41 @@ export const addOrUpdatePreset = Effect.fnUntraced(function* (options?: {
   const commandPrefix = yield* promptForCommandPrefix(
     options?.existing?.commandPrefix,
   )
-
-  const clankaModel = yield* Prompt.select<ClankaModel | undefined>({
-    message: "clanka model?",
+  const existingClankaConfig = options?.existing?.clankaConfig
+  const clankaProvider = yield* Prompt.select<ClankaProvider | undefined>({
+    message: "AI provider?",
     choices: [
       {
         title: "none",
         value: undefined,
-        selected: options?.existing?.clankaModel === undefined,
+        selected: existingClankaConfig === undefined,
       },
-      ...(Object.keys(clankaModels) as Array<ClankaModel>).map((key) => ({
-        title: key,
-        value: key,
-        selected: options?.existing?.clankaModel === key,
-      })),
+      {
+        title: "codex",
+        value: "codex",
+        selected: existingClankaConfig?.provider === "codex",
+      },
+      {
+        title: "copilot",
+        value: "copilot",
+        selected: existingClankaConfig?.provider === "copilot",
+      },
     ],
   })
+
+  const clankaModel =
+    clankaProvider === undefined
+      ? undefined
+      : (yield* Prompt.text({
+          message: "AI model?",
+          default: existingClankaConfig?.model ?? "",
+          validate(input) {
+            const model = input.trim()
+            return model.length === 0
+              ? Effect.fail("AI model cannot be empty")
+              : Effect.succeed(model)
+          },
+        })).trim()
 
   let preset = new CliAgentPreset({
     id,
@@ -142,7 +161,7 @@ export const addOrUpdatePreset = Effect.fnUntraced(function* (options?: {
     commandPrefix,
     extraArgs,
     sourceMetadata: {},
-    ...(clankaModel ? { clankaModel } : {}),
+    ...(clankaProvider && clankaModel ? { clankaProvider, clankaModel } : {}),
   })
 
   if (id !== CliAgentPreset.defaultId) {

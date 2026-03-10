@@ -30,6 +30,7 @@
     "@changesets/changelog-github": "^0.6.0",
     "@changesets/cli": "^2.30.0",
     "@effect/ai-openai": "https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@d440fd4",
+    "@effect/ai-openai-compat": "4.0.0-beta.29",
     "@effect/language-service": "^0.79.0",
     "@effect/platform-node": "4.0.0-beta.29",
     "@linear/sdk": "^76.0.0",

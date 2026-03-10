@@ -1,53 +1,100 @@
+import { OpenAiLanguageModel } from "@effect/ai-openai"
+import { OpenAiLanguageModel as OpenAiCompatLanguageModel } from "@effect/ai-openai-compat"
 import { NodeHttpClient } from "@effect/platform-node"
-import { Codex } from "clanka"
-import { Layer, LayerMap, PlatformError, Schema } from "effect"
+import { Codex, GithubCopilot } from "clanka"
+import { Layer, Schema } from "effect"
+import { Model } from "effect/unstable/ai"
 import { layerKvs } from "./Kvs.ts"
-import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai"
 
-export const CodexLayer: Layer.Layer<
-  OpenAiClient.OpenAiClient,
-  PlatformError.PlatformError
-> = Codex.layer.pipe(
+export const ClankaProvider = Schema.Literals(["codex", "copilot"])
+export type ClankaProvider = typeof ClankaProvider.Type
+
+const codexLayer = Codex.layer.pipe(
   Layer.provide(NodeHttpClient.layerUndici),
   Layer.provide(layerKvs),
 )
 
-export const clankaModels = {
-  "gpt-5.4-xhigh": OpenAiLanguageModel.model("gpt-5.4", {
-    reasoning: {
-      effort: "xhigh",
-      summary: "auto",
-    },
-  }).pipe(Layer.provideMerge(CodexLayer)),
-  "gpt-5.4-high": OpenAiLanguageModel.model("gpt-5.4", {
-    reasoning: {
-      effort: "high",
-      summary: "auto",
-    },
-  }).pipe(Layer.provideMerge(CodexLayer)),
-  "gpt-5.4-medium": OpenAiLanguageModel.model("gpt-5.4", {
-    reasoning: {
-      effort: "high",
-      summary: "auto",
-    },
-  }).pipe(Layer.provideMerge(CodexLayer)),
-} as const
-
-export type ClankaModel = keyof typeof clankaModels
-export const ClankaModel = Schema.Literals(
-  Object.keys(clankaModels) as ClankaModel[],
+const copilotLayer = GithubCopilot.layer.pipe(
+  Layer.provide(NodeHttpClient.layerUndici),
+  Layer.provide(layerKvs),
 )
 
-export const clankaSubagent = OpenAiLanguageModel.model("gpt-5.4", {
-  reasoning: {
-    effort: "low",
-    summary: "auto",
+const legacyCodexModelAliases = {
+  "gpt-5.4-xhigh": {
+    model: "gpt-5.4",
+    config: {
+      reasoning: {
+        effort: "xhigh",
+        summary: "auto",
+      },
+    },
   },
-}).pipe(Layer.provideMerge(CodexLayer))
+  "gpt-5.4-high": {
+    model: "gpt-5.4",
+    config: {
+      reasoning: {
+        effort: "high",
+        summary: "auto",
+      },
+    },
+  },
+  "gpt-5.4-medium": {
+    model: "gpt-5.4",
+    config: {
+      reasoning: {
+        effort: "high",
+        summary: "auto",
+      },
+    },
+  },
+} as const
 
-export class ClankaModels extends LayerMap.Service<ClankaModels>()(
-  "lalph/ClankaModels",
-  {
-    layers: clankaModels,
-  },
-) {}
+type LegacyCodexModelAlias = keyof typeof legacyCodexModelAliases
+
+export const normalizeLegacyClankaConfig = (
+  model: string,
+):
+  | {
+      readonly provider: ClankaProvider
+      readonly model: string
+    }
+  | undefined => {
+  const legacy = legacyCodexModelAliases[model as LegacyCodexModelAlias]
+  if (!legacy) {
+    return undefined
+  }
+  return {
+    provider: "codex",
+    model: legacy.model,
+  }
+}
+
+const makeCodexModel = (model: string) => {
+  const legacy = legacyCodexModelAliases[model as LegacyCodexModelAlias]
+  const modelName = legacy?.model ?? model
+  return Model.make(
+    "codex",
+    modelName,
+    OpenAiLanguageModel.layer({
+      model: modelName,
+      ...(legacy ? { config: legacy.config } : {}),
+    }).pipe(Layer.provide(codexLayer), Layer.orDie),
+  )
+}
+
+const makeCopilotModel = (model: string) =>
+  Model.make(
+    "copilot",
+    model,
+    OpenAiCompatLanguageModel.layer({
+      model,
+    }).pipe(Layer.provide(copilotLayer), Layer.orDie),
+  )
+
+export const makeClankaModel = (options: {
+  readonly provider: ClankaProvider
+  readonly model: string
+}) =>
+  options.provider === "codex"
+    ? makeCodexModel(options.model)
+    : makeCopilotModel(options.model)

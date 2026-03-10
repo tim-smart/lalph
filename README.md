@@ -10,7 +10,7 @@ A LLM agent orchestrator driven by your chosen source of issues.
 
 - Pull work from an issue source (GitHub Issues, Linear, etc.) and keep task state in sync
 - Projects to group execution settings (enabled state, concurrency, target branch, git flow, review agent)
-- Agent presets to control which CLI agent and optional clanka model run tasks, with optional label-based routing
+- Agent presets to control which CLI agent and optional AI provider/model run tasks, with optional label-based routing
 - Plan mode to turn a high-level plan into a spec and generate PRD tasks
 - Git worktrees to support multiple concurrent iterations
 - Optional PR flow with auto-merge and support for issue dependencies
@@ -42,8 +42,8 @@ credentials.
 
 ## Agent presets
 
-Agent presets define which CLI agent runs tasks, the optional clanka model to
-use, and any extra arguments. Lalph always needs a default preset and will
+Agent presets define which CLI agent runs tasks, the optional AI provider and
+model to use, and any extra arguments. Lalph always needs a default preset and will
 prompt you to create one on first run if it's missing.
 
 Some issue sources support routing: you can associate a preset with a label, and
@@ -54,7 +54,7 @@ lalph agents ls
 lalph agents add
 ```
 
-`lalph agents ls` shows each preset's CLI agent, clanka model selection,
+`lalph agents ls` shows each preset's CLI agent, AI provider/model selection,
 extra args, command prefix, and any issue-source routing metadata.
 
 ## Projects

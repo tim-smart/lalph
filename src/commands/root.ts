@@ -45,7 +45,7 @@ import { getAllProjects, welcomeWizard } from "../Projects.ts"
 import type { Project } from "../domain/Project.ts"
 import { getDefaultCliAgentPreset } from "../Presets.ts"
 import { ChosenTaskDeferred } from "../TaskTools.ts"
-import { ClankaModels, type ClankaModel } from "../ClankaModels.ts"
+import { makeClankaModel, type ClankaProvider } from "../ClankaModels.ts"
 import { runClanka } from "../Clanka.ts"
 import type { QuitError } from "effect/Terminal"
 import type { TimeoutError } from "effect/Cause"
@@ -282,7 +282,10 @@ const runWithClanka = Effect.fnUntraced(
     readonly stallTimeout: Duration.Duration
     readonly runTimeout: Duration.Duration
     readonly review: boolean
-    readonly clankaModel: ClankaModel
+    readonly clankaConfig: {
+      readonly provider: ClankaProvider
+      readonly model: string
+    }
   }): Effect.fn.Return<
     void,
     | PlatformError.PlatformError
@@ -304,7 +307,6 @@ const runWithClanka = Effect.fnUntraced(
     | GitFlow
     | CurrentWorkerState
     | PromptGen
-    | ClankaModels
     | Scope.Scope
     | Prd
   > {
@@ -318,8 +320,7 @@ const runWithClanka = Effect.fnUntraced(
     const currentWorker = yield* CurrentWorkerState
     const registry = yield* AtomRegistry.AtomRegistry
     const promptGen = yield* PromptGen
-    const models = yield* ClankaModels
-    const model = models.get(options.clankaModel)
+    const model = makeClankaModel(options.clankaConfig)
 
     // ensure cleanup of branch after run
     yield* Effect.addFinalizer(
@@ -527,7 +528,12 @@ const runProject = Effect.fnUntraced(
     readonly specsDirectory: string
     readonly stallTimeout: Duration.Duration
     readonly runTimeout: Duration.Duration
-    readonly clankaModel: ClankaModel | undefined
+    readonly clankaConfig:
+      | {
+          readonly provider: ClankaProvider
+          readonly model: string
+        }
+      | undefined
   }) {
     const isFinite = Number.isFinite(options.iterations)
     const iterationsDisplay = isFinite ? options.iterations : "unlimited"
@@ -559,7 +565,7 @@ const runProject = Effect.fnUntraced(
       yield* checkForWork.pipe(
         Effect.andThen(
           identity<RunEffect>(
-            options.clankaModel
+            options.clankaConfig
               ? runWithClanka({
                   startedDeferred,
                   targetBranch: options.project.targetBranch,
@@ -567,7 +573,7 @@ const runProject = Effect.fnUntraced(
                   stallTimeout: options.stallTimeout,
                   runTimeout: options.runTimeout,
                   review: options.project.reviewAgent,
-                  clankaModel: options.clankaModel,
+                  clankaConfig: options.clankaConfig,
                 })
               : run({
                   startedDeferred,
@@ -715,14 +721,13 @@ export const commandRoot = Command.make("lalph", {
               specsDirectory,
               stallTimeout: Duration.minutes(stallMinutes),
               runTimeout: Duration.minutes(maxIterationMinutes),
-              clankaModel: preset.clankaModel,
+              clankaConfig: preset.clankaConfig,
             }).pipe(Effect.provideService(CurrentProjectId, project.id)),
           { concurrency: "unbounded", discard: true },
         )
       },
       Effect.scoped,
       Effect.provide([
-        ClankaModels.layer,
         PromptGen.layer,
         GithubCli.layer,
         Settings.layer,

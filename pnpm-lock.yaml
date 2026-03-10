@@ -17,6 +17,9 @@ importers:
       '@effect/ai-openai':
         specifier: https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@d440fd4
         version: https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@d440fd4(effect@4.0.0-beta.29)
+      '@effect/ai-openai-compat':
+        specifier: 4.0.0-beta.29
+        version: 4.0.0-beta.29(effect@4.0.0-beta.29)
       '@effect/language-service':
         specifier: ^0.79.0
         version: 0.79.0
@@ -163,7 +166,7 @@ packages:
       effect: ^4.0.0-beta.29
 
   '@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@d440fd4':
-    resolution: {tarball: https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@d440fd4}
+    resolution: {integrity: sha512-nLC5vmMxQ3SrWI9bWKQ+3IsE/28LUE1GfqJVQ1iwHdK6f8ma2Flg3iO2B8i6IVJVyJrr7HtSft29A889VoNVDg==, tarball: https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@d440fd4}
     version: 4.0.0-beta.29
     peerDependencies:
       effect: ^4.0.0-beta.29
