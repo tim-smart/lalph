@@ -57,7 +57,18 @@ export class Editor extends ServiceMap.Service<Editor>()("lalph/Editor", {
       Effect.option,
     )
 
-    return { edit, editTemp } as const
+    const saveTemp = Effect.fnUntraced(function* (
+      content: string,
+      options: { suffix?: string },
+    ) {
+      const file = yield* fs.makeTempFile({
+        suffix: options.suffix ?? ".txt",
+      })
+      yield* fs.writeFileString(file, content)
+      return file
+    })
+
+    return { edit, editTemp, saveTemp } as const
   }),
 }) {
   static layer = Layer.effect(this, this.make).pipe(

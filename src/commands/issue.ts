@@ -1,6 +1,6 @@
 import { Command } from "effect/unstable/cli"
 import { CurrentIssueSource } from "../CurrentIssueSource.ts"
-import { Effect, flow, Option, Schema } from "effect"
+import { Effect, Exit, flow, Option, pipe, Schema } from "effect"
 import { IssueSource } from "../IssueSource.ts"
 import { PrdIssue } from "../domain/PrdIssue.ts"
 import * as Yaml from "yaml"
@@ -40,8 +40,18 @@ const handler = flow(
       if (Option.isNone(content)) {
         return
       }
+      const contentValue = content.value.trim()
 
-      const lines = content.value.split("\n")
+      yield* Effect.addFinalizer((exit) => {
+        if (Exit.isSuccess(exit)) return Effect.void
+        return pipe(
+          editor.saveTemp(contentValue, { suffix: ".md" }),
+          Effect.flatMap((file) => Effect.log(`Saved your issue to: ${file}`)),
+          Effect.ignore,
+        )
+      })
+
+      const lines = contentValue.split("\n")
       const yamlLines: string[] = []
       let descriptionStartIndex = 0
       for (let i = 0; i < lines.length; i++) {
@@ -81,7 +91,7 @@ const handler = flow(
         console.log(`Created issue with ID: ${created.id}`)
         console.log(`URL: ${created.url}`)
       }).pipe(Effect.provide([layerProjectIdPrompt, CurrentIssueSource.layer]))
-    }),
+    }, Effect.scoped),
   ),
   Command.provide(Editor.layer),
 )

@@ -1,4 +1,13 @@
-import { Data, Effect, FileSystem, Option, Path, pipe, Schema } from "effect"
+import {
+  Data,
+  Effect,
+  Exit,
+  FileSystem,
+  Option,
+  Path,
+  pipe,
+  Schema,
+} from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { Worktree } from "../Worktree.ts"
@@ -48,41 +57,54 @@ export const commandPlan = Command.make("plan", {
     "Draft a plan in your editor (or use --file); then generate a specification under --specs and create PRD tasks from it. Use --new to create a project first, and --dangerous to skip permission prompts during spec generation.",
   ),
   Command.withHandler(
-    Effect.fnUntraced(function* ({ dangerous, withNewProject, file }) {
-      const editor = yield* Editor
-      const fs = yield* FileSystem.FileSystem
+    Effect.fnUntraced(
+      function* ({ dangerous, withNewProject, file }) {
+        const editor = yield* Editor
+        const fs = yield* FileSystem.FileSystem
 
-      const thePlan = yield* Effect.matchEffect(file.asEffect(), {
-        onFailure: () => editor.editTemp({ suffix: ".md" }),
-        onSuccess: (path) => fs.readFileString(path).pipe(Effect.asSome),
-      })
+        const thePlan = yield* Effect.matchEffect(file.asEffect(), {
+          onFailure: () => editor.editTemp({ suffix: ".md" }),
+          onSuccess: (path) => fs.readFileString(path).pipe(Effect.asSome),
+        })
 
-      if (Option.isNone(thePlan)) return
+        if (Option.isNone(thePlan)) return
 
-      // We nest this effect, so we can launch the editor first as fast as
-      // possible
-      yield* Effect.gen(function* () {
-        const project = withNewProject
-          ? yield* addOrUpdateProject()
-          : yield* selectProject
-        const { specsDirectory } = yield* commandRoot
-        const preset = yield* selectCliAgentPreset
+        yield* Effect.addFinalizer((exit) => {
+          if (Exit.isSuccess(exit)) return Effect.void
+          return pipe(
+            editor.saveTemp(thePlan.value, { suffix: ".md" }),
+            Effect.flatMap((file) => Effect.log(`Saved your plan to: ${file}`)),
+            Effect.ignore,
+          )
+        })
 
-        yield* plan({
-          plan: thePlan.value,
-          specsDirectory,
-          targetBranch: project.targetBranch,
-          dangerous,
-          preset,
-        }).pipe(Effect.provideService(CurrentProjectId, project.id))
-      }).pipe(
-        Effect.provide([
-          Settings.layer,
-          CurrentIssueSource.layer,
-          ClankaModels.layer,
-        ]),
-      )
-    }, Effect.provide(Editor.layer)),
+        // We nest this effect, so we can launch the editor first as fast as
+        // possible
+        yield* Effect.gen(function* () {
+          const project = withNewProject
+            ? yield* addOrUpdateProject()
+            : yield* selectProject
+          const { specsDirectory } = yield* commandRoot
+          const preset = yield* selectCliAgentPreset
+
+          yield* plan({
+            plan: thePlan.value,
+            specsDirectory,
+            targetBranch: project.targetBranch,
+            dangerous,
+            preset,
+          }).pipe(Effect.provideService(CurrentProjectId, project.id))
+        }).pipe(
+          Effect.provide([
+            Settings.layer,
+            CurrentIssueSource.layer,
+            ClankaModels.layer,
+          ]),
+        )
+      },
+      Effect.scoped,
+      Effect.provide(Editor.layer),
+    ),
   ),
   Command.withSubcommands([commandPlanTasks]),
 )
