@@ -59,6 +59,8 @@ export const commandPlan = Command.make("plan", {
 
       if (Option.isNone(thePlan)) return
 
+      const draft = thePlan.value
+
       // We nest this effect, so we can launch the editor first as fast as
       // possible
       yield* Effect.gen(function* () {
@@ -69,7 +71,7 @@ export const commandPlan = Command.make("plan", {
         const preset = yield* selectCliAgentPreset
 
         yield* plan({
-          plan: thePlan.value,
+          plan: draft,
           specsDirectory,
           targetBranch: project.targetBranch,
           dangerous,
@@ -81,6 +83,17 @@ export const commandPlan = Command.make("plan", {
           CurrentIssueSource.layer,
           ClankaModels.layer,
         ]),
+        Effect.tapCause(() =>
+          Effect.gen(function* () {
+            const file = yield* editor.saveTempFile({
+              suffix: ".md",
+              content: draft,
+            })
+            console.log(
+              `Failed to save plan edit. Draft saved to temporary file: ${file}`,
+            )
+          }),
+        ),
       )
     }, Effect.provide(Editor.layer)),
   ),

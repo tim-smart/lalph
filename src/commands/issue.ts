@@ -41,46 +41,62 @@ const handler = flow(
         return
       }
 
-      const lines = content.value.split("\n")
-      const yamlLines: string[] = []
-      let descriptionStartIndex = 0
-      for (let i = 0; i < lines.length; i++) {
-        const line = lines[i]!
-        if (line.trim() === "---") {
-          if (yamlLines.length === 0) {
-            // starting delimiter
-            continue
-          } else {
-            // ending delimiter
-            descriptionStartIndex = i + 1
-            break
-          }
-        }
-        yamlLines.push(line)
-      }
-      const yamlContent = yamlLines.join("\n")
-      const frontMatter = yield* Schema.decodeEffect(FrontMatterSchema)(
-        Yaml.parse(yamlContent),
-      )
-      const description = lines.slice(descriptionStartIndex).join("\n").trim()
-
-      if (frontMatter.title.trim() === "Issue Title") return
+      const draft = content.value
 
       yield* Effect.gen(function* () {
-        const source = yield* IssueSource
-        const projectId = yield* CurrentProjectId
-        const created = yield* source.createIssue(
-          projectId,
-          new PrdIssue({
-            id: null,
-            ...frontMatter,
-            description,
-            state: "todo",
-          }),
+        const lines = draft.split("\n")
+        const yamlLines: string[] = []
+        let descriptionStartIndex = 0
+        for (let i = 0; i < lines.length; i++) {
+          const line = lines[i]!
+          if (line.trim() === "---") {
+            if (yamlLines.length === 0) {
+              continue
+            } else {
+              descriptionStartIndex = i + 1
+              break
+            }
+          }
+          yamlLines.push(line)
+        }
+        const yamlContent = yamlLines.join("\n")
+        const frontMatter = yield* Schema.decodeEffect(FrontMatterSchema)(
+          Yaml.parse(yamlContent),
         )
-        console.log(`Created issue with ID: ${created.id}`)
-        console.log(`URL: ${created.url}`)
-      }).pipe(Effect.provide([layerProjectIdPrompt, CurrentIssueSource.layer]))
+        const description = lines.slice(descriptionStartIndex).join("\n").trim()
+
+        if (frontMatter.title.trim() === "Issue Title") return
+
+        yield* Effect.gen(function* () {
+          const source = yield* IssueSource
+          const projectId = yield* CurrentProjectId
+          const created = yield* source.createIssue(
+            projectId,
+            new PrdIssue({
+              id: null,
+              ...frontMatter,
+              description,
+              state: "todo",
+            }),
+          )
+          console.log(`Created issue with ID: ${created.id}`)
+          console.log(`URL: ${created.url}`)
+        }).pipe(
+          Effect.provide([layerProjectIdPrompt, CurrentIssueSource.layer]),
+        )
+      }).pipe(
+        Effect.tapCause(() =>
+          Effect.gen(function* () {
+            const file = yield* editor.saveTempFile({
+              suffix: ".md",
+              content: draft,
+            })
+            console.log(
+              `Failed to save issue edit. Draft saved to temporary file: ${file}`,
+            )
+          }),
+        ),
+      )
     }),
   ),
   Command.provide(Editor.layer),
