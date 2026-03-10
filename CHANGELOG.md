@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.42
+
+### Patch Changes
+
+- [#326](https://github.com/tim-smart/lalph/pull/326) [`d78521a`](https://github.com/tim-smart/lalph/commit/d78521a4c6dcbffd951bc160088a815eefe0f2d7) Thanks [@tim-smart](https://github.com/tim-smart)! - Update `clanka` to the latest published version.
+
 ## 0.3.41
 
 ### Patch Changes
