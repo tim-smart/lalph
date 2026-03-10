@@ -9,6 +9,7 @@ import {
   Option,
   Path,
   PlatformError,
+  Result,
   Schema,
   Scope,
   Semaphore,
@@ -531,41 +532,28 @@ const taskUpdateSteer = Effect.fnUntraced(function* (options: {
     currentIssuesAtom(projectId),
   ).pipe(
     Stream.catchTag("IssueSourceError", () => Stream.empty),
+    Stream.filterMap((issues) => {
+      const issue = issues.find((entry) => entry.id === options.issueId)
+      return issue ? Result.succeed(issue) : Result.failVoid
+    }),
+    Stream.mapAccum(Option.none<PrdIssue>, (previous, issue) => {
+      if (Option.isNone(previous)) {
+        return [Option.some(issue), []]
+      }
+      const prev = previous.value
+      if (prev.isChangedComparedTo(issue)) {
+        return [Option.some(issue), [issue]]
+      }
+      return [previous, []]
+    }),
     Stream.map(
-      (issues) => issues.find((entry) => entry.id === options.issueId) ?? null,
-    ),
-    Stream.mapAccum(
-      () => null as Pick<PrdIssue, "title" | "description" | "state"> | null,
-      (previous, issue) => {
-        if (issue === null) {
-          return [previous, []] as const
-        }
-        const current = {
-          title: issue.title,
-          description: issue.description,
-          state: issue.state,
-        }
-        if (
-          previous !== null &&
-          (previous.title !== current.title ||
-            previous.description !== current.description ||
-            previous.state !== current.state)
-        ) {
-          return [
-            current,
-            [
-              `The task has been updated by the user. Here is the latest task state:
+      (
+        issue,
+      ) => `The task has been updated by the user. Here is the latest information:
 
-Title: ${issue.title}
-State: ${issue.state}
+# ${issue.title}
 
-Description:
 ${issue.description}`,
-            ],
-          ] as const
-        }
-        return [current, []] as const
-      },
     ),
   )
 })

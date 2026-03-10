@@ -1,9 +1,10 @@
 import { Agent, OutputFormatter } from "clanka"
-import { Duration, Effect, Stream } from "effect"
+import { Duration, Effect, Semaphore, Stream } from "effect"
 import {
   TaskTools,
   TaskToolsHandlers,
   TaskToolsWithChoose,
+  UpdateTaskSemaphore,
 } from "./TaskTools.ts"
 import { ClankaModels, clankaSubagent } from "./ClankaModels.ts"
 import { withStallTimeout } from "./shared/stream.ts"
@@ -22,13 +23,17 @@ export const runClanka = Effect.fnUntraced(
     readonly withChoose?: boolean | undefined
   }) {
     const models = yield* ClankaModels
+    const steerSemaphore = Semaphore.makeUnsafe(1)
     const agent = yield* Agent.make({
       ...options,
       tools: options.withChoose
         ? TaskToolsWithChoose
         : (TaskTools as unknown as typeof TaskToolsWithChoose),
       subagentModel: clankaSubagent(models, options.model),
-    }).pipe(Effect.provide(models.get(options.model)))
+    }).pipe(
+      Effect.provideService(UpdateTaskSemaphore, steerSemaphore),
+      Effect.provide(models.get(options.model)),
+    )
 
     let stream = options.stallTimeout
       ? withStallTimeout(options.stallTimeout)(agent.output)
@@ -36,7 +41,12 @@ export const runClanka = Effect.fnUntraced(
 
     if (options.steer) {
       yield* options.steer.pipe(
-        Stream.runForEach((message) => agent.steer(message)),
+        Stream.runForEach(
+          Effect.fnUntraced(function* (message) {
+            yield* Effect.log(`Received steer message: ${message}`)
+            yield* agent.steer(message)
+          }, steerSemaphore.withPermitsIfAvailable(1)),
+        ),
         Effect.forkScoped,
       )
     }
