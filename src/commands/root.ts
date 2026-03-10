@@ -51,11 +51,199 @@ import type { QuitError } from "effect/Terminal"
 import type { TimeoutError } from "effect/Cause"
 import type { ChildProcessSpawner } from "effect/unstable/process"
 import type { AiError } from "effect/unstable/ai"
+import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
+import type { PrdIssue } from "../domain/PrdIssue.ts"
+
+const runChosenTask = Effect.fnUntraced(function* (options: {
+  readonly taskId: string
+  readonly task: PrdIssue
+  readonly githubPrNumber: number | undefined
+  readonly targetBranch: Option.Option<string>
+  readonly specsDirectory: string
+  readonly stallTimeout: Duration.Duration
+  readonly runTimeout: Duration.Duration
+  readonly review: boolean
+  readonly revertIssueOnSuccess: boolean
+  readonly taskPreset: CliAgentPreset
+  readonly getTask: (
+    taskId: string,
+  ) => Effect.Effect<
+    PrdIssue | null,
+    PlatformError.PlatformError | IssueSourceError
+  >
+}) {
+  const worktree = yield* Worktree
+  const gitFlow = yield* GitFlow
+  const currentWorker = yield* CurrentWorkerState
+  const registry = yield* AtomRegistry.AtomRegistry
+  const promptGen = yield* PromptGen
+  const prd = yield* Prd
+  const models = yield* ClankaModels
+
+  yield* prd.setChosenIssueId(options.taskId)
+  yield* prd.setAutoMerge(options.task.autoMerge)
+
+  const catchStallInReview = <A, E, R>(
+    effect: Effect.Effect<A, E | RunnerStalled, R>,
+  ) =>
+    Effect.catchIf(
+      effect,
+      (u): u is RunnerStalled => u instanceof RunnerStalled,
+      Effect.fnUntraced(function* (e) {
+        const task = yield* options.getTask(options.taskId)
+        const inReview = task?.state === "in-review"
+        if (inReview) return
+        return yield* e
+      }),
+    )
+
+  const clankaModel = options.taskPreset.clankaModel
+    ? models.get(options.taskPreset.clankaModel)
+    : undefined
+
+  const timeoutEffect = identity<
+    Effect.Effect<
+      void,
+      | AiError.AiError
+      | PlatformError.PlatformError
+      | RunnerStalled
+      | IssueSourceError,
+      | AtomRegistry.AtomRegistry
+      | CurrentWorkerState
+      | Path.Path
+      | PromptGen
+      | Worktree
+      | ChildProcessSpawner.ChildProcessSpawner
+      | CurrentProjectId
+      | FileSystem.FileSystem
+      | IssueSource
+    >
+  >(
+    clankaModel
+      ? runClanka({
+          directory: worktree.directory,
+          system: promptGen.systemClanka(options),
+          prompt: promptGen.promptTimeoutClanka({
+            taskId: options.taskId,
+            specsDirectory: options.specsDirectory,
+          }),
+          stallTimeout: options.stallTimeout,
+        }).pipe(Effect.provide(clankaModel), Effect.withSpan("Main.timeout"))
+      : agentTimeout({
+          specsDirectory: options.specsDirectory,
+          stallTimeout: options.stallTimeout,
+          preset: options.taskPreset,
+          task: options.task,
+        }).pipe(Effect.asVoid),
+  )
+
+  const cancelled = yield* Effect.gen(function* () {
+    registry.update(currentWorker.state, (s) =>
+      s.transitionTo(WorkerStatus.Working({ issueId: options.taskId })),
+    )
+
+    if (clankaModel) {
+      const instructions = promptGen.promptClanka({
+        specsDirectory: options.specsDirectory,
+        targetBranch: Option.getOrUndefined(options.targetBranch),
+        task: options.task,
+        githubPrNumber: options.githubPrNumber,
+        gitFlow,
+      })
+
+      yield* runClanka({
+        directory: worktree.directory,
+        system: promptGen.systemClanka(options),
+        prompt: instructions,
+        stallTimeout: options.stallTimeout,
+      }).pipe(Effect.provide(clankaModel), Effect.withSpan("Main.worker"))
+
+      if (options.review) {
+        registry.update(currentWorker.state, (s) =>
+          s.transitionTo(WorkerStatus.Reviewing({ issueId: options.taskId })),
+        )
+
+        yield* runClanka({
+          directory: worktree.directory,
+          system: promptGen.systemClanka(options),
+          prompt: promptGen.promptReview({
+            prompt: instructions,
+            gitFlow,
+          }),
+        }).pipe(
+          Effect.provide(clankaModel),
+          catchStallInReview,
+          Effect.withSpan("Main.review"),
+        )
+      }
+
+      return
+    }
+
+    const instructions = promptGen.prompt({
+      specsDirectory: options.specsDirectory,
+      targetBranch: Option.getOrUndefined(options.targetBranch),
+      task: options.task,
+      githubPrNumber: options.githubPrNumber,
+      gitFlow,
+    })
+
+    const exitCode = yield* agentWorker({
+      stallTimeout: options.stallTimeout,
+      preset: options.taskPreset,
+      prompt: instructions,
+    }).pipe(catchStallInReview, Effect.withSpan("Main.agentWorker"))
+    yield* Effect.log(`Agent exited with code: ${exitCode}`)
+
+    if (options.review) {
+      registry.update(currentWorker.state, (s) =>
+        s.transitionTo(WorkerStatus.Reviewing({ issueId: options.taskId })),
+      )
+
+      yield* agentReviewer({
+        specsDirectory: options.specsDirectory,
+        stallTimeout: options.stallTimeout,
+        preset: options.taskPreset,
+        instructions,
+      }).pipe(catchStallInReview, Effect.withSpan("Main.agentReviewer"))
+    }
+  }).pipe(
+    Effect.timeout(options.runTimeout),
+    Effect.tapErrorTag("TimeoutError", () => timeoutEffect),
+    Effect.raceFirst(watchTaskState({ issueId: options.taskId })),
+    Effect.as(false),
+    Effect.catchTag("TaskStateChanged", (error) =>
+      Effect.log(
+        `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
+      ).pipe(Effect.as(true)),
+    ),
+  )
+
+  if (cancelled) return
+
+  yield* gitFlow.postWork({
+    worktree,
+    targetBranch: Option.getOrUndefined(options.targetBranch),
+    issueId: options.taskId,
+  })
+
+  const task = yield* options.getTask(options.taskId)
+  if (task?.autoMerge) {
+    yield* gitFlow.autoMerge({
+      targetBranch: Option.getOrUndefined(options.targetBranch),
+      issueId: options.taskId,
+      worktree,
+    })
+  } else if (options.revertIssueOnSuccess) {
+    yield* prd.maybeRevertIssue({ issueId: options.taskId })
+  }
+})
 
 // Main iteration run logic
 
 const run = Effect.fnUntraced(
   function* (options: {
+    readonly defaultPreset: CliAgentPreset
     readonly startedDeferred: Deferred.Deferred<void>
     readonly targetBranch: Option.Option<string>
     readonly specsDirectory: string
@@ -71,7 +259,8 @@ const run = Effect.fnUntraced(
     | GitFlowError
     | ChosenTaskNotFound
     | RunnerStalled
-    | TimeoutError,
+    | TimeoutError
+    | AiError.AiError,
     | CurrentProjectId
     | ChildProcessSpawner.ChildProcessSpawner
     | Settings
@@ -85,6 +274,7 @@ const run = Effect.fnUntraced(
     | PromptGen
     | Prd
     | Worktree
+    | ClankaModels
     | Scope.Scope
   > {
     const projectId = yield* CurrentProjectId
@@ -97,8 +287,6 @@ const run = Effect.fnUntraced(
     const gitFlow = yield* GitFlow
     const currentWorker = yield* CurrentWorkerState
     const registry = yield* AtomRegistry.AtomRegistry
-
-    const preset = yield* getDefaultCliAgentPreset
 
     // ensure cleanup of branch after run
     yield* Effect.addFinalizer(
@@ -143,7 +331,7 @@ const run = Effect.fnUntraced(
 
     const chosenTask = yield* agentChooser({
       stallTimeout: options.stallTimeout,
-      preset,
+      preset: options.defaultPreset,
     }).pipe(Effect.withSpan("Main.agentChooser"))
 
     taskId = chosenTask.id
@@ -152,8 +340,6 @@ const run = Effect.fnUntraced(
       issueId: taskId,
       state: "in-progress",
     })
-    yield* prd.setChosenIssueId(taskId)
-    yield* prd.setAutoMerge(chosenTask.prd.autoMerge)
 
     yield* source.ensureInProgress(projectId, taskId).pipe(
       Effect.timeoutOrElse({
@@ -175,100 +361,22 @@ const run = Effect.fnUntraced(
 
     const taskPreset = Option.getOrElse(
       yield* source.issueCliAgentPreset(chosenTask.prd),
-      () => preset,
+      () => options.defaultPreset,
     )
 
-    const catchStallInReview = <A, E, R>(
-      effect: Effect.Effect<A, E | RunnerStalled, R>,
-    ) =>
-      Effect.catchIf(
-        effect,
-        (u): u is RunnerStalled => u instanceof RunnerStalled,
-        Effect.fnUntraced(function* (e) {
-          const task = yield* prd.findById(taskId!)
-          const inReview = task?.state === "in-review"
-          if (inReview) return
-          return yield* e
-        }),
-      )
-
-    const cancelled = yield* Effect.gen(function* () {
-      //
-      // 2. Work on task
-      // -----------------------
-
-      registry.update(currentWorker.state, (s) =>
-        s.transitionTo(WorkerStatus.Working({ issueId: taskId })),
-      )
-
-      const promptGen = yield* PromptGen
-      const instructions = promptGen.prompt({
-        specsDirectory: options.specsDirectory,
-        targetBranch: Option.getOrUndefined(options.targetBranch),
-        task: chosenTask.prd,
-        githubPrNumber: chosenTask.githubPrNumber ?? undefined,
-        gitFlow,
-      })
-
-      const exitCode = yield* agentWorker({
-        stallTimeout: options.stallTimeout,
-        preset: taskPreset,
-        prompt: instructions,
-      }).pipe(catchStallInReview, Effect.withSpan("Main.agentWorker"))
-      yield* Effect.log(`Agent exited with code: ${exitCode}`)
-
-      // 3. Review task
-      // -----------------------
-
-      if (options.review) {
-        registry.update(currentWorker.state, (s) =>
-          s.transitionTo(WorkerStatus.Reviewing({ issueId: taskId })),
-        )
-
-        yield* agentReviewer({
-          specsDirectory: options.specsDirectory,
-          stallTimeout: options.stallTimeout,
-          preset: taskPreset,
-          instructions,
-        }).pipe(catchStallInReview, Effect.withSpan("Main.agentReviewer"))
-      }
-    }).pipe(
-      Effect.timeout(options.runTimeout),
-      Effect.tapErrorTag("TimeoutError", () =>
-        agentTimeout({
-          specsDirectory: options.specsDirectory,
-          stallTimeout: options.stallTimeout,
-          preset: taskPreset,
-          task: chosenTask.prd,
-        }),
-      ),
-      Effect.raceFirst(watchTaskState({ issueId: taskId })),
-      Effect.as(false),
-      Effect.catchTag("TaskStateChanged", (error) =>
-        Effect.log(
-          `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
-        ).pipe(Effect.as(true)),
-      ),
-    )
-
-    if (cancelled) return
-
-    yield* gitFlow.postWork({
-      worktree,
-      targetBranch: Option.getOrUndefined(options.targetBranch),
-      issueId: taskId,
+    yield* runChosenTask({
+      taskId,
+      task: chosenTask.prd,
+      githubPrNumber: chosenTask.githubPrNumber ?? undefined,
+      targetBranch: options.targetBranch,
+      specsDirectory: options.specsDirectory,
+      stallTimeout: options.stallTimeout,
+      runTimeout: options.runTimeout,
+      review: options.review,
+      revertIssueOnSuccess: true,
+      taskPreset,
+      getTask: (taskId) => prd.findById(taskId),
     })
-
-    const task = yield* prd.findById(taskId)
-    if (task?.autoMerge) {
-      yield* gitFlow.autoMerge({
-        targetBranch: Option.getOrUndefined(options.targetBranch),
-        issueId: taskId,
-        worktree,
-      })
-    } else {
-      yield* prd.maybeRevertIssue({ issueId: taskId })
-    }
   },
   Effect.scoped,
   Effect.provide(Prd.layer, { local: true }),
@@ -276,13 +384,15 @@ const run = Effect.fnUntraced(
 
 const runWithClanka = Effect.fnUntraced(
   function* (options: {
+    readonly defaultPreset: CliAgentPreset & {
+      readonly clankaModel: ClankaModel
+    }
     readonly startedDeferred: Deferred.Deferred<void>
     readonly targetBranch: Option.Option<string>
     readonly specsDirectory: string
     readonly stallTimeout: Duration.Duration
     readonly runTimeout: Duration.Duration
     readonly review: boolean
-    readonly clankaModel: ClankaModel
   }): Effect.fn.Return<
     void,
     | PlatformError.PlatformError
@@ -292,7 +402,8 @@ const runWithClanka = Effect.fnUntraced(
     | ChosenTaskNotFound
     | RunnerStalled
     | TimeoutError
-    | AiError.AiError,
+    | AiError.AiError
+    | QuitError,
     | CurrentProjectId
     | FileSystem.FileSystem
     | Path.Path
@@ -319,7 +430,7 @@ const runWithClanka = Effect.fnUntraced(
     const registry = yield* AtomRegistry.AtomRegistry
     const promptGen = yield* PromptGen
     const models = yield* ClankaModels
-    const model = models.get(options.clankaModel)
+    const model = models.get(options.defaultPreset.clankaModel)
 
     // ensure cleanup of branch after run
     yield* Effect.addFinalizer(
@@ -354,7 +465,9 @@ const runWithClanka = Effect.fnUntraced(
 
     const taskById = (taskId: string) =>
       AtomRegistry.getResult(registry, currentIssuesAtom(projectId)).pipe(
-        Effect.map((issues) => issues.find((entry) => entry.id === taskId)),
+        Effect.map(
+          (issues) => issues.find((entry) => entry.id === taskId) ?? null,
+        ),
       )
 
     // 1. Choose task
@@ -407,107 +520,24 @@ const runWithClanka = Effect.fnUntraced(
       )
     }
 
-    const catchStallInReview = <A, E, R>(
-      effect: Effect.Effect<A, E | RunnerStalled, R>,
-    ) =>
-      Effect.catchIf(
-        effect,
-        (u): u is RunnerStalled => u instanceof RunnerStalled,
-        Effect.fnUntraced(function* (e) {
-          const issues = yield* AtomRegistry.getResult(
-            registry,
-            currentIssuesAtom(projectId),
-          )
-          const task = issues.find((entry) => entry.id === taskId)
-          const inReview = task?.state === "in-review"
-          if (inReview) return
-          return yield* e
-        }),
-      )
-
-    const cancelled = yield* Effect.gen(function* () {
-      //
-      // 2. Work on task
-      // -----------------------
-
-      registry.update(currentWorker.state, (s) =>
-        s.transitionTo(WorkerStatus.Working({ issueId: taskId })),
-      )
-
-      const instructions = promptGen.promptClanka({
-        specsDirectory: options.specsDirectory,
-        targetBranch: Option.getOrUndefined(options.targetBranch),
-        task: chosenTask,
-        githubPrNumber: chooseResult.githubPrNumber ?? undefined,
-        gitFlow,
-      })
-
-      yield* runClanka({
-        directory: worktree.directory,
-        system: promptGen.systemClanka(options),
-        prompt: instructions,
-        stallTimeout: options.stallTimeout,
-      }).pipe(Effect.provide(model), Effect.withSpan("Main.worker"))
-
-      // 3. Review task
-      // -----------------------
-
-      if (options.review) {
-        registry.update(currentWorker.state, (s) =>
-          s.transitionTo(WorkerStatus.Reviewing({ issueId: taskId })),
-        )
-
-        yield* runClanka({
-          directory: worktree.directory,
-          system: promptGen.systemClanka(options),
-          prompt: promptGen.promptReview({
-            prompt: instructions,
-            gitFlow,
-          }),
-        }).pipe(
-          Effect.provide(model),
-          catchStallInReview,
-          Effect.withSpan("Main.review"),
-        )
-      }
-    }).pipe(
-      Effect.timeout(options.runTimeout),
-      Effect.tapErrorTag("TimeoutError", () =>
-        runClanka({
-          directory: worktree.directory,
-          system: promptGen.systemClanka(options),
-          prompt: promptGen.promptTimeoutClanka({
-            taskId,
-            specsDirectory: options.specsDirectory,
-          }),
-          stallTimeout: options.stallTimeout,
-        }).pipe(Effect.provide(model), Effect.withSpan("Main.timeout")),
-      ),
-      Effect.raceFirst(watchTaskState({ issueId: taskId })),
-      Effect.as(false),
-      Effect.catchTag("TaskStateChanged", (error) =>
-        Effect.log(
-          `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
-        ).pipe(Effect.as(true)),
-      ),
+    const taskPreset = Option.getOrElse(
+      yield* source.issueCliAgentPreset(chosenTask),
+      () => options.defaultPreset,
     )
 
-    if (cancelled) return
-
-    yield* gitFlow.postWork({
-      worktree,
-      targetBranch: Option.getOrUndefined(options.targetBranch),
-      issueId: taskId,
+    yield* runChosenTask({
+      taskId,
+      task: chosenTask,
+      githubPrNumber: chooseResult.githubPrNumber ?? undefined,
+      targetBranch: options.targetBranch,
+      specsDirectory: options.specsDirectory,
+      stallTimeout: options.stallTimeout,
+      runTimeout: options.runTimeout,
+      review: options.review,
+      revertIssueOnSuccess: false,
+      taskPreset,
+      getTask: taskById,
     })
-
-    const task = yield* taskById(taskId)
-    if (task?.autoMerge) {
-      yield* gitFlow.autoMerge({
-        targetBranch: Option.getOrUndefined(options.targetBranch),
-        issueId: taskId,
-        worktree,
-      })
-    }
   },
   Effect.scoped,
   Effect.provide(Prd.layer, { local: true }),
@@ -527,7 +557,7 @@ const runProject = Effect.fnUntraced(
     readonly specsDirectory: string
     readonly stallTimeout: Duration.Duration
     readonly runTimeout: Duration.Duration
-    readonly clankaModel: ClankaModel | undefined
+    readonly defaultPreset: CliAgentPreset
   }) {
     const isFinite = Number.isFinite(options.iterations)
     const iterationsDisplay = isFinite ? options.iterations : "unlimited"
@@ -559,17 +589,20 @@ const runProject = Effect.fnUntraced(
       yield* checkForWork.pipe(
         Effect.andThen(
           identity<RunEffect>(
-            options.clankaModel
+            options.defaultPreset.clankaModel
               ? runWithClanka({
+                  defaultPreset: options.defaultPreset as CliAgentPreset & {
+                    readonly clankaModel: ClankaModel
+                  },
                   startedDeferred,
                   targetBranch: options.project.targetBranch,
                   specsDirectory: options.specsDirectory,
                   stallTimeout: options.stallTimeout,
                   runTimeout: options.runTimeout,
                   review: options.project.reviewAgent,
-                  clankaModel: options.clankaModel,
                 })
               : run({
+                  defaultPreset: options.defaultPreset,
                   startedDeferred,
                   targetBranch: options.project.targetBranch,
                   specsDirectory: options.specsDirectory,
@@ -715,7 +748,7 @@ export const commandRoot = Command.make("lalph", {
               specsDirectory,
               stallTimeout: Duration.minutes(stallMinutes),
               runTimeout: Duration.minutes(maxIterationMinutes),
-              clankaModel: preset.clankaModel,
+              defaultPreset: preset,
             }).pipe(Effect.provideService(CurrentProjectId, project.id)),
           { concurrency: "unbounded", discard: true },
         )
