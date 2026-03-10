@@ -7,7 +7,7 @@ import { getAllCliAgentPresets } from "../../Presets.ts"
 
 export const commandAgentsLs = Command.make("ls").pipe(
   Command.withDescription(
-    "List configured agent presets (preset ids, agent, arguments, and any issue-source options).",
+    "List configured agent presets (preset ids, agent, clanka model, arguments, and any issue-source options).",
   ),
   Command.withHandler(
     Effect.fnUntraced(function* () {
@@ -30,6 +30,7 @@ export const commandAgentsLs = Command.make("ls").pipe(
         console.log(`Preset: ${preset.id}`)
         yield* source.cliAgentPresetInfo(preset)
         console.log(`  CLI agent: ${preset.cliAgent.name}`)
+        console.log(`  Clanka model: ${preset.clankaModel ?? "none"}`)
         if (preset.extraArgs.length > 0) {
           console.log(`  Extra args: ${preset.extraArgs.join(" ")}`)
         }
