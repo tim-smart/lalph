@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.40
+
+### Patch Changes
+
+- [`b705f00`](https://github.com/tim-smart/lalph/commit/b705f002c6002d2d7e751021ce2ed3df1eee7f79) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+- [#323](https://github.com/tim-smart/lalph/pull/323) [`5970ca9`](https://github.com/tim-smart/lalph/commit/5970ca9308859689cfb754eb8718aef37b506078) Thanks [@tim-smart](https://github.com/tim-smart)! - Show each agent preset's clanka model in `lalph agents ls` output and refresh related CLI/help text.
+
 ## 0.3.39
 
 ### Patch Changes
