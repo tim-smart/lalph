@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.46
+
+### Patch Changes
+
+- [`594d75a`](https://github.com/tim-smart/lalph/commit/594d75a14e9f6f40870de3a0a4f597d9c76f26fa) Thanks [@tim-smart](https://github.com/tim-smart)! - fix clanka worker prompt
+
+- [`ef4b9c0`](https://github.com/tim-smart/lalph/commit/ef4b9c0f4e4044203caf0143dd437ece6e50e574) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
 ## 0.3.45
 
 ### Patch Changes
