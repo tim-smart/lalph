@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.39
+
+### Patch Changes
+
+- [`7dffd82`](https://github.com/tim-smart/lalph/commit/7dffd8273e98b38ece5bb2070ef0e19f111cefbc) Thanks [@tim-smart](https://github.com/tim-smart)! - remove chooseTask from workers
+
 ## 0.3.38
 
 ### Patch Changes
