@@ -107,14 +107,7 @@ The following instructions should be done without interaction or asking for perm
    - The pull request will contain the task id in the title or description.`
       : ""
   }
-- Once you have chosen a task, save its information in a "task.json" file alongside
-  the prd.yml file. Use the following format:
-
-\`\`\`json
-{
-  "id": "task id",
-  "githubPrNumber": null
-}
+- Use the "chooseTask" function to select the task you have chosen.
 \`\`\`${
         options.gitFlow.requiresGithubPr
           ? `
@@ -161,8 +154,6 @@ ${prdNotes(options)}`
 
 **If at any point** you discover something that needs fixing, or another task
 that needs doing, immediately add it as a new task.
-
-Read the "### Adding tasks" section below carefully for guidelines on creating tasks.
 
 ## Important: Recording key information
 

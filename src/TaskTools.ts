@@ -35,7 +35,7 @@ export class TaskTools extends Toolkit.make(
     dependencies: [CurrentProjectId],
   }),
   Tool.make("chooseTask", {
-    description: "Choose a task to work on from a list of tasks.",
+    description: "Choose the task to work on",
     parameters: Schema.Struct({
       taskId: Schema.String,
       githubPrNumber: Schema.optional(Schema.Number),
@@ -45,7 +45,7 @@ export class TaskTools extends Toolkit.make(
     description: "Create a new task and return it's id.",
     parameters: Schema.Struct({
       title: Schema.String,
-      description: Schema.String,
+      description: PrdIssue.fields.description,
       state: PrdIssue.fields.state,
       priority: PrdIssue.fields.priority,
       estimate: PrdIssue.fields.estimate,
@@ -58,16 +58,18 @@ export class TaskTools extends Toolkit.make(
     description: "Update a task. Supports partial updates",
     parameters: Schema.Struct({
       taskId: Schema.String,
-      title: Schema.optional(Schema.String),
-      description: Schema.optional(Schema.String),
+      title: Schema.optional(PrdIssue.fields.title),
+      description: Schema.optional(PrdIssue.fields.description),
       state: Schema.optional(PrdIssue.fields.state),
-      blockedBy: Schema.optional(Schema.Array(Schema.String)),
+      blockedBy: Schema.optional(PrdIssue.fields.blockedBy),
     }),
     dependencies: [CurrentProjectId],
   }),
   Tool.make("removeTask", {
     description: "Remove a task by it's id.",
-    parameters: Schema.String,
+    parameters: Schema.String.annotate({
+      identifier: "taskId",
+    }),
     dependencies: [CurrentProjectId],
   }),
 ) {}
@@ -78,6 +80,7 @@ export const TaskToolsHandlers = TaskTools.toLayer(
 
     return TaskTools.of({
       listTasks: Effect.fn("TaskTools.listTasks")(function* () {
+        yield* Effect.log(`Calling "listTasks"`)
         const projectId = yield* CurrentProjectId
         const tasks = yield* source.issues(projectId)
         return tasks.map((issue) => ({
@@ -91,10 +94,14 @@ export const TaskToolsHandlers = TaskTools.toLayer(
         }))
       }, Effect.orDie),
       chooseTask: Effect.fn("TaskTools.chooseTask")(function* (options) {
+        yield* Effect.log(`Calling "chooseTask"`).pipe(
+          Effect.annotateLogs(options),
+        )
         const deferred = yield* ChosenTaskDeferred
         yield* Deferred.succeed(deferred, options)
       }),
       createTask: Effect.fn("TaskTools.createTask")(function* (options) {
+        yield* Effect.log(`Calling "createTask"`)
         const projectId = yield* CurrentProjectId
         const taskId = yield* source.createIssue(
           projectId,
@@ -107,6 +114,9 @@ export const TaskToolsHandlers = TaskTools.toLayer(
         return taskId.id
       }, Effect.orDie),
       updateTask: Effect.fn("TaskTools.updateTask")(function* (options) {
+        yield* Effect.log(`Calling "updateTask"`).pipe(
+          Effect.annotateLogs({ taskId: options.taskId }),
+        )
         const projectId = yield* CurrentProjectId
         yield* source.updateIssue({
           projectId,
@@ -115,6 +125,9 @@ export const TaskToolsHandlers = TaskTools.toLayer(
         })
       }, Effect.orDie),
       removeTask: Effect.fn("TaskTools.removeTask")(function* (taskId) {
+        yield* Effect.log(`Calling "removeTask"`).pipe(
+          Effect.annotateLogs({ taskId }),
+        )
         const projectId = yield* CurrentProjectId
         yield* source.cancelIssue(projectId, taskId)
       }, Effect.orDie),

@@ -54,36 +54,7 @@ import type { AiError } from "effect/unstable/ai"
 
 // Main iteration run logic
 
-const run: (options: {
-  readonly startedDeferred: Deferred.Deferred<void>
-  readonly targetBranch: Option.Option<string>
-  readonly specsDirectory: string
-  readonly stallTimeout: Duration.Duration
-  readonly runTimeout: Duration.Duration
-  readonly review: boolean
-}) => Effect.Effect<
-  void,
-  | PlatformError.PlatformError
-  | Schema.SchemaError
-  | IssueSourceError
-  | QuitError
-  | GitFlowError
-  | ChosenTaskNotFound
-  | RunnerStalled
-  | TimeoutError,
-  | CurrentProjectId
-  | ChildProcessSpawner.ChildProcessSpawner
-  | Settings
-  | Reactivity.Reactivity
-  | GithubCli
-  | IssueSource
-  | Prompt.Environment
-  | AtomRegistry.AtomRegistry
-  | GitFlow
-  | CurrentWorkerState
-  | PromptGen
-  | Prd
-> = Effect.fnUntraced(
+const run = Effect.fnUntraced(
   function* (options: {
     readonly startedDeferred: Deferred.Deferred<void>
     readonly targetBranch: Option.Option<string>
@@ -91,7 +62,31 @@ const run: (options: {
     readonly stallTimeout: Duration.Duration
     readonly runTimeout: Duration.Duration
     readonly review: boolean
-  }) {
+  }): Effect.fn.Return<
+    void,
+    | PlatformError.PlatformError
+    | Schema.SchemaError
+    | IssueSourceError
+    | QuitError
+    | GitFlowError
+    | ChosenTaskNotFound
+    | RunnerStalled
+    | TimeoutError,
+    | CurrentProjectId
+    | ChildProcessSpawner.ChildProcessSpawner
+    | Settings
+    | Reactivity.Reactivity
+    | GithubCli
+    | IssueSource
+    | Prompt.Environment
+    | AtomRegistry.AtomRegistry
+    | GitFlow
+    | CurrentWorkerState
+    | PromptGen
+    | Prd
+    | Worktree
+    | Scope.Scope
+  > {
     const projectId = yield* CurrentProjectId
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
@@ -279,239 +274,243 @@ const run: (options: {
   Effect.provide(Prd.layer, { local: true }),
 )
 
-const runWithClanka = Effect.fnUntraced(function* (options: {
-  readonly startedDeferred: Deferred.Deferred<void>
-  readonly targetBranch: Option.Option<string>
-  readonly specsDirectory: string
-  readonly stallTimeout: Duration.Duration
-  readonly runTimeout: Duration.Duration
-  readonly review: boolean
-  readonly clankaModel: ClankaModel
-}): Effect.fn.Return<
-  void,
-  | PlatformError.PlatformError
-  | Schema.SchemaError
-  | IssueSourceError
-  | GitFlowError
-  | ChosenTaskNotFound
-  | RunnerStalled
-  | TimeoutError
-  | AiError.AiError,
-  | CurrentProjectId
-  | FileSystem.FileSystem
-  | Path.Path
-  | Worktree
-  | ChildProcessSpawner.ChildProcessSpawner
-  | GithubCli
-  | IssueSource
-  | AtomRegistry.AtomRegistry
-  | GitFlow
-  | CurrentWorkerState
-  | PromptGen
-  | ClankaModels
-  | Scope.Scope
-  | Prd
-> {
-  const projectId = yield* CurrentProjectId
-  const fs = yield* FileSystem.FileSystem
-  const pathService = yield* Path.Path
-  const worktree = yield* Worktree
-  const gh = yield* GithubCli
-  const source = yield* IssueSource
-  const gitFlow = yield* GitFlow
-  const currentWorker = yield* CurrentWorkerState
-  const registry = yield* AtomRegistry.AtomRegistry
-  const promptGen = yield* PromptGen
-  const models = yield* ClankaModels
-  const model = models.get(options.clankaModel)
+const runWithClanka = Effect.fnUntraced(
+  function* (options: {
+    readonly startedDeferred: Deferred.Deferred<void>
+    readonly targetBranch: Option.Option<string>
+    readonly specsDirectory: string
+    readonly stallTimeout: Duration.Duration
+    readonly runTimeout: Duration.Duration
+    readonly review: boolean
+    readonly clankaModel: ClankaModel
+  }): Effect.fn.Return<
+    void,
+    | PlatformError.PlatformError
+    | Schema.SchemaError
+    | IssueSourceError
+    | GitFlowError
+    | ChosenTaskNotFound
+    | RunnerStalled
+    | TimeoutError
+    | AiError.AiError,
+    | CurrentProjectId
+    | FileSystem.FileSystem
+    | Path.Path
+    | Worktree
+    | ChildProcessSpawner.ChildProcessSpawner
+    | GithubCli
+    | IssueSource
+    | AtomRegistry.AtomRegistry
+    | GitFlow
+    | CurrentWorkerState
+    | PromptGen
+    | ClankaModels
+    | Scope.Scope
+    | Prd
+  > {
+    const projectId = yield* CurrentProjectId
+    const fs = yield* FileSystem.FileSystem
+    const pathService = yield* Path.Path
+    const worktree = yield* Worktree
+    const gh = yield* GithubCli
+    const source = yield* IssueSource
+    const gitFlow = yield* GitFlow
+    const currentWorker = yield* CurrentWorkerState
+    const registry = yield* AtomRegistry.AtomRegistry
+    const promptGen = yield* PromptGen
+    const models = yield* ClankaModels
+    const model = models.get(options.clankaModel)
 
-  // ensure cleanup of branch after run
-  yield* Effect.addFinalizer(
-    Effect.fnUntraced(function* () {
-      const currentBranchName = yield* worktree
-        .currentBranch(worktree.directory)
-        .pipe(Effect.option, Effect.map(Option.getOrUndefined))
-      if (!currentBranchName) return
+    // ensure cleanup of branch after run
+    yield* Effect.addFinalizer(
+      Effect.fnUntraced(function* () {
+        const currentBranchName = yield* worktree
+          .currentBranch(worktree.directory)
+          .pipe(Effect.option, Effect.map(Option.getOrUndefined))
+        if (!currentBranchName) return
 
-      // enter detached state
-      yield* worktree.exec`git checkout --detach ${currentBranchName}`
-      // delete the branch
-      yield* worktree.exec`git branch -D ${currentBranchName}`
-    }, Effect.ignore()),
-  )
-
-  let taskId: string | undefined = undefined
-
-  // setup finalizer to revert issue if we fail
-  yield* Effect.addFinalizer(
-    Effect.fnUntraced(function* (exit) {
-      if (exit._tag === "Success") return
-      if (taskId) {
-        yield* source.updateIssue({
-          projectId,
-          issueId: taskId,
-          state: "todo",
-        })
-      }
-    }, Effect.ignore()),
-  )
-
-  const taskById = (taskId: string) =>
-    AtomRegistry.getResult(registry, currentIssuesAtom(projectId)).pipe(
-      Effect.map((issues) => issues.find((entry) => entry.id === taskId)),
+        // enter detached state
+        yield* worktree.exec`git checkout --detach ${currentBranchName}`
+        // delete the branch
+        yield* worktree.exec`git branch -D ${currentBranchName}`
+      }, Effect.ignore()),
     )
 
-  // 1. Choose task
-  // --------------
+    let taskId: string | undefined = undefined
 
-  registry.update(currentWorker.state, (s) =>
-    s.transitionTo(WorkerStatus.ChoosingTask()),
-  )
-
-  const deferred = ChosenTaskDeferred.of(Deferred.makeUnsafe())
-  const chooseResult = yield* runClanka({
-    directory: worktree.directory,
-    prompt: promptGen.promptChooseClanka({ gitFlow }),
-    stallTimeout: options.stallTimeout,
-  }).pipe(
-    Effect.andThen(Effect.fail(new ChosenTaskNotFound())),
-    Effect.provideService(ChosenTaskDeferred, deferred),
-    Effect.provide(model),
-    Effect.raceFirst(Deferred.await(deferred)),
-    Effect.withSpan("Main.choose"),
-  )
-
-  const chosenTask = yield* taskById(chooseResult.taskId)
-  if (!chosenTask) {
-    return yield* new ChosenTaskNotFound()
-  }
-  taskId = chooseResult.taskId
-  yield* source.updateIssue({
-    projectId,
-    issueId: taskId,
-    state: "in-progress",
-  })
-
-  yield* source.ensureInProgress(projectId, taskId).pipe(
-    Effect.timeoutOrElse({
-      duration: "1 minute",
-      onTimeout: () => Effect.fail(new RunnerStalled()),
-    }),
-  )
-
-  yield* Deferred.completeWith(options.startedDeferred, Effect.void)
-
-  if (gitFlow.requiresGithubPr && chooseResult.githubPrNumber) {
-    yield* worktree.exec`gh pr checkout ${chooseResult.githubPrNumber}`
-    const feedback = yield* gh.prFeedbackMd(chooseResult.githubPrNumber)
-    yield* fs.writeFileString(
-      pathService.join(worktree.directory, ".lalph", "feedback.md"),
-      feedback,
+    // setup finalizer to revert issue if we fail
+    yield* Effect.addFinalizer(
+      Effect.fnUntraced(function* (exit) {
+        if (exit._tag === "Success") return
+        if (taskId) {
+          yield* source.updateIssue({
+            projectId,
+            issueId: taskId,
+            state: "todo",
+          })
+        }
+      }, Effect.ignore()),
     )
-  }
 
-  const catchStallInReview = <A, E, R>(
-    effect: Effect.Effect<A, E | RunnerStalled, R>,
-  ) =>
-    Effect.catchIf(
-      effect,
-      (u): u is RunnerStalled => u instanceof RunnerStalled,
-      Effect.fnUntraced(function* (e) {
-        const issues = yield* AtomRegistry.getResult(
-          registry,
-          currentIssuesAtom(projectId),
-        )
-        const task = issues.find((entry) => entry.id === taskId)
-        const inReview = task?.state === "in-review"
-        if (inReview) return
-        return yield* e
+    const taskById = (taskId: string) =>
+      AtomRegistry.getResult(registry, currentIssuesAtom(projectId)).pipe(
+        Effect.map((issues) => issues.find((entry) => entry.id === taskId)),
+      )
+
+    // 1. Choose task
+    // --------------
+
+    registry.update(currentWorker.state, (s) =>
+      s.transitionTo(WorkerStatus.ChoosingTask()),
+    )
+
+    const deferred = ChosenTaskDeferred.of(Deferred.makeUnsafe())
+    const chooseResult = yield* runClanka({
+      directory: worktree.directory,
+      prompt: promptGen.promptChooseClanka({ gitFlow }),
+      stallTimeout: options.stallTimeout,
+    }).pipe(
+      Effect.andThen(Effect.fail(new ChosenTaskNotFound())),
+      Effect.provideService(ChosenTaskDeferred, deferred),
+      Effect.provide(model),
+      Effect.raceFirst(Deferred.await(deferred)),
+      Effect.withSpan("Main.choose"),
+    )
+
+    const chosenTask = yield* taskById(chooseResult.taskId)
+    if (!chosenTask) {
+      return yield* new ChosenTaskNotFound()
+    }
+    taskId = chooseResult.taskId
+    yield* source.updateIssue({
+      projectId,
+      issueId: taskId,
+      state: "in-progress",
+    })
+
+    yield* source.ensureInProgress(projectId, taskId).pipe(
+      Effect.timeoutOrElse({
+        duration: "1 minute",
+        onTimeout: () => Effect.fail(new RunnerStalled()),
       }),
     )
 
-  const cancelled = yield* Effect.gen(function* () {
-    //
-    // 2. Work on task
-    // -----------------------
+    yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 
-    registry.update(currentWorker.state, (s) =>
-      s.transitionTo(WorkerStatus.Working({ issueId: taskId })),
-    )
-
-    const instructions = promptGen.promptClanka({
-      specsDirectory: options.specsDirectory,
-      targetBranch: Option.getOrUndefined(options.targetBranch),
-      task: chosenTask,
-      githubPrNumber: chooseResult.githubPrNumber ?? undefined,
-      gitFlow,
-    })
-
-    yield* runClanka({
-      directory: worktree.directory,
-      system: promptGen.systemClanka(options),
-      prompt: instructions,
-      stallTimeout: options.stallTimeout,
-    }).pipe(Effect.provide(model), Effect.withSpan("Main.worker"))
-
-    // 3. Review task
-    // -----------------------
-
-    if (options.review) {
-      registry.update(currentWorker.state, (s) =>
-        s.transitionTo(WorkerStatus.Reviewing({ issueId: taskId })),
+    if (gitFlow.requiresGithubPr && chooseResult.githubPrNumber) {
+      yield* worktree.exec`gh pr checkout ${chooseResult.githubPrNumber}`
+      const feedback = yield* gh.prFeedbackMd(chooseResult.githubPrNumber)
+      yield* fs.writeFileString(
+        pathService.join(worktree.directory, ".lalph", "feedback.md"),
+        feedback,
       )
+    }
+
+    const catchStallInReview = <A, E, R>(
+      effect: Effect.Effect<A, E | RunnerStalled, R>,
+    ) =>
+      Effect.catchIf(
+        effect,
+        (u): u is RunnerStalled => u instanceof RunnerStalled,
+        Effect.fnUntraced(function* (e) {
+          const issues = yield* AtomRegistry.getResult(
+            registry,
+            currentIssuesAtom(projectId),
+          )
+          const task = issues.find((entry) => entry.id === taskId)
+          const inReview = task?.state === "in-review"
+          if (inReview) return
+          return yield* e
+        }),
+      )
+
+    const cancelled = yield* Effect.gen(function* () {
+      //
+      // 2. Work on task
+      // -----------------------
+
+      registry.update(currentWorker.state, (s) =>
+        s.transitionTo(WorkerStatus.Working({ issueId: taskId })),
+      )
+
+      const instructions = promptGen.promptClanka({
+        specsDirectory: options.specsDirectory,
+        targetBranch: Option.getOrUndefined(options.targetBranch),
+        task: chosenTask,
+        githubPrNumber: chooseResult.githubPrNumber ?? undefined,
+        gitFlow,
+      })
 
       yield* runClanka({
         directory: worktree.directory,
         system: promptGen.systemClanka(options),
-        prompt: promptGen.promptReview({
-          prompt: instructions,
-          gitFlow,
-        }),
-      }).pipe(
-        Effect.provide(model),
-        catchStallInReview,
-        Effect.withSpan("Main.review"),
-      )
-    }
-  }).pipe(
-    Effect.timeout(options.runTimeout),
-    Effect.tapErrorTag("TimeoutError", () =>
-      runClanka({
-        directory: worktree.directory,
-        system: promptGen.systemClanka(options),
-        prompt: promptGen.promptTimeoutClanka({
-          taskId,
-          specsDirectory: options.specsDirectory,
-        }),
+        prompt: instructions,
         stallTimeout: options.stallTimeout,
-      }).pipe(Effect.provide(model), Effect.withSpan("Main.timeout")),
-    ),
-    Effect.raceFirst(watchTaskState({ issueId: taskId })),
-    Effect.as(false),
-    Effect.catchTag("TaskStateChanged", (error) =>
-      Effect.log(
-        `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
-      ).pipe(Effect.as(true)),
-    ),
-  )
+      }).pipe(Effect.provide(model), Effect.withSpan("Main.worker"))
 
-  if (cancelled) return
+      // 3. Review task
+      // -----------------------
 
-  yield* gitFlow.postWork({
-    worktree,
-    targetBranch: Option.getOrUndefined(options.targetBranch),
-    issueId: taskId,
-  })
+      if (options.review) {
+        registry.update(currentWorker.state, (s) =>
+          s.transitionTo(WorkerStatus.Reviewing({ issueId: taskId })),
+        )
 
-  const task = yield* taskById(taskId)
-  if (task?.autoMerge) {
-    yield* gitFlow.autoMerge({
+        yield* runClanka({
+          directory: worktree.directory,
+          system: promptGen.systemClanka(options),
+          prompt: promptGen.promptReview({
+            prompt: instructions,
+            gitFlow,
+          }),
+        }).pipe(
+          Effect.provide(model),
+          catchStallInReview,
+          Effect.withSpan("Main.review"),
+        )
+      }
+    }).pipe(
+      Effect.timeout(options.runTimeout),
+      Effect.tapErrorTag("TimeoutError", () =>
+        runClanka({
+          directory: worktree.directory,
+          system: promptGen.systemClanka(options),
+          prompt: promptGen.promptTimeoutClanka({
+            taskId,
+            specsDirectory: options.specsDirectory,
+          }),
+          stallTimeout: options.stallTimeout,
+        }).pipe(Effect.provide(model), Effect.withSpan("Main.timeout")),
+      ),
+      Effect.raceFirst(watchTaskState({ issueId: taskId })),
+      Effect.as(false),
+      Effect.catchTag("TaskStateChanged", (error) =>
+        Effect.log(
+          `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
+        ).pipe(Effect.as(true)),
+      ),
+    )
+
+    if (cancelled) return
+
+    yield* gitFlow.postWork({
+      worktree,
       targetBranch: Option.getOrUndefined(options.targetBranch),
       issueId: taskId,
-      worktree,
     })
-  }
-}, Effect.scoped)
+
+    const task = yield* taskById(taskId)
+    if (task?.autoMerge) {
+      yield* gitFlow.autoMerge({
+        targetBranch: Option.getOrUndefined(options.targetBranch),
+        issueId: taskId,
+        worktree,
+      })
+    }
+  },
+  Effect.scoped,
+  Effect.provide(Prd.layer, { local: true }),
+)
 
 type RunEffects = ReturnType<typeof run> | ReturnType<typeof runWithClanka>
 type RunEffect = Effect.Effect<
