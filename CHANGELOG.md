@@ -1,5 +1,15 @@
 # lalph
 
+## 0.3.47
+
+### Patch Changes
+
+- [#336](https://github.com/tim-smart/lalph/pull/336) [`49d40ab`](https://github.com/tim-smart/lalph/commit/49d40ab7e46d4eca1d7633faf8fbdd79af9fa9aa) Thanks [@tim-smart](https://github.com/tim-smart)! - remove task estimates from clanka
+
+- [`f3d2e51`](https://github.com/tim-smart/lalph/commit/f3d2e51123ae5e95a6599d98dff279c163ca07e1) Thanks [@tim-smart](https://github.com/tim-smart)! - save issue / plan on failure
+
+- [#336](https://github.com/tim-smart/lalph/pull/336) [`49d40ab`](https://github.com/tim-smart/lalph/commit/49d40ab7e46d4eca1d7633faf8fbdd79af9fa9aa) Thanks [@tim-smart](https://github.com/tim-smart)! - Allow clanka runs to accept an optional steer stream and forward live task updates to the running agent.
+
 ## 0.3.46
 
 ### Patch Changes
