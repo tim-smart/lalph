@@ -192,7 +192,7 @@ const run = Effect.fnUntraced(
         }),
       )
 
-    const cancelled = yield* Effect.gen(function* () {
+    const cancelledState = yield* Effect.gen(function* () {
       //
       // 2. Work on task
       // -----------------------
@@ -243,15 +243,24 @@ const run = Effect.fnUntraced(
         }),
       ),
       Effect.raceFirst(watchTaskState({ issueId: taskId })),
-      Effect.as(false),
+      Effect.as(undefined as TaskStateChanged["state"] | undefined),
       Effect.catchTag("TaskStateChanged", (error) =>
         Effect.log(
           `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
-        ).pipe(Effect.as(true)),
+        ).pipe(Effect.as(error.state)),
       ),
     )
 
-    if (cancelled) return
+    if (cancelledState !== undefined) {
+      if (taskId && cancelledState === "todo") {
+        yield* source.updateIssue({
+          projectId,
+          issueId: taskId,
+          state: "todo",
+        })
+      }
+      return
+    }
 
     yield* gitFlow.postWork({
       worktree,
@@ -425,7 +434,7 @@ const runWithClanka = Effect.fnUntraced(
         }),
       )
 
-    const cancelled = yield* Effect.gen(function* () {
+    const cancelledState = yield* Effect.gen(function* () {
       //
       // 2. Work on task
       // -----------------------
@@ -484,15 +493,24 @@ const runWithClanka = Effect.fnUntraced(
         }).pipe(Effect.provide(model), Effect.withSpan("Main.timeout")),
       ),
       Effect.raceFirst(watchTaskState({ issueId: taskId })),
-      Effect.as(false),
+      Effect.as(undefined as TaskStateChanged["state"] | undefined),
       Effect.catchTag("TaskStateChanged", (error) =>
         Effect.log(
           `Task ${error.issueId} moved to ${error.state}; cancelling run.`,
-        ).pipe(Effect.as(true)),
+        ).pipe(Effect.as(error.state)),
       ),
     )
 
-    if (cancelled) return
+    if (cancelledState !== undefined) {
+      if (taskId && cancelledState === "todo") {
+        yield* source.updateIssue({
+          projectId,
+          issueId: taskId,
+          state: "todo",
+        })
+      }
+      return
+    }
 
     yield* gitFlow.postWork({
       worktree,
