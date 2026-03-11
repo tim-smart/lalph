@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.48
+
+### Patch Changes
+
+- [#339](https://github.com/tim-smart/lalph/pull/339) [`8056dc3`](https://github.com/tim-smart/lalph/commit/8056dc3d2b451baf1f07d28d393fd4cbe5bcfb89) Thanks [@tim-smart](https://github.com/tim-smart)! - Return eligible tasks in priority order.
+
 ## 0.3.47
 
 ### Patch Changes
