@@ -109,7 +109,7 @@ export class TaskToolsWithChoose extends Toolkit.merge(
       }),
     }),
     Tool.make("listEligibleTasks", {
-      description: "List chooseable tasks in priority order.",
+      description: "List tasks eligible for being chosen with chooseTask, pre-sorted by priority.",
       success: TaskList,
       dependencies: [CurrentProjectId],
     }),
