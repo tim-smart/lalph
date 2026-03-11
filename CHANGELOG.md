@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.52
+
+### Patch Changes
+
+- [`2f8e8f7`](https://github.com/tim-smart/lalph/commit/2f8e8f7db962e0049305e30d96948cd9f661998d) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
 ## 0.3.51
 
 ### Patch Changes
