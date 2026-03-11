@@ -1,5 +1,5 @@
 import { Agent, OutputFormatter } from "clanka"
-import { Duration, Effect, Stream } from "effect"
+import { Duration, Effect, Layer, Stdio, Stream } from "effect"
 import {
   TaskChooseTools,
   TaskTools,
@@ -9,8 +9,15 @@ import {
 import { ClankaModels, clankaSubagent } from "./ClankaModels.ts"
 import { withStallTimeout } from "./shared/stream.ts"
 
+export const ClankaMuxerLayer = Layer.effectDiscard(
+  Effect.gen(function* () {
+    const muxer = yield* OutputFormatter.Muxer
+    const stdio = yield* Stdio.Stdio
+    yield* muxer.output.pipe(Stream.run(stdio.stdout()), Effect.forkScoped)
+  }),
+).pipe(Layer.provideMerge(OutputFormatter.layerMuxer(OutputFormatter.pretty)))
+
 export const runClanka = Effect.fnUntraced(
-  /** The working directory to run the agent in */
   function* (options: {
     readonly directory: string
     readonly model: string
@@ -21,6 +28,8 @@ export const runClanka = Effect.fnUntraced(
     readonly withChoose?: boolean | undefined
   }) {
     const models = yield* ClankaModels
+    const muxer = yield* OutputFormatter.Muxer
+
     const agent = yield* Agent.make({
       ...options,
       tools: (options.withChoose
@@ -28,6 +37,8 @@ export const runClanka = Effect.fnUntraced(
         : TaskTools) as unknown as typeof TaskToolsWithChoose,
       subagentModel: clankaSubagent(models, options.model),
     }).pipe(Effect.provide(models.get(options.model)))
+
+    yield* muxer.add(agent.output)
 
     let stream = options.stallTimeout
       ? withStallTimeout(options.stallTimeout)(agent.output)
@@ -46,14 +57,9 @@ export const runClanka = Effect.fnUntraced(
       )
     }
 
-    return yield* stream.pipe(
-      OutputFormatter.pretty,
-      Stream.runForEachArray((out) => {
-        for (const item of out) {
-          process.stdout.write(item)
-        }
-        return Effect.void
-      }),
+    yield* stream.pipe(
+      Stream.runDrain,
+      Effect.catchTag("AgentFinished", () => Effect.void),
     )
   },
   Effect.scoped,

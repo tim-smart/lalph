@@ -11,6 +11,7 @@ import { selectCliAgentPreset } from "../../Presets.ts"
 import { CurrentIssueSource } from "../../CurrentIssueSource.ts"
 import type { CliAgentPreset } from "../../domain/CliAgentPreset.ts"
 import { ClankaModels } from "../../ClankaModels.ts"
+import { ClankaMuxerLayer } from "../../Clanka.ts"
 
 const specificationPath = Argument.path("spec", {
   pathType: "file",
@@ -72,6 +73,7 @@ const generateTasks = Effect.fnUntraced(
   },
   Effect.provide([
     ClankaModels.layer,
+    ClankaMuxerLayer,
     Settings.layer,
     PromptGen.layer,
     Prd.layerProvided.pipe(Layer.provideMerge(layerProjectIdPrompt)),

@@ -90,16 +90,13 @@ Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.
 
       const promptChooseClanka = (options: {
         readonly gitFlow: GitFlow["Service"]
-      }) => `Your job is to choose the next task to work on using "listEligibleTasks".
-**DO NOT** implement the task yet.
-
-The following instructions should be done without interaction or asking for permission.
-
-- Decide which single task to work on next from "listEligibleTasks". This should
+      }) => `- Use the "listEligibleTasks" function to view the list of tasks that you can start working on.
+  - **NO NOT PARSE THE yaml OUTPUT IN ANY WAY**
+  - **DO NOT** implement the task yet.
+  - **DO NOT** use the "delegate" function for any step in this workflow
+- After reading through the list of tasks, choose the task to work on. This should
   be the task YOU decide as the most important to work on next, not just the
-  first task in the list.
-
-  **Make sure to read the task list in full** before choosing. DO NOT try to parse it first.${
+  first task in the list.${
     options.gitFlow.requiresGithubPr
       ? `
 - Check if there is an open Github PR for the chosen task. If there is, note the PR number for inclusion when calling "chooseTask".

@@ -52,6 +52,9 @@ import type { ChildProcessSpawner } from "effect/unstable/process"
 import { ClankaModels } from "../ClankaModels.ts"
 import type { AiError } from "effect/unstable/ai/AiError"
 import type { PrdIssue } from "../domain/PrdIssue.ts"
+import { CurrentTaskRef } from "../TaskTools.ts"
+import type { OutputFormatter } from "clanka"
+import { ClankaMuxerLayer } from "../Clanka.ts"
 
 // Main iteration run logic
 
@@ -88,6 +91,7 @@ const run = Effect.fnUntraced(
     | Prd
     | Worktree
     | ClankaModels
+    | OutputFormatter.Muxer
     | Scope.Scope
   > {
     const projectId = yield* CurrentProjectId
@@ -236,7 +240,11 @@ const run = Effect.fnUntraced(
         preset: taskPreset,
         prompt: instructions,
         steer,
-      }).pipe(catchStallInReview, Effect.withSpan("Main.agentWorker"))
+      }).pipe(
+        Effect.provideService(CurrentTaskRef, issueRef),
+        catchStallInReview,
+        Effect.withSpan("Main.agentWorker"),
+      )
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
       // 3. Review task
@@ -484,6 +492,7 @@ export const commandRoot = Command.make("lalph", {
       Effect.scoped,
       Effect.provide([
         ClankaModels.layer,
+        ClankaMuxerLayer,
         PromptGen.layer,
         GithubCli.layer,
         Settings.layer,
