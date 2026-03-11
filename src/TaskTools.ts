@@ -48,6 +48,18 @@ const TaskList = Schema.Array(
   }),
 )
 
+const toTaskListItem = (issue: PrdIssue) => ({
+  id: issue.id ?? "",
+  title: issue.title,
+  description: issue.description,
+  state: issue.state,
+  priority: issue.priority,
+  blockedBy: issue.blockedBy,
+})
+
+const sortByPriority = (issues: ReadonlyArray<PrdIssue>) =>
+  issues.toSorted((a, b) => a.priority - b.priority)
+
 export class TaskTools extends Toolkit.make(
   Tool.make("listTasks", {
     description: "Returns the current list of tasks.",
@@ -97,7 +109,7 @@ export class TaskToolsWithChoose extends Toolkit.merge(
       }),
     }),
     Tool.make("listEligibleTasks", {
-      description: "List tasks eligible for being chosen with chooseTask.",
+      description: "List chooseable tasks in priority order.",
       success: TaskList,
       dependencies: [CurrentProjectId],
     }),
@@ -113,29 +125,15 @@ export const TaskToolsHandlers = TaskToolsWithChoose.toLayer(
         yield* Effect.log(`Calling "listTasks"`)
         const projectId = yield* CurrentProjectId
         const tasks = yield* source.issues(projectId)
-        return tasks.map((issue) => ({
-          id: issue.id ?? "",
-          title: issue.title,
-          description: issue.description,
-          state: issue.state,
-          priority: issue.priority,
-          blockedBy: issue.blockedBy,
-        }))
+        return tasks.map(toTaskListItem)
       }, Effect.orDie),
       listEligibleTasks: Effect.fn("TaskTools.listEligibleTasks")(function* () {
         yield* Effect.log(`Calling "listEligibleTasks"`)
         const projectId = yield* CurrentProjectId
         const tasks = yield* source.issues(projectId)
-        return tasks
-          .filter((t) => t.blockedBy.length === 0 && t.state === "todo")
-          .map((issue) => ({
-            id: issue.id ?? "",
-            title: issue.title,
-            description: issue.description,
-            state: issue.state,
-            priority: issue.priority,
-            blockedBy: issue.blockedBy,
-          }))
+        return sortByPriority(
+          tasks.filter((t) => t.blockedBy.length === 0 && t.state === "todo"),
+        ).map(toTaskListItem)
       }, Effect.orDie),
       chooseTask: Effect.fn("TaskTools.chooseTask")(function* (options) {
         yield* Effect.log(`Calling "chooseTask"`).pipe(
