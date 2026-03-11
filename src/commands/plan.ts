@@ -24,7 +24,6 @@ import { selectCliAgentPreset } from "../Presets.ts"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { parseBranch } from "../shared/git.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
-import { ClankaModels } from "../ClankaModels.ts"
 import { ClankaMuxerLayer } from "../Clanka.ts"
 
 const dangerous = Flag.boolean("dangerous").pipe(
@@ -99,7 +98,6 @@ export const commandPlan = Command.make("plan", {
           Effect.provide([
             Settings.layer,
             CurrentIssueSource.layer,
-            ClankaModels.layer,
             ClankaMuxerLayer,
           ]),
         )

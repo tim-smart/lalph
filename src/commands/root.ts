@@ -491,7 +491,6 @@ export const commandRoot = Command.make("lalph", {
       },
       Effect.scoped,
       Effect.provide([
-        ClankaModels.layer,
         ClankaMuxerLayer,
         PromptGen.layer,
         GithubCli.layer,
