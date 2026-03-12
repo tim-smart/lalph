@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.53
+
+### Patch Changes
+
+- [`1569dd3`](https://github.com/tim-smart/lalph/commit/1569dd3101ced789bf61ff52d8c333550b2da2fa) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+- [`c4e5f1a`](https://github.com/tim-smart/lalph/commit/c4e5f1aa5f5d40bf3029c8736f7e0887d3a34d2a) Thanks [@tim-smart](https://github.com/tim-smart)! - require clanka model auth during preset setup
+
 ## 0.3.52
 
 ### Patch Changes
