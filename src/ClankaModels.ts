@@ -1,6 +1,6 @@
 // oxlint-disable typescript/no-explicit-any
 import { NodeHttpClient } from "@effect/platform-node"
-import { Codex, Copilot } from "clanka"
+import { Agent, Codex, Copilot } from "clanka"
 import { Effect, flow, Layer, LayerMap, Schema } from "effect"
 import { layerKvs } from "./Kvs.ts"
 
@@ -20,37 +20,44 @@ const parseInput = flow(
   Effect.orDie,
 )
 
-export const clankaSubagent = Effect.fnUntraced(function* (
-  models: ClankaModels["Service"],
-  input: string,
-) {
-  const [provider, model] = yield* parseInput(input.split("/"))
-  return models.get(`${provider}/${model}/low`)
-}, Layer.unwrap)
-
 export class ClankaModels extends LayerMap.Service<ClankaModels>()(
   "lalph/ClankaModels",
   {
     dependencies: [ModelServices],
     lookup: Effect.fnUntraced(function* (input: string) {
       const [provider, model, reasoning] = yield* parseInput(input.split("/"))
-      switch (provider) {
-        case "openai": {
-          return Codex.model(model, {
-            reasoning: {
-              effort: reasoning,
-            },
-          })
-        }
-        case "copilot": {
-          return Copilot.model(model, {
-            ...reasoningToCopilotConfig(model, reasoning),
-          })
-        }
+      const layer = resolve(provider, model, reasoning)
+      if (reasoning === "low" || reasoning === "medium") {
+        return layer
       }
+      return Layer.merge(
+        layer,
+        Agent.layerSubagentModel(resolve(provider, model, "medium")),
+      )
     }, Layer.unwrap),
   },
 ) {}
+
+const resolve = (
+  provider: "openai" | "copilot",
+  model: string,
+  reasoning: typeof Reasoning.Type,
+) => {
+  switch (provider) {
+    case "openai": {
+      return Codex.model(model, {
+        reasoning: {
+          effort: reasoning,
+        },
+      })
+    }
+    case "copilot": {
+      return Copilot.model(model, {
+        ...reasoningToCopilotConfig(model, reasoning),
+      })
+    }
+  }
+}
 
 const reasoningToCopilotConfig = (
   model: string,

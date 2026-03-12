@@ -1,7 +1,7 @@
 import { Agent, OutputFormatter } from "clanka"
 import { Duration, Effect, Layer, pipe, Stdio, Stream } from "effect"
 import { TaskChooseTools, TaskTools, TaskToolsHandlers } from "./TaskTools.ts"
-import { ClankaModels, clankaSubagent } from "./ClankaModels.ts"
+import { ClankaModels } from "./ClankaModels.ts"
 import { withStallTimeout } from "./shared/stream.ts"
 import { NodeHttpClient } from "@effect/platform-node"
 
@@ -32,10 +32,7 @@ export const runClanka = Effect.fnUntraced(
         prompt: options.prompt,
         system: options.system,
       }),
-      Effect.provide([
-        models.get(options.model),
-        Agent.layerSubagentModel(clankaSubagent(models, options.model)),
-      ]),
+      Effect.provide(models.get(options.model)),
     )
 
     yield* muxer.add(output)
