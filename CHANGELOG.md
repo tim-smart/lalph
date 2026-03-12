@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.55
+
+### Patch Changes
+
+- [`b4544e1`](https://github.com/tim-smart/lalph/commit/b4544e19ba0605fe960a1c4f4b36cc8d232759e1) Thanks [@tim-smart](https://github.com/tim-smart)! - increase subagent reasoning
+
 ## 0.3.54
 
 ### Patch Changes
