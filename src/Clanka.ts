@@ -1,5 +1,5 @@
 import { Agent, OutputFormatter } from "clanka"
-import { Duration, Effect, Layer, Stdio, Stream } from "effect"
+import { Duration, Effect, Layer, pipe, Stdio, Stream } from "effect"
 import { TaskChooseTools, TaskTools, TaskToolsHandlers } from "./TaskTools.ts"
 import { ClankaModels, clankaSubagent } from "./ClankaModels.ts"
 import { withStallTimeout } from "./shared/stream.ts"
@@ -25,18 +25,24 @@ export const runClanka = Effect.fnUntraced(
   }) {
     const models = yield* ClankaModels
     const muxer = yield* OutputFormatter.Muxer
+    const agent = yield* Agent.Agent
 
-    const agent = yield* Agent.make({
-      ...options,
-      tools: options.withChoose ? TaskChooseTools : TaskTools,
-      subagentModel: clankaSubagent(models, options.model),
-    }).pipe(Effect.provide(models.get(options.model)))
+    const output = yield* pipe(
+      agent.send({
+        prompt: options.prompt,
+        system: options.system,
+      }),
+      Effect.provide([
+        models.get(options.model),
+        Agent.layerSubagentModel(clankaSubagent(models, options.model)),
+      ]),
+    )
 
-    yield* muxer.add(agent.output)
+    yield* muxer.add(output)
 
     let stream = options.stallTimeout
-      ? withStallTimeout(options.stallTimeout)(agent.output)
-      : agent.output
+      ? withStallTimeout(options.stallTimeout)(output)
+      : output
 
     if (options.steer) {
       yield* options.steer.pipe(
@@ -57,8 +63,14 @@ export const runClanka = Effect.fnUntraced(
     )
   },
   Effect.scoped,
-  Effect.provide([
-    Agent.layerServices.pipe(Layer.provide(NodeHttpClient.layerUndici)),
-    TaskToolsHandlers,
-  ]),
+  (effect, options) =>
+    Effect.provide(
+      effect,
+      Agent.layerLocal({
+        directory: options.directory,
+        tools: options.withChoose ? TaskChooseTools : TaskTools,
+      }),
+      { local: true },
+    ),
+  Effect.provide([NodeHttpClient.layerUndici, TaskToolsHandlers]),
 )

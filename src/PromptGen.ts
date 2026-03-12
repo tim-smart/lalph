@@ -107,14 +107,11 @@ Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.
       : ""
   }
 - Use the "chooseTask" function to select the task you have chosen.
-\`\`\`${
-        options.gitFlow.requiresGithubPr
-          ? `
-
-Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.
-`
-          : "\n\nLeave `githubPrNumber` as null."
-      }
+${
+  options.gitFlow.requiresGithubPr
+    ? `\n  - Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.`
+    : "\n  Leave `githubPrNumber` as null."
+}
 `
 
       const keyInformation = (options: {
