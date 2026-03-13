@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.56
+
+### Patch Changes
+
+- [`424ca7d`](https://github.com/tim-smart/lalph/commit/424ca7dbb8998b5c0006b0e82e2f4ca1081ae0ed) Thanks [@tim-smart](https://github.com/tim-smart)! - create task branch before starting worker
+
 ## 0.3.55
 
 ### Patch Changes
