@@ -522,24 +522,51 @@ const watchTaskState = Effect.fnUntraced(function* (options: {
     Stream.runForEach((issues) => {
       const issue = issues.find((entry) => entry.id === options.issueId)
       if (!issue) {
-        return Effect.fail(
-          new TaskStateChanged({
-            issueId: options.issueId,
-            state: "missing",
-          }),
-        )
+        return verifyTaskStateFromSource({
+          issueId: options.issueId,
+        })
       }
       if (issue.state === "in-progress" || issue.state === "in-review") {
         return Effect.void
       }
-      return Effect.fail(
-        new TaskStateChanged({
-          issueId: options.issueId,
-          state: issue.state,
-        }),
-      )
+      return verifyTaskStateFromSource({
+        issueId: options.issueId,
+      })
     }),
     Effect.withSpan("Main.watchTaskState"),
+  )
+})
+
+const verifyTaskStateFromSource = Effect.fnUntraced(function* (options: {
+  readonly issueId: string
+}) {
+  const source = yield* IssueSource
+  const projectId = yield* CurrentProjectId
+
+  const state = yield* source.issues(projectId).pipe(
+    Effect.map((issues) => {
+      const issue = issues.find((entry) => entry.id === options.issueId)
+      return issue ? issue.state : "missing"
+    }),
+    Effect.timeoutOrElse({
+      duration: "5 seconds",
+      onTimeout: () => Effect.succeed("unknown" as const),
+    }),
+    Effect.catchTag("IssueSourceError", () =>
+      Effect.logWarning(
+        `Failed to verify latest task state for ${options.issueId}; ignoring stale local state update.`,
+      ).pipe(Effect.as("unknown" as const)),
+    ),
+  )
+
+  if (state === "unknown") return
+  if (state === "in-progress" || state === "in-review") return
+
+  return yield* Effect.fail(
+    new TaskStateChanged({
+      issueId: options.issueId,
+      state,
+    }),
   )
 })
 
