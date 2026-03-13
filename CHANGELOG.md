@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.60
+
+### Patch Changes
+
+- [#356](https://github.com/tim-smart/lalph/pull/356) [`450ded0`](https://github.com/tim-smart/lalph/commit/450ded07a7727b5cc4b1dcb81a11634fdd1024fb) Thanks [@tim-smart](https://github.com/tim-smart)! - Fix task-run cancellation races by verifying task state against the issue source before cancelling a worker.
+
+- [`311f190`](https://github.com/tim-smart/lalph/commit/311f190fe5f90a3c259d7bf65de8dd6442dab6f7) Thanks [@tim-smart](https://github.com/tim-smart)! - debounce task state watching
+
 ## 0.3.59
 
 ### Patch Changes
