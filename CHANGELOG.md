@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.63
+
+### Patch Changes
+
+- [`33fcb72`](https://github.com/tim-smart/lalph/commit/33fcb72c17b7c2082afa923242c2417bba54f9a6) Thanks [@tim-smart](https://github.com/tim-smart)! - tweak research prompt
+
 ## 0.3.62
 
 ### Patch Changes
