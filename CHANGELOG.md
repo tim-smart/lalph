@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.62
+
+### Patch Changes
+
+- [`08e090e`](https://github.com/tim-smart/lalph/commit/08e090e2081d7f39df55a6e089e999086d0b740f) Thanks [@tim-smart](https://github.com/tim-smart)! - add optional research agent
+
 ## 0.3.61
 
 ### Patch Changes
