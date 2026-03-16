@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.65
+
+### Patch Changes
+
+- [`1957bd2`](https://github.com/tim-smart/lalph/commit/1957bd26f96367915f911534220375b59145eb40) Thanks [@tim-smart](https://github.com/tim-smart)! - add support for websocket mode
+
 ## 0.3.64
 
 ### Patch Changes
