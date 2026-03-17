@@ -1,5 +1,17 @@
 # lalph
 
+## 0.3.71
+
+### Patch Changes
+
+- [#373](https://github.com/tim-smart/lalph/pull/373) [`a552a73`](https://github.com/tim-smart/lalph/commit/a552a73ce7e1cafd517ae334f7429772c5555170) Thanks [@tim-smart](https://github.com/tim-smart)! - move tasks to in-progress while the review agent is running, then return them to in-review once review finishes
+
+- [`586b9c8`](https://github.com/tim-smart/lalph/commit/586b9c869b9ea273fae8c102b8fc0007492b9c74) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
+- [#374](https://github.com/tim-smart/lalph/pull/374) [`466b756`](https://github.com/tim-smart/lalph/commit/466b756aabe1c2197a127acab097c9afb478438e) Thanks [@tim-smart](https://github.com/tim-smart)! - add support for clanka semantic search tool
+
+- [`586b9c8`](https://github.com/tim-smart/lalph/commit/586b9c869b9ea273fae8c102b8fc0007492b9c74) Thanks [@tim-smart](https://github.com/tim-smart)! - add shared directory
+
 ## 0.3.70
 
 ### Patch Changes
