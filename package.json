@@ -26,6 +26,18 @@
     "url": "https://github.com/tim-smart/lalph.git"
   },
   "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48",
+  "dependencies": {
+    "better-sqlite3": "^12.8.0"
+  },
+  "optionalDependencies": {
+    "@sqliteai/sqlite-vector-darwin-arm64": "0.9.93",
+    "@sqliteai/sqlite-vector-darwin-x86_64": "0.9.93",
+    "@sqliteai/sqlite-vector-linux-arm64": "0.9.93",
+    "@sqliteai/sqlite-vector-linux-arm64-musl": "0.9.93",
+    "@sqliteai/sqlite-vector-linux-x86_64": "0.9.93",
+    "@sqliteai/sqlite-vector-linux-x86_64-musl": "0.9.93",
+    "@sqliteai/sqlite-vector-win32-x86_64": "0.9.93"
+  },
   "devDependencies": {
     "@changesets/changelog-github": "^0.6.0",
     "@changesets/cli": "^2.30.0",
@@ -37,7 +49,7 @@
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@octokit/types": "^16.0.0",
     "@typescript/native-preview": "7.0.0-dev.20260317.1",
-    "clanka": "^0.1.21",
+    "clanka": "^0.1.22",
     "concurrently": "^9.2.1",
     "effect": "4.0.0-beta.34",
     "husky": "^9.1.7",
@@ -60,7 +72,8 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "@vscode/ripgrep"
+      "@vscode/ripgrep",
+      "better-sqlite3"
     ]
   }
 }

@@ -1,10 +1,20 @@
-import { Agent, OutputFormatter } from "clanka"
-import { Duration, Effect, Layer, Stdio, Stream } from "effect"
+import { Agent, OutputFormatter, SemanticSearch } from "clanka"
+import {
+  Config,
+  Duration,
+  Effect,
+  Layer,
+  Option,
+  Path,
+  Stdio,
+  Stream,
+} from "effect"
 import { TaskChooseTools, TaskTools, TaskToolsHandlers } from "./TaskTools.ts"
 import { ClankaModels } from "./ClankaModels.ts"
 import { withStallTimeout } from "./shared/stream.ts"
 import { NodeHttpClient } from "@effect/platform-node"
 import type { Prompt } from "effect/unstable/ai"
+import { OpenAiClient, OpenAiEmbeddingModel } from "@effect/ai-openai"
 
 export const ClankaMuxerLayer = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -13,6 +23,44 @@ export const ClankaMuxerLayer = Layer.effectDiscard(
     yield* muxer.output.pipe(Stream.run(stdio.stdout()), Effect.forkScoped)
   }),
 ).pipe(Layer.provideMerge(OutputFormatter.layerMuxer(OutputFormatter.pretty)))
+
+const Search = (directory: string) =>
+  Layer.unwrap(
+    Effect.gen(function* () {
+      const pathService = yield* Path.Path
+      const apiKey = yield* Config.redacted("LALPH_OPENAI_API_KEY").pipe(
+        Config.option,
+      )
+      if (Option.isNone(apiKey)) {
+        return Layer.empty
+      }
+      return SemanticSearch.layer({
+        directory,
+        database: pathService.join(
+          directory,
+          ".lalph",
+          "shared",
+          "search.sqlite",
+        ),
+      }).pipe(
+        Layer.orDie,
+        Layer.provide(
+          OpenAiEmbeddingModel.model("text-embedding-3-small", {
+            dimensions: 1536,
+          }),
+        ),
+        Layer.provide(
+          OpenAiClient.layer({
+            apiKey: apiKey.value,
+          }),
+        ),
+        Layer.tapCause((cause) =>
+          Effect.logWarning(`Failed to create SemanticSearch layer`, cause),
+        ),
+        Layer.catchCause(() => Layer.empty),
+      )
+    }).pipe(Effect.orDie),
+  )
 
 export const runClanka = Effect.fnUntraced(
   function* (options: {
@@ -64,7 +112,10 @@ export const runClanka = Effect.fnUntraced(
       Agent.layerLocal({
         directory: options.directory,
         tools: options.withChoose ? TaskChooseTools : TaskTools,
-      }).pipe(Layer.merge(ClankaModels.get(options.model))),
+      }).pipe(
+        Layer.provide(Search(options.directory)),
+        Layer.merge(ClankaModels.get(options.model)),
+      ),
     ),
   Effect.provide([NodeHttpClient.layerUndici, TaskToolsHandlers]),
 )
