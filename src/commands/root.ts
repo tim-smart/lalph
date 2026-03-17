@@ -268,6 +268,12 @@ const run = Effect.fnUntraced(
       // -----------------------
 
       if (options.review) {
+        yield* source.updateIssue({
+          projectId,
+          issueId: taskId,
+          state: "in-progress",
+        })
+
         registry.update(currentWorker.state, (s) =>
           s.transitionTo(WorkerStatus.Reviewing({ issueId: taskId })),
         )
@@ -278,6 +284,15 @@ const run = Effect.fnUntraced(
           preset: taskPreset,
           instructions,
         }).pipe(catchStallInReview, Effect.withSpan("Main.agentReviewer"))
+
+        const task = yield* prd.findById(taskId)
+        if (task?.state === "in-progress") {
+          yield* source.updateIssue({
+            projectId,
+            issueId: taskId,
+            state: "in-review",
+          })
+        }
       }
     }).pipe(
       Effect.timeout(options.runTimeout),
