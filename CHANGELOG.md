@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.72
+
+### Patch Changes
+
+- [`2dad80f`](https://github.com/tim-smart/lalph/commit/2dad80f8d3bda9a35e2bf77988ce5ad466beb76e) Thanks [@tim-smart](https://github.com/tim-smart)! - only watch for prd changes
+
 ## 0.3.71
 
 ### Patch Changes
