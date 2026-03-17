@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.73
+
+### Patch Changes
+
+- [#376](https://github.com/tim-smart/lalph/pull/376) [`5818830`](https://github.com/tim-smart/lalph/commit/58188307e09d7e47e1abc2482bea18b75e885145) Thanks [@tim-smart](https://github.com/tim-smart)! - Copy .lalph/shared into new temporary worktrees instead of symlinking it, and sync the worktree copy back to the main .lalph/shared directory when the worktree is finalized.
+
 ## 0.3.72
 
 ### Patch Changes
