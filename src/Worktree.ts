@@ -40,6 +40,8 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     }
 
     const directory = yield* fs.makeTempDirectory()
+    const shared = pathService.resolve(".lalph", "shared")
+    const worktreeShared = pathService.join(directory, ".lalph", "shared")
 
     yield* Effect.addFinalizer(
       Effect.fnUntraced(function* () {
@@ -62,7 +64,18 @@ export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
     yield* setupWorktree({
       directory,
       exec: execHelpers.exec,
+      shared,
+      worktreeShared,
     })
+
+    yield* Effect.addFinalizer(
+      Effect.fnUntraced(function* () {
+        yield* copySharedBack({
+          shared,
+          worktreeShared,
+        }).pipe(Effect.catchCause(Effect.logWarning))
+      }),
+    )
 
     return {
       directory,
@@ -109,6 +122,8 @@ const seedSetupScript = Effect.fnUntraced(function* (setupPath: string) {
 
 const setupWorktree = Effect.fnUntraced(function* (options: {
   readonly directory: string
+  readonly shared: string
+  readonly worktreeShared: string
   readonly exec: (
     template: TemplateStringsArray,
     ...args: Array<string | number | boolean>
@@ -129,12 +144,10 @@ const setupWorktree = Effect.fnUntraced(function* (options: {
     }
   }
 
-  const shared = pathService.resolve(".lalph", "shared")
-  yield* fs.makeDirectory(shared, { recursive: true })
-  yield* fs.symlink(
-    shared,
-    pathService.join(options.directory, ".lalph", "shared"),
-  )
+  yield* fs.makeDirectory(options.shared, { recursive: true })
+  yield* fs.copy(options.shared, options.worktreeShared, {
+    overwrite: true,
+  })
 
   const cwdSetupPath = pathService.resolve("scripts", "worktree-setup.sh")
   const worktreeSetupPath = pathService.join(
@@ -156,6 +169,24 @@ const setupWorktree = Effect.fnUntraced(function* (options: {
     stderr: "inherit",
     stdout: "inherit",
   })`${setupPath}`.pipe(spawner.exitCode)
+})
+
+const copySharedBack = Effect.fnUntraced(function* (options: {
+  readonly shared: string
+  readonly worktreeShared: string
+}) {
+  const fs = yield* FileSystem.FileSystem
+  const pathService = yield* Path.Path
+
+  if (!(yield* fs.exists(options.worktreeShared))) {
+    return
+  }
+
+  yield* fs.makeDirectory(pathService.dirname(options.shared), {
+    recursive: true,
+  })
+  yield* fs.remove(options.shared, { recursive: true, force: true })
+  yield* fs.copy(options.worktreeShared, options.shared)
 })
 
 const getTargetBranch = Effect.gen(function* () {
