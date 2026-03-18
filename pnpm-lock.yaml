@@ -43,8 +43,8 @@ importers:
         specifier: 7.0.0-dev.20260317.1
         version: 7.0.0-dev.20260317.1
       clanka:
-        specifier: ^0.2.3
-        version: 0.2.3(@effect/ai-openai-compat@4.0.0-beta.34(effect@4.0.0-beta.34))(@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238(effect@4.0.0-beta.34))(effect@4.0.0-beta.34)(zod@4.3.6)
+        specifier: ^0.2.4
+        version: 0.2.4(@effect/ai-openai-compat@4.0.0-beta.34(effect@4.0.0-beta.34))(@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238(effect@4.0.0-beta.34))(effect@4.0.0-beta.34)(zod@4.3.6)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -898,9 +898,9 @@ packages:
   chownr@1.1.4:
     resolution: {integrity: sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg==}
 
-  clanka@0.2.3:
-    resolution: {integrity: sha512-0xdi2VfMhlcXgehAmB7tFt97eo/aC00svuCLP6WkWK+oWZTOey4hZtubhIa5lyQphtBFB5hdKkFwSRwvSvcSKQ==}
-    version: 0.2.3
+  clanka@0.2.4:
+    resolution: {integrity: sha512-7cbGAgx8KFfB0xYcV1P1QVJIkytfugMt12OPqIy2LrzsI67rCBE0c/qkbeR4FEeTzp+zTTtQUNmsVTjJQ/kX9g==}
+    version: 0.2.4
     peerDependencies:
       '@effect/ai-openai': 4.0.0-beta.34
       '@effect/ai-openai-compat': 4.0.0-beta.34
@@ -2883,7 +2883,7 @@ snapshots:
 
   chownr@1.1.4: {}
 
-  clanka@0.2.3(@effect/ai-openai-compat@4.0.0-beta.34(effect@4.0.0-beta.34))(@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238(effect@4.0.0-beta.34))(effect@4.0.0-beta.34)(zod@4.3.6):
+  clanka@0.2.4(@effect/ai-openai-compat@4.0.0-beta.34(effect@4.0.0-beta.34))(@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238(effect@4.0.0-beta.34))(effect@4.0.0-beta.34)(zod@4.3.6):
     dependencies:
       '@effect/ai-openai': https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238(effect@4.0.0-beta.34)
       '@effect/ai-openai-compat': 4.0.0-beta.34(effect@4.0.0-beta.34)

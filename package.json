@@ -49,7 +49,7 @@
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@octokit/types": "^16.0.0",
     "@typescript/native-preview": "7.0.0-dev.20260317.1",
-    "clanka": "^0.2.3",
+    "clanka": "^0.2.4",
     "concurrently": "^9.2.1",
     "effect": "4.0.0-beta.34",
     "husky": "^9.1.7",
