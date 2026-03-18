@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.74
+
+### Patch Changes
+
+- [`7d9db91`](https://github.com/tim-smart/lalph/commit/7d9db916826865629a94e05c96ad2e85f809d17b) Thanks [@tim-smart](https://github.com/tim-smart)! - update openai provider
+
 ## 0.3.73
 
 ### Patch Changes
