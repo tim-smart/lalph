@@ -19,8 +19,8 @@ importers:
         specifier: ^2.30.0
         version: 2.30.0(@types/node@25.5.0)
       '@effect/ai-openai':
-        specifier: https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@34082eb
-        version: https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@34082eb(effect@4.0.0-beta.34)
+        specifier: https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238
+        version: https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238(effect@4.0.0-beta.34)
       '@effect/ai-openai-compat':
         specifier: 4.0.0-beta.34
         version: 4.0.0-beta.34(effect@4.0.0-beta.34)
@@ -44,7 +44,7 @@ importers:
         version: 7.0.0-dev.20260317.1
       clanka:
         specifier: ^0.2.0
-        version: 0.2.0(@effect/ai-openai-compat@4.0.0-beta.34(effect@4.0.0-beta.34))(@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@34082eb(effect@4.0.0-beta.34))(effect@4.0.0-beta.34)(zod@4.3.6)
+        version: 0.2.0(@effect/ai-openai-compat@4.0.0-beta.34(effect@4.0.0-beta.34))(@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238(effect@4.0.0-beta.34))(effect@4.0.0-beta.34)(zod@4.3.6)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -191,8 +191,8 @@ packages:
     peerDependencies:
       effect: ^4.0.0-beta.34
 
-  '@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@34082eb':
-    resolution: {integrity: sha512-Dk9qKM5gEXGGCm2DVXZjPALiqajb962Q2TG8/j3EhxWYCDMYQN8Ksv5obpeFb6nE43VO8pp/7XT/M2bRFTuOkw==, tarball: https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@34082eb}
+  '@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238':
+    resolution: {integrity: sha512-WwLVgKBMbRK9XD6vS22Hy53AkXFt/RDRiGuRkXH6xgtiA6jpxhvyhAx0eoMfPUSAVR8qdX8rLtTTSBF3RHq5dw==, tarball: https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238}
     version: 4.0.0-beta.34
     peerDependencies:
       effect: ^4.0.0-beta.34
@@ -2246,7 +2246,7 @@ snapshots:
     dependencies:
       effect: 4.0.0-beta.34
 
-  '@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@34082eb(effect@4.0.0-beta.34)':
+  '@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238(effect@4.0.0-beta.34)':
     dependencies:
       effect: 4.0.0-beta.34
 
@@ -2883,9 +2883,9 @@ snapshots:
 
   chownr@1.1.4: {}
 
-  clanka@0.2.0(@effect/ai-openai-compat@4.0.0-beta.34(effect@4.0.0-beta.34))(@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@34082eb(effect@4.0.0-beta.34))(effect@4.0.0-beta.34)(zod@4.3.6):
+  clanka@0.2.0(@effect/ai-openai-compat@4.0.0-beta.34(effect@4.0.0-beta.34))(@effect/ai-openai@https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238(effect@4.0.0-beta.34))(effect@4.0.0-beta.34)(zod@4.3.6):
     dependencies:
-      '@effect/ai-openai': https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@34082eb(effect@4.0.0-beta.34)
+      '@effect/ai-openai': https://pkg.pr.new/Effect-TS/effect-smol/@effect/ai-openai@720d238(effect@4.0.0-beta.34)
       '@effect/ai-openai-compat': 4.0.0-beta.34(effect@4.0.0-beta.34)
       '@effect/sql-sqlite-node': 4.0.0-beta.34(effect@4.0.0-beta.34)
       '@modelcontextprotocol/sdk': 1.27.1(zod@4.3.6)
