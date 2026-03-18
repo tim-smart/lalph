@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.75
+
+### Patch Changes
+
+- [`3b9d4cf`](https://github.com/tim-smart/lalph/commit/3b9d4cfdf9c9e3d9b41c03b0e53c2f17591be163) Thanks [@tim-smart](https://github.com/tim-smart)! - build SemanticSearch earlier
+
+- [`e1e923a`](https://github.com/tim-smart/lalph/commit/e1e923a3f1bf3eb85ff9da99a41a286ff6aa81cf) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
 ## 0.3.74
 
 ### Patch Changes
