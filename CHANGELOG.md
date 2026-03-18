@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.81
+
+### Patch Changes
+
+- [`b1a9c4a`](https://github.com/tim-smart/lalph/commit/b1a9c4a565a38b360f3b518531ff9f43c9eff2d0) Thanks [@tim-smart](https://github.com/tim-smart)! - align tree-sitter versions
+
 ## 0.3.80
 
 ### Patch Changes
