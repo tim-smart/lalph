@@ -17,6 +17,10 @@ a shared `CurrentTask` discriminated interface with a `_tag` field.
   each duplicate Ralph/default conditionals for prompt/system/mode/prd paths.
 - `src/Agents/timeout.ts` repeats `options.task._tag === "ralph"` across
   multiple fields, increasing cognitive load.
+- `src/Agents/timeout.ts` intentionally uses different timeout prompts between
+  execution paths in standard mode (`promptTimeoutClanka` for Clanka vs
+  `promptTimeout` for CLI command), so descriptor refactoring must preserve
+  this split.
 - `src/Agents/worker.ts` and `src/Agents/reviewer.ts` use `ralph: boolean`
   while `src/Agents/timeout.ts` uses a tagged task union, so mode branching
   shape is inconsistent across agents.
@@ -198,7 +202,7 @@ type, or runtime issue that cannot be resolved in the primary files.
    - Keep existing review prompt-selection behavior unchanged.
    - Validation gate: run `pnpm check`.
 
-4. [ ] Refactor timeout task-tag branching into a single mode descriptor.
+4. [x] Refactor timeout task-tag branching into a single mode descriptor.
    - File: `src/Agents/timeout.ts`
    - Migrate timeout options to shared `CurrentTask` type.
    - Use `CurrentTask` tagged-enum matching helpers to build the timeout mode

@@ -312,7 +312,7 @@ const run = Effect.fnUntraced(
           specsDirectory: options.specsDirectory,
           stallTimeout: options.stallTimeout,
           preset: taskPreset,
-          task: { _tag: "task", task: chosenTask.prd },
+          currentTask: CurrentTask.task({ task: chosenTask.prd }),
         }),
       ),
       Effect.raceFirst(watchTaskState({ issueId: taskId })),
@@ -504,7 +504,10 @@ const runRalph = Effect.fnUntraced(
           specsDirectory: "",
           stallTimeout: options.stallTimeout,
           preset,
-          task: { _tag: "ralph", task: chosenTask, specFile: options.specFile },
+          currentTask: CurrentTask.ralph({
+            task: chosenTask,
+            specFile: options.specFile,
+          }),
         }),
       ),
     )
