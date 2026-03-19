@@ -25,6 +25,9 @@ a shared `CurrentTask` discriminated interface with a `_tag` field.
 - Missing-`ralphSpec` validation must occur before the iteration loop in
   `runProject`; otherwise the generic per-iteration `catchCause` path retries
   indefinitely and masks the configuration issue.
+- There was no shared `CurrentTask` domain tagged enum yet, so worker/refactor
+  work needed a new `src/domain/CurrentTask.ts` source of truth before agent
+  signatures could switch away from `ralph: boolean`.
 
 ## Requirements Gathered From User Interview
 
@@ -172,7 +175,7 @@ type, or runtime issue that cannot be resolved in the primary files.
    - Add early guard for missing `project.ralphSpec` in Ralph path.
    - Validation gate: run `pnpm check`.
 
-2. [ ] Refactor worker mode conditionals into local helpers.
+2. [x] Refactor worker mode conditionals into local helpers.
    - File: `src/Agents/worker.ts`
    - Switch branching input to `currentTask: CurrentTask` and branch on `_tag`.
    - Use `CurrentTask` tagged-enum matching helpers for mode/prd path

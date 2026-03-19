@@ -66,6 +66,7 @@ import type { OutputFormatter } from "clanka"
 import { ClankaMuxerLayer, SemanticSearchLayer } from "../Clanka.ts"
 import { agentResearcher } from "../Agents/researcher.ts"
 import { agentChooserRalph } from "../Agents/chooserRalph.ts"
+import { CurrentTask } from "../domain/CurrentTask.ts"
 
 // Main iteration run logic
 
@@ -268,7 +269,7 @@ const run = Effect.fnUntraced(
         prompt: instructions,
         research: researchResult,
         steer,
-        ralph: false,
+        currentTask: CurrentTask.task({ task: chosenTask.prd }),
       }).pipe(
         Effect.provideService(CurrentTaskRef, issueRef),
         catchStallInReview,
@@ -470,7 +471,10 @@ const runRalph = Effect.fnUntraced(
         prompt: instructions,
         research: researchResult,
         maxContext: options.maxContext,
-        ralph: true,
+        currentTask: CurrentTask.ralph({
+          task: chosenTask,
+          specFile: options.specFile,
+        }),
       }).pipe(Effect.withSpan("Main.worker"))
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
