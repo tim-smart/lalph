@@ -115,11 +115,14 @@ Interview outcomes captured for this specification:
 
 ## Implementation Discoveries and Issues
 
-- Discovery: This task iteration is scoped to H2 heading emoji prefixes only;
-  bullet-level emoji additions remain for a follow-up task.
-- Discovery: Prefix emoji placement keeps markdown heading syntax valid and
-  preserves expected heading rendering.
-- Validation: `pnpm check` passed after applying heading updates.
+- Discovery: Prefix emoji placement for H2 headings keeps markdown heading
+  syntax valid and preserves expected heading rendering.
+- Discovery: `README.md` currently has 21 eligible bullet lines in in-scope
+  list sections (Features, CLI usage, Creating issues front matter,
+  Development).
+- Discovery: Added exactly one semantically relevant emoji to all 21/21
+  eligible bullet lines (100% one-emoji coverage, 0% two-emoji lines).
+- Validation: `pnpm check` passed after applying the bullet emoji updates.
 - Issues found: none.
 
 ## Implementation Plan
@@ -130,20 +133,20 @@ Interview outcomes captured for this specification:
    - Keep heading text intact beyond emoji insertion.
    - Definition of done: markdown remains well-formed and `pnpm check` passes.
 
-2. [ ] Add high-density emojis to in-scope README bullet lines.
+2. [x] Add high-density emojis to in-scope README bullet lines.
    - Update bullet text while preserving `-` markers and command accuracy.
    - Meet density threshold (>=80% eligible bullet coverage) without editing
      fenced or inline code.
    - Definition of done: readability remains strong and `pnpm check` passes.
-   - Status: pending (not part of this heading-only task iteration).
+   - Status: completed.
 
-3. [ ] Run final integrity and acceptance sweep.
+3. [x] Run final integrity and acceptance sweep.
    - Verify acceptance criteria (heading coverage, bullet coverage, code safety,
      command accuracy, rendering).
    - Verify `.specs/README.md` still references this spec.
    - Definition of done: all acceptance criteria are satisfied and
      `pnpm check` passes.
-   - Status: pending until bullet coverage work is completed.
+   - Status: completed.
 
 ## Validation Plan
 
