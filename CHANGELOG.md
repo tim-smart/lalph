@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.89
+
+### Patch Changes
+
+- [`f2a1127`](https://github.com/tim-smart/lalph/commit/f2a11271d1f224e3a2fd4de5d354ca00febbe0f6) Thanks [@tim-smart](https://github.com/tim-smart)! - add max context config for clanka
+
 ## 0.3.88
 
 ### Patch Changes
