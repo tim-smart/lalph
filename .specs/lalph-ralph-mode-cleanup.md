@@ -22,6 +22,9 @@ a shared `CurrentTask` discriminated interface with a `_tag` field.
   shape is inconsistent across agents.
 - `src/commands/root.ts` uses `options.project.ralphSpec!` in Ralph execution,
   which is brittle if a Ralph project is missing `ralphSpec`.
+- Missing-`ralphSpec` validation must occur before the iteration loop in
+  `runProject`; otherwise the generic per-iteration `catchCause` path retries
+  indefinitely and masks the configuration issue.
 
 ## Requirements Gathered From User Interview
 
@@ -161,7 +164,7 @@ type, or runtime issue that cannot be resolved in the primary files.
 
 ## Implementation Plan
 
-1. Refactor root Ralph branching into local decision helpers.
+1. [x] Refactor root Ralph branching into local decision helpers.
    - File: `src/commands/root.ts`
    - Extract helper functions for git-flow layer choice, run strategy choice,
      mode-specific catch handling, and iteration waiting behavior.
@@ -169,7 +172,7 @@ type, or runtime issue that cannot be resolved in the primary files.
    - Add early guard for missing `project.ralphSpec` in Ralph path.
    - Validation gate: run `pnpm check`.
 
-2. Refactor worker mode conditionals into local helpers.
+2. [ ] Refactor worker mode conditionals into local helpers.
    - File: `src/Agents/worker.ts`
    - Switch branching input to `currentTask: CurrentTask` and branch on `_tag`.
    - Use `CurrentTask` tagged-enum matching helpers for mode/prd path
@@ -179,7 +182,7 @@ type, or runtime issue that cannot be resolved in the primary files.
    - Keep existing prompt construction and command execution behavior.
    - Validation gate: run `pnpm check`.
 
-3. Refactor reviewer mode conditionals into local helpers.
+3. [ ] Refactor reviewer mode conditionals into local helpers.
    - File: `src/Agents/reviewer.ts`
    - Switch branching input to `currentTask: CurrentTask` and branch on `_tag`.
    - Use `CurrentTask` tagged-enum matching helpers for system/mode decisions.
@@ -188,7 +191,7 @@ type, or runtime issue that cannot be resolved in the primary files.
    - Keep existing review prompt-selection behavior unchanged.
    - Validation gate: run `pnpm check`.
 
-4. Refactor timeout task-tag branching into a single mode descriptor.
+4. [ ] Refactor timeout task-tag branching into a single mode descriptor.
    - File: `src/Agents/timeout.ts`
    - Migrate timeout options to shared `CurrentTask` type.
    - Use `CurrentTask` tagged-enum matching helpers to build the timeout mode
@@ -198,7 +201,7 @@ type, or runtime issue that cannot be resolved in the primary files.
    - Eliminate repeated `_tag === "ralph"` checks in object literals.
    - Validation gate: run `pnpm check`.
 
-5. Add release metadata only.
+5. [x] Add release metadata only.
    - File: `.changeset/*` (single changeset)
    - Add one changeset describing the Ralph-mode readability cleanup and
      defensive guard behavior.
