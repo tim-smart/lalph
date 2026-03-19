@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.86
+
+### Patch Changes
+
+- [`24c5529`](https://github.com/tim-smart/lalph/commit/24c5529f7d3f9a2d4b031c5aa2372b4381580947) Thanks [@tim-smart](https://github.com/tim-smart)! - add ralph loop mode
+
 ## 0.3.85
 
 ### Patch Changes
