@@ -52,7 +52,7 @@
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@octokit/types": "^16.0.0",
     "@typescript/native-preview": "7.0.0-dev.20260318.1",
-    "clanka": "^0.2.13",
+    "clanka": "^0.2.14",
     "concurrently": "^9.2.1",
     "effect": "https://pkg.pr.new/Effect-TS/effect-smol/effect@60fcbcc",
     "husky": "^9.1.7",
