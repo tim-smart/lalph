@@ -36,9 +36,11 @@ const clanka = new CliAgent({
       "opencode",
       [
         "--prompt",
-        `@${prdFilePath}
+        prdFilePath
+          ? `@${prdFilePath}
 
-${prompt}`,
+${prompt}`
+          : prompt,
       ],
       {
         extendEnv: true,
