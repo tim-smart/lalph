@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.90
+
+### Patch Changes
+
+- [#392](https://github.com/tim-smart/lalph/pull/392) [`adfdcf0`](https://github.com/tim-smart/lalph/commit/adfdcf0bce2202e413849ce7b057f59440029a86) Thanks [@tim-smart](https://github.com/tim-smart)! - Refactor Ralph branching in `src/commands/root.ts` by extracting named helpers for git-flow layer selection, run-effect selection, iteration waiting, and mode-specific no-work handling. Add an early actionable failure when a Ralph project is missing `ralphSpec` so Ralph worker startup is blocked for misconfigured projects.
+
+- [`c92ef3a`](https://github.com/tim-smart/lalph/commit/c92ef3af67d95fa3d2fd2f795753d5ef96eb6da2) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
 ## 0.3.89
 
 ### Patch Changes
