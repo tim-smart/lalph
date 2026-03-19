@@ -1,7 +1,7 @@
 {
   "name": "lalph",
   "type": "module",
-  "version": "0.3.84",
+  "version": "0.3.85",
   "publishConfig": {
     "access": "public"
   },
