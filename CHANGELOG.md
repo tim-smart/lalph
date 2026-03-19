@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.87
+
+### Patch Changes
+
+- [`c8a7804`](https://github.com/tim-smart/lalph/commit/c8a78045c6c892886c0ec09c4fa321c9b19f2cfb) Thanks [@tim-smart](https://github.com/tim-smart)! - settings and prompt cleanup
+
 ## 0.3.86
 
 ### Patch Changes
