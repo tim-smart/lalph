@@ -1,5 +1,6 @@
 import {
   Config,
+  Data,
   Deferred,
   Duration,
   Effect,
@@ -18,7 +19,6 @@ import {
   Scope,
   Semaphore,
   Stream,
-  Unify,
 } from "effect"
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
@@ -66,6 +66,7 @@ import type { OutputFormatter } from "clanka"
 import { ClankaMuxerLayer, SemanticSearchLayer } from "../Clanka.ts"
 import { agentResearcher } from "../Agents/researcher.ts"
 import { agentChooserRalph } from "../Agents/chooserRalph.ts"
+import { CurrentTask } from "../domain/CurrentTask.ts"
 
 // Main iteration run logic
 
@@ -268,7 +269,7 @@ const run = Effect.fnUntraced(
         prompt: instructions,
         research: researchResult,
         steer,
-        ralph: false,
+        currentTask: CurrentTask.task({ task: chosenTask.prd }),
       }).pipe(
         Effect.provideService(CurrentTaskRef, issueRef),
         catchStallInReview,
@@ -295,7 +296,7 @@ const run = Effect.fnUntraced(
           stallTimeout: options.stallTimeout,
           preset: taskPreset,
           instructions,
-          ralph: false,
+          currentTask: CurrentTask.task({ task: chosenTask.prd }),
         }).pipe(catchStallInReview, Effect.withSpan("Main.agentReviewer"))
 
         yield* source.updateIssue({
@@ -311,7 +312,7 @@ const run = Effect.fnUntraced(
           specsDirectory: options.specsDirectory,
           stallTimeout: options.stallTimeout,
           preset: taskPreset,
-          task: { _tag: "task", task: chosenTask.prd },
+          currentTask: CurrentTask.task({ task: chosenTask.prd }),
         }),
       ),
       Effect.raceFirst(watchTaskState({ issueId: taskId })),
@@ -470,7 +471,10 @@ const runRalph = Effect.fnUntraced(
         prompt: instructions,
         research: researchResult,
         maxContext: options.maxContext,
-        ralph: true,
+        currentTask: CurrentTask.ralph({
+          task: chosenTask,
+          specFile: options.specFile,
+        }),
       }).pipe(Effect.withSpan("Main.worker"))
       yield* Effect.log(`Agent exited with code: ${exitCode}`)
 
@@ -487,7 +491,10 @@ const runRalph = Effect.fnUntraced(
           stallTimeout: options.stallTimeout,
           preset,
           instructions,
-          ralph: true,
+          currentTask: CurrentTask.ralph({
+            task: chosenTask,
+            specFile: options.specFile,
+          }),
         }).pipe(Effect.withSpan("Main.review"))
       }
     }).pipe(
@@ -497,7 +504,10 @@ const runRalph = Effect.fnUntraced(
           specsDirectory: "",
           stallTimeout: options.stallTimeout,
           preset,
-          task: { _tag: "ralph", task: chosenTask, specFile: options.specFile },
+          currentTask: CurrentTask.ralph({
+            task: chosenTask,
+            specFile: options.specFile,
+          }),
         }),
       ),
     )
@@ -517,6 +527,22 @@ const runRalph = Effect.fnUntraced(
   ),
 )
 
+class RalphSpecMissing extends Data.TaggedError("RalphSpecMissing")<{
+  readonly projectId: Project["id"]
+}> {
+  readonly message = `Project "${this.projectId}" is configured with gitFlow="ralph" but is missing "ralphSpec". Run 'lalph projects edit' and set "Path to Ralph spec file".`
+}
+
+type ProjectExecutionMode =
+  | {
+      readonly _tag: "standard"
+      readonly gitFlow: "pr" | "commit"
+    }
+  | {
+      readonly _tag: "ralph"
+      readonly specFile: string
+    }
+
 const runProject = Effect.fnUntraced(
   function* (options: {
     readonly iterations: number
@@ -530,6 +556,79 @@ const runProject = Effect.fnUntraced(
     const iterationsDisplay = isFinite ? options.iterations : "unlimited"
     const semaphore = Semaphore.makeUnsafe(options.project.concurrency)
     const fibers = yield* FiberSet.make()
+
+    let executionMode: ProjectExecutionMode
+    if (options.project.gitFlow === "ralph") {
+      if (!options.project.ralphSpec) {
+        return yield* new RalphSpecMissing({
+          projectId: options.project.id,
+        })
+      }
+      executionMode = {
+        _tag: "ralph",
+        specFile: options.project.ralphSpec,
+      }
+    } else {
+      executionMode = {
+        _tag: "standard",
+        gitFlow: options.project.gitFlow,
+      }
+    }
+
+    const resolveGitFlowLayer = () => {
+      if (executionMode._tag === "ralph") {
+        return GitFlowRalph
+      }
+      if (executionMode.gitFlow === "commit") {
+        return GitFlowCommit
+      }
+      return GitFlowPR
+    }
+
+    const resolveRunEffect = (startedDeferred: Deferred.Deferred<void>) => {
+      if (executionMode._tag === "ralph") {
+        return runRalph({
+          targetBranch: options.project.targetBranch,
+          stallTimeout: options.stallTimeout,
+          runTimeout: options.runTimeout,
+          review: options.project.reviewAgent,
+          research: options.project.researchAgent,
+          specFile: executionMode.specFile,
+          maxContext: options.maxContext,
+        })
+      }
+      return run({
+        startedDeferred,
+        targetBranch: options.project.targetBranch,
+        specsDirectory: options.specsDirectory,
+        stallTimeout: options.stallTimeout,
+        runTimeout: options.runTimeout,
+        review: options.project.reviewAgent,
+        research: options.project.researchAgent,
+      })
+    }
+
+    const handleNoMoreWork = (
+      currentIteration: number,
+      setIterations: (iterations: number) => void,
+    ) => {
+      if (executionMode._tag === "ralph") {
+        return Effect.void
+      }
+      if (isFinite) {
+        // If we have a finite number of iterations, we exit when no more
+        // work is found
+        setIterations(currentIteration)
+        return Effect.log(
+          `No more work to process, ending after ${currentIteration} iteration(s).`,
+        )
+      }
+      const log =
+        Iterable.size(fibers) <= 1
+          ? Effect.log("No more work to process, waiting 30 seconds...")
+          : Effect.void
+      return Effect.andThen(log, Effect.sleep(Duration.seconds(30)))
+    }
 
     yield* resetInProgress.pipe(Effect.withSpan("Main.resetInProgress"))
 
@@ -554,65 +653,28 @@ const runProject = Effect.fnUntraced(
       const startedDeferred = yield* Deferred.make<void>()
       let ralphDone = false
 
-      const gitFlow = options.project.gitFlow
-      const isRalph = gitFlow === "ralph"
-      const gitFlowLayer =
-        gitFlow === "commit"
-          ? GitFlowCommit
-          : gitFlow === "ralph"
-            ? GitFlowRalph
-            : GitFlowPR
+      const gitFlowLayer = resolveGitFlowLayer()
       const fiber = yield* checkForWork(options.project).pipe(
         Effect.andThen(
-          Unify.unify(
-            isRalph
-              ? runRalph({
-                  targetBranch: options.project.targetBranch,
-                  stallTimeout: options.stallTimeout,
-                  runTimeout: options.runTimeout,
-                  maxContext: options.maxContext,
-                  review: options.project.reviewAgent,
-                  research: options.project.researchAgent,
-                  specFile: options.project.ralphSpec!,
-                })
-              : run({
-                  startedDeferred,
-                  targetBranch: options.project.targetBranch,
-                  specsDirectory: options.specsDirectory,
-                  stallTimeout: options.stallTimeout,
-                  runTimeout: options.runTimeout,
-                  review: options.project.reviewAgent,
-                  research: options.project.researchAgent,
-                }),
-          ).pipe(
+          resolveRunEffect(startedDeferred).pipe(
             Effect.provide(gitFlowLayer, { local: true }),
             withWorkerState(options.project.id),
           ),
         ),
         Effect.catchTags({
           ChosenTaskNotFound(_error) {
-            if (isRalph) {
+            if (executionMode._tag !== "ralph") {
               ralphDone = true
-              return Effect.log(
-                `No more work to process for Ralph, ending after ${currentIteration + 1} iteration(s).`,
-              )
+              return Effect.void
             }
-            return Effect.void
+            return Effect.log(
+              `No more work to process for Ralph, ending after ${currentIteration + 1} iteration(s).`,
+            )
           },
           NoMoreWork(_error) {
-            if (isFinite) {
-              // If we have a finite number of iterations, we exit when no more
-              // work is found
-              iterations = currentIteration
-              return Effect.log(
-                `No more work to process, ending after ${currentIteration} iteration(s).`,
-              )
-            }
-            const log =
-              Iterable.size(fibers) <= 1
-                ? Effect.log("No more work to process, waiting 30 seconds...")
-                : Effect.void
-            return Effect.andThen(log, Effect.sleep(Duration.seconds(30)))
+            return handleNoMoreWork(currentIteration, (newIterations) => {
+              iterations = newIterations
+            })
           },
           QuitError(_error) {
             quit = true
@@ -628,12 +690,14 @@ const runProject = Effect.fnUntraced(
         Effect.ensuring(Deferred.completeWith(startedDeferred, Effect.void)),
         FiberSet.run(fibers),
       )
-      if (isRalph) {
+
+      if (executionMode._tag === "ralph") {
         yield* Fiber.await(fiber)
         if (ralphDone) break
       } else {
         yield* Deferred.await(startedDeferred)
       }
+
       iteration++
     }
 
