@@ -263,6 +263,7 @@ const run = Effect.fnUntraced(
 
       const exitCode = yield* agentWorker({
         stallTimeout: options.stallTimeout,
+        system: promptGen.systemClanka(options),
         preset: taskPreset,
         prompt: instructions,
         research: researchResult,
