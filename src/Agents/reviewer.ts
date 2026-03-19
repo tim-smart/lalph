@@ -6,19 +6,33 @@ import { GitFlow } from "../GitFlow.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 import { ExitCode } from "effect/unstable/process/ChildProcessSpawner"
 import { runClanka } from "../Clanka.ts"
+import { CurrentTask } from "../domain/CurrentTask.ts"
 
 export const agentReviewer = Effect.fnUntraced(function* (options: {
   readonly specsDirectory: string
   readonly stallTimeout: Duration.Duration
   readonly preset: CliAgentPreset
   readonly instructions: string
-  readonly ralph: boolean
+  readonly currentTask: CurrentTask
 }) {
   const fs = yield* FileSystem.FileSystem
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
   const gitFlow = yield* GitFlow
+
+  const resolveReviewerMode = CurrentTask.$match({
+    task: () => "default" as const,
+    ralph: () => "ralph" as const,
+  })
+
+  const resolveReviewerSystem = CurrentTask.$match({
+    task: () => promptGen.systemClanka(options),
+    ralph: () => undefined,
+  })
+
+  const mode = resolveReviewerMode(options.currentTask)
+  const system = resolveReviewerSystem(options.currentTask)
 
   const customInstructions = yield* pipe(
     fs.readFileString(pathService.join(worktree.directory, "LALPH_REVIEW.md")),
@@ -30,7 +44,7 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
     yield* runClanka({
       directory: worktree.directory,
       model: options.preset.extraArgs.join(" "),
-      system: options.ralph ? undefined : promptGen.systemClanka(options),
+      system,
       prompt: Option.match(customInstructions, {
         onNone: () =>
           promptGen.promptReview({
@@ -45,7 +59,7 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
           }),
       }),
       stallTimeout: options.stallTimeout,
-      mode: options.ralph ? "ralph" : "default",
+      mode,
     })
     return ExitCode(0)
   }

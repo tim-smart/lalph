@@ -20,6 +20,10 @@ a shared `CurrentTask` discriminated interface with a `_tag` field.
 - `src/Agents/worker.ts` and `src/Agents/reviewer.ts` use `ralph: boolean`
   while `src/Agents/timeout.ts` uses a tagged task union, so mode branching
   shape is inconsistent across agents.
+- `src/Agents/reviewer.ts` intentionally uses different
+  `promptReviewCustom(...removePrdNotes)` settings between execution paths
+  (`true` for Clanka, `false` for CLI command), so this behavior must be
+  preserved while refactoring mode branching.
 - `src/commands/root.ts` uses `options.project.ralphSpec!` in Ralph execution,
   which is brittle if a Ralph project is missing `ralphSpec`.
 - Missing-`ralphSpec` validation must occur before the iteration loop in
@@ -185,7 +189,7 @@ type, or runtime issue that cannot be resolved in the primary files.
    - Keep existing prompt construction and command execution behavior.
    - Validation gate: run `pnpm check`.
 
-3. [ ] Refactor reviewer mode conditionals into local helpers.
+3. [x] Refactor reviewer mode conditionals into local helpers.
    - File: `src/Agents/reviewer.ts`
    - Switch branching input to `currentTask: CurrentTask` and branch on `_tag`.
    - Use `CurrentTask` tagged-enum matching helpers for system/mode decisions.

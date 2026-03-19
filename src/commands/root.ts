@@ -296,7 +296,7 @@ const run = Effect.fnUntraced(
           stallTimeout: options.stallTimeout,
           preset: taskPreset,
           instructions,
-          ralph: false,
+          currentTask: CurrentTask.task({ task: chosenTask.prd }),
         }).pipe(catchStallInReview, Effect.withSpan("Main.agentReviewer"))
 
         yield* source.updateIssue({
@@ -491,7 +491,10 @@ const runRalph = Effect.fnUntraced(
           stallTimeout: options.stallTimeout,
           preset,
           instructions,
-          ralph: true,
+          currentTask: CurrentTask.ralph({
+            task: chosenTask,
+            specFile: options.specFile,
+          }),
         }).pipe(Effect.withSpan("Main.review"))
       }
     }).pipe(
