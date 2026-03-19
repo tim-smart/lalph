@@ -113,26 +113,37 @@ Interview outcomes captured for this specification:
 - Risk: inconsistent tone across sections.
   - Mitigation: define a small emoji style map before editing.
 
+## Implementation Discoveries and Issues
+
+- Discovery: This task iteration is scoped to H2 heading emoji prefixes only;
+  bullet-level emoji additions remain for a follow-up task.
+- Discovery: Prefix emoji placement keeps markdown heading syntax valid and
+  preserves expected heading rendering.
+- Validation: `pnpm check` passed after applying heading updates.
+- Issues found: none.
+
 ## Implementation Plan
 
-1. Add emoji prefixes to all in-scope README headings.
+1. [x] Add emoji prefixes to all in-scope README headings.
    - Update the 8 listed H2 headings with one playful, semantically relevant
      prefix emoji each.
    - Keep heading text intact beyond emoji insertion.
    - Definition of done: markdown remains well-formed and `pnpm check` passes.
 
-2. Add high-density emojis to in-scope README bullet lines.
+2. [ ] Add high-density emojis to in-scope README bullet lines.
    - Update bullet text while preserving `-` markers and command accuracy.
    - Meet density threshold (>=80% eligible bullet coverage) without editing
      fenced or inline code.
    - Definition of done: readability remains strong and `pnpm check` passes.
+   - Status: pending (not part of this heading-only task iteration).
 
-3. Run final integrity and acceptance sweep.
+3. [ ] Run final integrity and acceptance sweep.
    - Verify acceptance criteria (heading coverage, bullet coverage, code safety,
      command accuracy, rendering).
    - Verify `.specs/README.md` still references this spec.
    - Definition of done: all acceptance criteria are satisfied and
      `pnpm check` passes.
+   - Status: pending until bullet coverage work is completed.
 
 ## Validation Plan
 
