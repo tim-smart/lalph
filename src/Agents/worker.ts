@@ -20,18 +20,10 @@ export const agentWorker = Effect.fnUntraced(function* (options: {
   const pathService = yield* Path.Path
   const worktree = yield* Worktree
 
-  const resolveAgentMode = CurrentTask.$match({
-    task: () => "default" as const,
-    ralph: () => "ralph" as const,
-  })
-
-  const resolvePrdFilePath = CurrentTask.$match({
+  const prdFilePath = CurrentTask.$match(options.currentTask, {
     task: () => pathService.join(".lalph", "prd.yml"),
     ralph: () => undefined,
   })
-
-  const mode = resolveAgentMode(options.currentTask)
-  const prdFilePath = resolvePrdFilePath(options.currentTask)
 
   // use clanka
   if (!options.preset.cliAgent.command) {
@@ -59,7 +51,10 @@ ${research}`,
       stallTimeout: options.stallTimeout,
       maxContext: options.maxContext,
       steer: options.steer,
-      mode,
+      mode: CurrentTask.$match(options.currentTask, {
+        task: () => "default" as const,
+        ralph: () => "ralph" as const,
+      }),
     })
     return ExitCode(0)
   }

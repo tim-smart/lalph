@@ -17,7 +17,7 @@ export const agentTimeout = Effect.fnUntraced(function* (options: {
   const worktree = yield* Worktree
   const promptGen = yield* PromptGen
 
-  const resolveTimeoutModeDescriptor = CurrentTask.$match({
+  const timeoutMode = CurrentTask.$match(options.currentTask, {
     task: ({ task }) => ({
       mode: "default" as const,
       system: promptGen.systemClanka(options),
@@ -39,8 +39,6 @@ export const agentTimeout = Effect.fnUntraced(function* (options: {
       prdFilePath: undefined,
     }),
   })
-
-  const timeoutMode = resolveTimeoutModeDescriptor(options.currentTask)
 
   // use clanka
   if (!options.preset.cliAgent.command) {

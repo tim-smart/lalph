@@ -21,18 +21,15 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
   const promptGen = yield* PromptGen
   const gitFlow = yield* GitFlow
 
-  const resolveReviewerMode = CurrentTask.$match({
+  const mode = CurrentTask.$match(options.currentTask, {
     task: () => "default" as const,
     ralph: () => "ralph" as const,
   })
 
-  const resolveReviewerSystem = CurrentTask.$match({
+  const system = CurrentTask.$match(options.currentTask, {
     task: () => promptGen.systemClanka(options),
     ralph: () => undefined,
   })
-
-  const mode = resolveReviewerMode(options.currentTask)
-  const system = resolveReviewerSystem(options.currentTask)
 
   const customInstructions = yield* pipe(
     fs.readFileString(pathService.join(worktree.directory, "LALPH_REVIEW.md")),
