@@ -608,29 +608,6 @@ const runProject = Effect.fnUntraced(
       })
     }
 
-    const waitForIteration = (
-      startedDeferred: Deferred.Deferred<void>,
-      fiber: Fiber.Fiber<void, never>,
-    ) => {
-      if (executionMode._tag === "ralph") {
-        return Fiber.await(fiber)
-      }
-      return Deferred.await(startedDeferred)
-    }
-
-    const handleChosenTaskNotFound = (
-      currentIteration: number,
-      markRalphDone: () => void,
-    ) => {
-      if (executionMode._tag !== "ralph") {
-        return Effect.void
-      }
-      markRalphDone()
-      return Effect.log(
-        `No more work to process for Ralph, ending after ${currentIteration + 1} iteration(s).`,
-      )
-    }
-
     const handleNoMoreWork = (
       currentIteration: number,
       setIterations: (iterations: number) => void,
@@ -686,9 +663,13 @@ const runProject = Effect.fnUntraced(
         ),
         Effect.catchTags({
           ChosenTaskNotFound(_error) {
-            return handleChosenTaskNotFound(currentIteration, () => {
+            if (executionMode._tag !== "ralph") {
               ralphDone = true
-            })
+              return Effect.void
+            }
+            return Effect.log(
+              `No more work to process for Ralph, ending after ${currentIteration + 1} iteration(s).`,
+            )
           },
           NoMoreWork(_error) {
             return handleNoMoreWork(currentIteration, (newIterations) => {
@@ -710,9 +691,11 @@ const runProject = Effect.fnUntraced(
         FiberSet.run(fibers),
       )
 
-      yield* waitForIteration(startedDeferred, fiber)
-      if (executionMode._tag === "ralph" && ralphDone) {
-        break
+      if (executionMode._tag === "ralph") {
+        yield* Fiber.await(fiber)
+        if (ralphDone) break
+      } else {
+        yield* Deferred.await(startedDeferred)
       }
 
       iteration++
