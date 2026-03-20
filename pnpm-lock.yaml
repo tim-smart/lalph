@@ -28,17 +28,17 @@ importers:
         specifier: ^2.30.0
         version: 2.30.0(@types/node@25.5.0)
       '@effect/ai-openai':
-        specifier: 4.0.0-beta.35
-        version: 4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)
+        specifier: 4.0.0-beta.36
+        version: 4.0.0-beta.36(effect@4.0.0-beta.36)
       '@effect/ai-openai-compat':
-        specifier: 4.0.0-beta.35
-        version: 4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)
+        specifier: 4.0.0-beta.36
+        version: 4.0.0-beta.36(effect@4.0.0-beta.36)
       '@effect/language-service':
         specifier: ^0.80.0
         version: 0.80.0
       '@effect/platform-node':
-        specifier: 4.0.0-beta.35
-        version: 4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)(ioredis@5.10.0)
+        specifier: 4.0.0-beta.36
+        version: 4.0.0-beta.36(effect@4.0.0-beta.36)(ioredis@5.10.0)
       '@linear/sdk':
         specifier: ^78.0.0
         version: 78.0.0(graphql@16.13.1)
@@ -52,14 +52,14 @@ importers:
         specifier: 7.0.0-dev.20260319.1
         version: 7.0.0-dev.20260319.1
       clanka:
-        specifier: ^0.2.19
-        version: 0.2.19(@effect/ai-openai-compat@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(@effect/ai-openai@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)(zod@4.3.6)
+        specifier: ^0.2.20
+        version: 0.2.20(@effect/ai-openai-compat@4.0.0-beta.36(effect@4.0.0-beta.36))(@effect/ai-openai@4.0.0-beta.36(effect@4.0.0-beta.36))(effect@4.0.0-beta.36)(zod@4.3.6)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
       effect:
-        specifier: https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98
-        version: https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98
+        specifier: 4.0.0-beta.36
+        version: 4.0.0-beta.36
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -195,42 +195,37 @@ packages:
   '@changesets/write@0.4.0':
     resolution: {integrity: sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q==}
 
-  '@effect/ai-openai-compat@4.0.0-beta.35':
-    resolution: {integrity: sha512-x6P2Paah2Xu9so02foSccxmStTfHTN+mD+A9r17x82O19J17+M6168ePLz6OKEqmK1pAs2doq6qIjcEN1RZE/Q==}
-    version: 4.0.0-beta.35
+  '@effect/ai-openai-compat@4.0.0-beta.36':
+    resolution: {integrity: sha512-Z9TVdeYUoblgPvZrpZF4g87u26VEhMDZoqsrGpNN0vhHEipH5Lp0MMbVLrx90maVVVt8uCjdrLL7X4oIZzn17A==}
     peerDependencies:
-      effect: ^4.0.0-beta.35
+      effect: ^4.0.0-beta.36
 
-  '@effect/ai-openai@4.0.0-beta.35':
-    resolution: {integrity: sha512-aNwMgmkorHeNx0q6osN2R7P4z1SJI/R5yXKTqtSDpRdbDFi7KQ/TMUr5k/y614ZjmhQ8LF8UAk27xVTe1aBKwg==}
-    version: 4.0.0-beta.35
+  '@effect/ai-openai@4.0.0-beta.36':
+    resolution: {integrity: sha512-PDITCy6bfpNvj+v1/Z3oSyl625b7GvrJi5e0dW0b7+UJ8b0FJKsYMRApZZE75y4iKLP87J98enfySUQ2w/fmew==}
     peerDependencies:
-      effect: ^4.0.0-beta.35
+      effect: ^4.0.0-beta.36
 
   '@effect/language-service@0.80.0':
     resolution: {integrity: sha512-dKMATT1fDzaCpNrICpXga7sjJBtFLpKCAoE/1MiGXI8UwcHA9rmAZ2t52JO9g/kJpERWyomkJ+rl+VFlwNIofg==}
     hasBin: true
 
-  '@effect/platform-node-shared@4.0.0-beta.35':
-    resolution: {integrity: sha512-9bPqNV988itKJ7MQoJuzmR014DB9EZRDOnhJt/+iJlb8qLoR9HnCzNJb9gfBdYhFmVYc8DMsQxG81rdJzpv9tg==}
-    version: 4.0.0-beta.35
+  '@effect/platform-node-shared@4.0.0-beta.36':
+    resolution: {integrity: sha512-QRK+B2tzMJ4L6uQXj4c1r9cRSCspPPuCF+ptJXWoZXO+fR3mIu1h4rTefTvtPVdiED5t3IhIm252FoMVBWwuZQ==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      effect: ^4.0.0-beta.35
+      effect: ^4.0.0-beta.36
 
-  '@effect/platform-node@4.0.0-beta.35':
-    resolution: {integrity: sha512-HPc2xZASl9F9y/xJ01bQgFD6Jf9XP4Fcv/BlVTvG0Yr/uN63lwKZYr/VXor5K5krHfBDeCBD8y7/SICPYZoq3A==}
-    version: 4.0.0-beta.35
+  '@effect/platform-node@4.0.0-beta.36':
+    resolution: {integrity: sha512-S7hMDf+vvWgK/KwW0FRxQ4zEtoThFA6HQVRp6oaKdm+j4zaXEDxg+WF5OoYiM5bwHc4h+hkbHRcCx1FIiZypvw==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      effect: ^4.0.0-beta.35
+      effect: ^4.0.0-beta.36
       ioredis: ^5.7.0
 
-  '@effect/sql-sqlite-node@4.0.0-beta.35':
-    resolution: {integrity: sha512-AEZ4oPc0QJBXWMD6PrhMtvSZuDUktj6kOgIhAKkuCgBYxbv76o3D+Wc7shrJbsa+iqyxub1YrToaM9oH+05nrQ==}
-    version: 4.0.0-beta.35
+  '@effect/sql-sqlite-node@4.0.0-beta.36':
+    resolution: {integrity: sha512-DntB80IRZ/QJ2iibLGuF4uOWaf/YWdOL1L3k2yB0caTzLF0VuXm+AkznryH8X4ZiSvyLhh6D0p4RfTIU9vKMwA==}
     peerDependencies:
-      effect: ^4.0.0-beta.35
+      effect: ^4.0.0-beta.36
 
   '@emnapi/core@1.9.0':
     resolution: {integrity: sha512-0DQ98G9ZQZOxfUcQn1waV2yS8aWdZ6kJMbYCJB3oUBecjWYO1fqJ+a1DRfPF3O5JEkwqwP1A9QEN/9mYm2Yd0w==}
@@ -911,13 +906,12 @@ packages:
   chownr@1.1.4:
     resolution: {integrity: sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg==}
 
-  clanka@0.2.19:
-    resolution: {integrity: sha512-5A2bJJJL87+r2pGTid97OWpuH+NOr/Cp9cH49RsQ1acuWJflRs/jwMNhCUfr9W+kI1UUsNw7RQA6/9uJeqWpBg==}
-    version: 0.2.19
+  clanka@0.2.20:
+    resolution: {integrity: sha512-BFu98MSLdBnLfv33lW8NLJLouc+x+w+BL1zFVJiUpCneLdLsqdIYyytq9Nl5gqkRX+5WctCBJYhrFP+PQKmqwg==}
     peerDependencies:
-      '@effect/ai-openai': 4.0.0-beta.35
-      '@effect/ai-openai-compat': 4.0.0-beta.35
-      effect: 4.0.0-beta.35
+      '@effect/ai-openai': 4.0.0-beta.36
+      '@effect/ai-openai-compat': 4.0.0-beta.36
+      effect: 4.0.0-beta.36
 
   cli-cursor@5.0.0:
     resolution: {integrity: sha512-aCj4O5wKyszjMmDT4tZj93kxyydN/K5zPWSCe6/0AV/AA1pqe5ZBIw0a2ZfPQV7lL5/yb5HsUreJ6UFAF1tEQw==}
@@ -1041,9 +1035,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98:
-    resolution: {integrity: sha512-D+aWSERhtVa6Yxm2aX+ukNJyUs2gue3drN8SiMQSTCkixLRLKX5+5KTpoHqS4UeyxNX5qnOdXvwZSToFQUf45g==, tarball: https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98}
-    version: 4.0.0-beta.35
+  effect@4.0.0-beta.36:
+    resolution: {integrity: sha512-It0ivpQrAi7cTAISEVPLbPjGGLSN90dZ1Y6iDhYbUdBj/QH8rf/AZVx1tGYLgA++Jfs+5ONrxA88gpNYWXxXKA==}
 
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
@@ -2283,29 +2276,29 @@ snapshots:
       human-id: 4.1.3
       prettier: 2.8.8
 
-  '@effect/ai-openai-compat@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)':
+  '@effect/ai-openai-compat@4.0.0-beta.36(effect@4.0.0-beta.36)':
     dependencies:
-      effect: https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98
+      effect: 4.0.0-beta.36
 
-  '@effect/ai-openai@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)':
+  '@effect/ai-openai@4.0.0-beta.36(effect@4.0.0-beta.36)':
     dependencies:
-      effect: https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98
+      effect: 4.0.0-beta.36
 
   '@effect/language-service@0.80.0': {}
 
-  '@effect/platform-node-shared@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)':
+  '@effect/platform-node-shared@4.0.0-beta.36(effect@4.0.0-beta.36)':
     dependencies:
       '@types/ws': 8.18.1
-      effect: https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98
+      effect: 4.0.0-beta.36
       ws: 8.19.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@effect/platform-node@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)(ioredis@5.10.0)':
+  '@effect/platform-node@4.0.0-beta.36(effect@4.0.0-beta.36)(ioredis@5.10.0)':
     dependencies:
-      '@effect/platform-node-shared': 4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)
-      effect: https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98
+      '@effect/platform-node-shared': 4.0.0-beta.36(effect@4.0.0-beta.36)
+      effect: 4.0.0-beta.36
       ioredis: 5.10.0
       mime: 4.1.0
       undici: 7.24.4
@@ -2313,10 +2306,10 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@effect/sql-sqlite-node@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)':
+  '@effect/sql-sqlite-node@4.0.0-beta.36(effect@4.0.0-beta.36)':
     dependencies:
       better-sqlite3: 12.8.0
-      effect: https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98
+      effect: 4.0.0-beta.36
 
   '@emnapi/core@1.9.0':
     dependencies:
@@ -2924,15 +2917,15 @@ snapshots:
 
   chownr@1.1.4: {}
 
-  clanka@0.2.19(@effect/ai-openai-compat@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(@effect/ai-openai@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)(zod@4.3.6):
+  clanka@0.2.20(@effect/ai-openai-compat@4.0.0-beta.36(effect@4.0.0-beta.36))(@effect/ai-openai@4.0.0-beta.36(effect@4.0.0-beta.36))(effect@4.0.0-beta.36)(zod@4.3.6):
     dependencies:
-      '@effect/ai-openai': 4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)
-      '@effect/ai-openai-compat': 4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)
-      '@effect/sql-sqlite-node': 4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)
+      '@effect/ai-openai': 4.0.0-beta.36(effect@4.0.0-beta.36)
+      '@effect/ai-openai-compat': 4.0.0-beta.36(effect@4.0.0-beta.36)
+      '@effect/sql-sqlite-node': 4.0.0-beta.36(effect@4.0.0-beta.36)
       '@modelcontextprotocol/sdk': 1.27.1(zod@4.3.6)
       '@vscode/ripgrep': 1.17.1
       chalk: 5.6.2
-      effect: https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98
+      effect: 4.0.0-beta.36
       glob: 13.0.6
       tree-sitter: 0.21.1
       tree-sitter-javascript: 0.23.1(tree-sitter@0.21.1)
@@ -3044,7 +3037,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98:
+  effect@4.0.0-beta.36:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 4.6.0
