@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.93
+
+### Patch Changes
+
+- [`ce85c24`](https://github.com/tim-smart/lalph/commit/ce85c24be087000e5127286d81ace770d06444e1) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
+- [#398](https://github.com/tim-smart/lalph/pull/398) [`597319f`](https://github.com/tim-smart/lalph/commit/597319f1a3b7cd3780ea1fc32d6c916f23183915) Thanks [@tim-smart](https://github.com/tim-smart)! - Add IssueSource.findById and expose it through a new task tool, `findTaskById`.
+
 ## 0.3.92
 
 ### Patch Changes
