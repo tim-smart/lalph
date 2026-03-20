@@ -661,9 +661,9 @@ const runProject = Effect.fnUntraced(
         Effect.catchTags({
           ChosenTaskNotFound(_error) {
             if (executionMode._tag !== "ralph") {
-              ralphDone = true
               return Effect.void
             }
+            ralphDone = true
             return Effect.log(
               `No more work to process for Ralph, ending after ${currentIteration + 1} iteration(s).`,
             )
