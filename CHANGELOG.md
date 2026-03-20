@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.92
+
+### Patch Changes
+
+- [`cd8f873`](https://github.com/tim-smart/lalph/commit/cd8f8735ecd1917874e60ff3314d842e67f2c29b) Thanks [@tim-smart](https://github.com/tim-smart)! - prevent memoization of websocket models
+
 ## 0.3.91
 
 ### Patch Changes
