@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.95
+
+### Patch Changes
+
+- [`8fea89e`](https://github.com/tim-smart/lalph/commit/8fea89e2d759743b6116b6cf3e9b4a786e7c3334) Thanks [@tim-smart](https://github.com/tim-smart)! - fix ralphDone flag
+
 ## 0.3.94
 
 ### Patch Changes
