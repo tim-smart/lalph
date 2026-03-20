@@ -492,6 +492,11 @@ export const GithubIssueSource = Layer.effect(
         const settings = yield* Cache.get(projectSettings, projectId)
         return yield* issues(settings)
       }),
+      findById: Effect.fnUntraced(function* (projectId, issueId) {
+        const settings = yield* Cache.get(projectSettings, projectId)
+        const projectIssues = yield* issues(settings)
+        return projectIssues.find((issue) => issue.id === issueId) ?? null
+      }),
       createIssue: Effect.fnUntraced(
         function* (projectId, issue) {
           const { labelFilter, autoMergeLabelName } = yield* Cache.get(
