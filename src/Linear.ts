@@ -344,6 +344,7 @@ export const LinearIssueSource = Layer.effect(
         const projectIssues = yield* issues({
           projectId: settings.project.id,
           labelId: settings.labelId,
+          teamId: settings.teamId,
           autoMergeLabelId: settings.autoMergeLabelId,
         })
         return projectIssues.find((issue) => issue.id === issueId) ?? null
