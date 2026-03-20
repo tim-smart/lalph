@@ -14,6 +14,11 @@ export class IssueSource extends ServiceMap.Service<
       projectId: ProjectId,
     ) => Effect.Effect<ReadonlyArray<PrdIssue>, IssueSourceError>
 
+    readonly findById: (
+      projectId: ProjectId,
+      issueId: string,
+    ) => Effect.Effect<PrdIssue | null, IssueSourceError>
+
     readonly createIssue: (
       projectId: ProjectId,
       issue: PrdIssue,

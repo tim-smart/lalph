@@ -35,20 +35,20 @@ export class CurrentTaskRef extends ServiceMap.Service<
   }
 }
 
-const TaskList = Schema.Array(
-  Schema.Struct({
-    id: Schema.String.annotate({
-      documentation: "The unique identifier of the task.",
-    }),
-    ...Struct.pick(PrdIssue.fields, [
-      "title",
-      "description",
-      "state",
-      "priority",
-      "blockedBy",
-    ]),
+const Task = Schema.Struct({
+  id: Schema.String.annotate({
+    documentation: "The unique identifier of the task.",
   }),
-)
+  ...Struct.pick(PrdIssue.fields, [
+    "title",
+    "description",
+    "state",
+    "priority",
+    "blockedBy",
+  ]),
+})
+
+const TaskList = Schema.Array(Task)
 
 const toTaskListItem = (issue: PrdIssue) => ({
   id: issue.id ?? "",
@@ -75,6 +75,14 @@ export class TaskTools extends Toolkit.make(
       blockedBy: PrdIssue.fields.blockedBy,
     }),
     success: Schema.String,
+    dependencies: [CurrentProjectId],
+  }),
+  Tool.make("findTaskById", {
+    description: "Find a task by it's id. Returns null if not found.",
+    parameters: Schema.String.annotate({
+      identifier: "taskId",
+    }),
+    success: Schema.NullOr(Task),
     dependencies: [CurrentProjectId],
   }),
   Tool.make("updateTask", {
@@ -158,6 +166,14 @@ export const TaskToolsHandlers = TaskToolsWithChoose.toLayer(
           }),
         )
         return taskId.id
+      }, Effect.orDie),
+      findTaskById: Effect.fn("TaskTools.findTaskById")(function* (taskId) {
+        yield* Effect.log(`Calling "findTaskById"`).pipe(
+          Effect.annotateLogs({ taskId }),
+        )
+        const projectId = yield* CurrentProjectId
+        const task = yield* source.findById(projectId, taskId)
+        return task ? toTaskListItem(task) : null
       }, Effect.orDie),
       updateTask: Effect.fn("TaskTools.updateTask")(function* (options) {
         yield* Effect.log(`Calling "updateTask"`).pipe(

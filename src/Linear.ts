@@ -329,6 +329,15 @@ export const LinearIssueSource = Layer.effect(
           autoMergeLabelId: settings.autoMergeLabelId,
         })
       }),
+      findById: Effect.fnUntraced(function* (projectId, issueId) {
+        const settings = yield* Cache.get(projectSettings, projectId)
+        const projectIssues = yield* issues({
+          projectId: settings.project.id,
+          labelId: settings.labelId,
+          autoMergeLabelId: settings.autoMergeLabelId,
+        })
+        return projectIssues.find((issue) => issue.id === issueId) ?? null
+      }),
       createIssue: Effect.fnUntraced(
         function* (projectId, issue) {
           const { teamId, labelId, autoMergeLabelId, project } =

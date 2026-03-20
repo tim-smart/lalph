@@ -121,6 +121,11 @@ export class CurrentIssueSource extends ServiceMap.Service<
             Effect.retry(refreshSchedule),
             unlessRalph(projectId, Effect.succeed([])),
           ),
+        findById: (projectId, issueId) =>
+          ScopedRef.get(ref).pipe(
+            Effect.flatMap((source) => source.findById(projectId, issueId)),
+            unlessRalph(projectId, Effect.succeed(null)),
+          ),
         createIssue: (projectId, options) =>
           ScopedRef.get(ref).pipe(
             Effect.flatMap((source) => source.createIssue(projectId, options)),
