@@ -117,14 +117,7 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
           stream((client) => client.issueLabels()),
         )
         const states = Stream.runCollect(
-          stream((client) => client.workflowStates()).pipe(
-            Stream.map((s) => ({
-              id: s.id,
-              name: s.name,
-              type: s.type,
-              teamId: s.teamId,
-            })),
-          ),
+          stream((client) => client.workflowStates()),
         )
         const viewer = use((client) => client.viewer)
         return Effect.all(
@@ -215,115 +208,86 @@ export const LinearIssueSource = Layer.effect(
     const identifierMap = new Map<string, string>()
     const presetMap = new Map<string, CliAgentPreset>()
 
-    const resolveTeamStates = (teamId: string) => {
-      const teamStates = state.states.filter(
-        (s) => s.teamId === undefined || s.teamId === teamId,
-      )
-      // Fall back to all states if no team-specific states found
-      const states = teamStates.length > 0 ? teamStates : state.states
-
-      const backlogState =
-        states.find(
-          (s) =>
-            s.type === "backlog" && s.name.toLowerCase().includes("backlog"),
-        ) || states.find((s) => s.type === "backlog")!
-      const todoState =
-        states.find(
-          (s) =>
-            s.type === "unstarted" &&
-            (s.name.toLowerCase().includes("todo") ||
-              s.name.toLowerCase().includes("unstarted")),
-        ) || states.find((s) => s.type === "unstarted")!
-      const inProgressState =
-        states.find(
-          (s) =>
-            s.type === "started" &&
-            (s.name.toLowerCase().includes("progress") ||
-              s.name.toLowerCase().includes("started")),
-        ) || states.find((s) => s.type === "started")!
-      const inReviewState =
-        states.find(
-          (s) =>
-            s.type === "started" && s.name.toLowerCase().includes("review"),
-        ) || states.find((s) => s.type === "completed")!
-      const doneState = states.find((s) => s.type === "completed")!
-      const canceledState = states.find((s) => s.type === "canceled")!
-
-      return {
-        backlogState,
-        todoState,
-        inProgressState,
-        inReviewState,
-        doneState,
-        canceledState,
-      }
+    const findState = (
+      teamId: string,
+      type: string,
+      names: Array<string> = [],
+      fallbackType = type,
+    ) => {
+      const filtered = state.states.filter((s) => {
+        if (names.length === 0) return s.type === type
+        const name = s.name.toLowerCase()
+        return s.type === type && names.some((n) => name.includes(n))
+      })
+      const withTeamId = filtered.filter((s) => s.teamId === teamId)
+      if (withTeamId.length > 0) return withTeamId[0]!
+      const withoutTeamId = filtered.filter((s) => s.teamId === undefined)
+      if (withoutTeamId.length > 0) return withoutTeamId[0]!
+      return state.states.find((s) => s.type === fallbackType)!
     }
 
+    const statesForTeamId = memoize((teamId: string) => ({
+      backlog: findState(teamId, "backlog", ["backlog"]),
+      todo: findState(teamId, "unstarted", ["todo", "unstarted"]),
+      inProgress: findState(teamId, "started", ["progress", "started"]),
+      inReview: findState(teamId, "started", ["review"], "completed"),
+      done: findState(teamId, "completed"),
+      canceled: findState(teamId, "canceled"),
+    }))
+
     const linearStateToPrdState = (
-      issueState: State,
+      state: State,
       teamId: string,
     ): PrdIssue["state"] => {
-      const {
-        backlogState,
-        todoState,
-        inProgressState,
-        inReviewState,
-        doneState,
-      } = resolveTeamStates(teamId)
-      switch (issueState.id) {
-        case backlogState?.id:
+      const states = statesForTeamId(teamId)
+      switch (state.id) {
+        case states.backlog.id:
           return "backlog"
-        case todoState?.id:
+        case states.todo.id:
           return "todo"
-        case inProgressState?.id:
+        case states.inProgress.id:
           return "in-progress"
-        case inReviewState?.id:
+        case states.inReview.id:
           return "in-review"
-        case doneState?.id:
+        case states.done.id:
           return "done"
         default:
-          if (issueState.type === "backlog") return "backlog"
-          if (issueState.type === "unstarted") return "todo"
-          if (issueState.type === "started") return "in-progress"
-          if (issueState.type === "completed") return "done"
+          if (state.type === "backlog") return "backlog"
+          if (state.type === "unstarted") return "todo"
+          if (state.type === "started") return "in-progress"
+          if (state.type === "completed") return "done"
           return "backlog"
       }
     }
     const prdStateToLinearStateId = (
-      prdState: PrdIssue["state"],
+      state: PrdIssue["state"],
       teamId: string,
     ): string => {
-      const {
-        backlogState,
-        todoState,
-        inProgressState,
-        inReviewState,
-        doneState,
-      } = resolveTeamStates(teamId)
-      switch (prdState) {
+      const states = statesForTeamId(teamId)
+      switch (state) {
         case "backlog":
-          return backlogState.id
+          return states.backlog.id
         case "todo":
-          return todoState.id
+          return states.todo.id
         case "in-progress":
-          return inProgressState.id
+          return states.inProgress.id
         case "in-review":
-          return inReviewState.id
+          return states.inReview.id
         case "done":
-          return doneState.id
+          return states.done.id
       }
     }
 
     const issues = ({
       labelId,
       projectId,
-      autoMergeLabelId,
       teamId,
+      autoMergeLabelId,
     }: {
       readonly labelId: Option.Option<string>
       readonly projectId: string
-      readonly autoMergeLabelId: Option.Option<string>
       readonly teamId: string
+      readonly autoMergeLabelId: Option.Option<string>
     }) =>
       linear.issues({ labelId, projectId }).pipe(
         Effect.mapError((cause) => new IssueSourceError({ cause })),
@@ -370,9 +334,9 @@ export const LinearIssueSource = Layer.effect(
         const settings = yield* Cache.get(projectSettings, projectId)
         return yield* issues({
           projectId: settings.project.id,
+          teamId: settings.teamId,
           labelId: settings.labelId,
           autoMergeLabelId: settings.autoMergeLabelId,
-          teamId: settings.teamId,
         })
       }),
       findById: Effect.fnUntraced(function* (projectId, issueId) {
@@ -523,11 +487,11 @@ export const LinearIssueSource = Layer.effect(
       cancelIssue: Effect.fnUntraced(
         function* (projectId, issueId) {
           const { teamId } = yield* Cache.get(projectSettings, projectId)
-          const { canceledState } = resolveTeamStates(teamId)
+          const states = statesForTeamId(teamId)
           const linearIssueId = identifierMap.get(issueId)!
           yield* linear.use((c) =>
             c.updateIssue(linearIssueId, {
-              stateId: canceledState.id,
+              stateId: states.canceled.id,
             }),
           )
         },
@@ -934,3 +898,14 @@ class LinearState extends Persistable.Class<{
     }),
   }),
 }) {}
+
+const memoize = <A, B>(f: (a: A) => B): ((a: A) => B) => {
+  const cache = new Map<A, B>()
+  return (a: A) => {
+    const cached = cache.get(a)
+    if (cached) return cached
+    const b = f(a)
+    cache.set(a, b)
+    return b
+  }
+}
