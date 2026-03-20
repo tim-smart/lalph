@@ -117,7 +117,14 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
           stream((client) => client.issueLabels()),
         )
         const states = Stream.runCollect(
-          stream((client) => client.workflowStates()),
+          stream((client) => client.workflowStates()).pipe(
+            Stream.map((s) => ({
+              id: s.id,
+              name: s.name,
+              type: s.type,
+              teamId: s.teamId,
+            })),
+          ),
         )
         const viewer = use((client) => client.viewer)
         return Effect.all(
@@ -208,56 +215,92 @@ export const LinearIssueSource = Layer.effect(
     const identifierMap = new Map<string, string>()
     const presetMap = new Map<string, CliAgentPreset>()
 
-    const backlogState =
-      state.states.find(
-        (s) => s.type === "backlog" && s.name.toLowerCase().includes("backlog"),
-      ) || state.states.find((s) => s.type === "backlog")!
-    const todoState =
-      state.states.find(
-        (s) =>
-          s.type === "unstarted" &&
-          (s.name.toLowerCase().includes("todo") ||
-            s.name.toLowerCase().includes("unstarted")),
-      ) || state.states.find((s) => s.type === "unstarted")!
-    const inProgressState =
-      state.states.find(
-        (s) =>
-          s.type === "started" &&
-          (s.name.toLowerCase().includes("progress") ||
-            s.name.toLowerCase().includes("started")),
-      ) || state.states.find((s) => s.type === "started")!
-    const inReviewState =
-      state.states.find(
-        (s) => s.type === "started" && s.name.toLowerCase().includes("review"),
-      ) || state.states.find((s) => s.type === "completed")!
-    const doneState = state.states.find((s) => s.type === "completed")!
+    const resolveTeamStates = (teamId: string) => {
+      const teamStates = state.states.filter(
+        (s) => s.teamId === undefined || s.teamId === teamId,
+      )
+      // Fall back to all states if no team-specific states found
+      const states = teamStates.length > 0 ? teamStates : state.states
 
-    const canceledState = state.states.find(
-      (state) => state.type === "canceled",
-    )!
+      const backlogState =
+        states.find(
+          (s) =>
+            s.type === "backlog" && s.name.toLowerCase().includes("backlog"),
+        ) || states.find((s) => s.type === "backlog")!
+      const todoState =
+        states.find(
+          (s) =>
+            s.type === "unstarted" &&
+            (s.name.toLowerCase().includes("todo") ||
+              s.name.toLowerCase().includes("unstarted")),
+        ) || states.find((s) => s.type === "unstarted")!
+      const inProgressState =
+        states.find(
+          (s) =>
+            s.type === "started" &&
+            (s.name.toLowerCase().includes("progress") ||
+              s.name.toLowerCase().includes("started")),
+        ) || states.find((s) => s.type === "started")!
+      const inReviewState =
+        states.find(
+          (s) =>
+            s.type === "started" && s.name.toLowerCase().includes("review"),
+        ) || states.find((s) => s.type === "completed")!
+      const doneState = states.find((s) => s.type === "completed")!
+      const canceledState = states.find((s) => s.type === "canceled")!
 
-    const linearStateToPrdState = (state: State): PrdIssue["state"] => {
-      switch (state.id) {
-        case backlogState.id:
+      return {
+        backlogState,
+        todoState,
+        inProgressState,
+        inReviewState,
+        doneState,
+        canceledState,
+      }
+    }
+
+    const linearStateToPrdState = (
+      issueState: State,
+      teamId: string,
+    ): PrdIssue["state"] => {
+      const {
+        backlogState,
+        todoState,
+        inProgressState,
+        inReviewState,
+        doneState,
+      } = resolveTeamStates(teamId)
+      switch (issueState.id) {
+        case backlogState?.id:
           return "backlog"
-        case todoState.id:
+        case todoState?.id:
           return "todo"
-        case inProgressState.id:
+        case inProgressState?.id:
           return "in-progress"
-        case inReviewState.id:
+        case inReviewState?.id:
           return "in-review"
-        case doneState.id:
+        case doneState?.id:
           return "done"
         default:
-          if (state.type === "backlog") return "backlog"
-          if (state.type === "unstarted") return "todo"
-          if (state.type === "started") return "in-progress"
-          if (state.type === "completed") return "done"
+          if (issueState.type === "backlog") return "backlog"
+          if (issueState.type === "unstarted") return "todo"
+          if (issueState.type === "started") return "in-progress"
+          if (issueState.type === "completed") return "done"
           return "backlog"
       }
     }
-    const prdStateToLinearStateId = (state: PrdIssue["state"]): string => {
-      switch (state) {
+    const prdStateToLinearStateId = (
+      prdState: PrdIssue["state"],
+      teamId: string,
+    ): string => {
+      const {
+        backlogState,
+        todoState,
+        inProgressState,
+        inReviewState,
+        doneState,
+      } = resolveTeamStates(teamId)
+      switch (prdState) {
         case "backlog":
           return backlogState.id
         case "todo":
@@ -275,10 +318,12 @@ export const LinearIssueSource = Layer.effect(
       labelId,
       projectId,
       autoMergeLabelId,
+      teamId,
     }: {
       readonly labelId: Option.Option<string>
       readonly projectId: string
       readonly autoMergeLabelId: Option.Option<string>
+      readonly teamId: string
     }) =>
       linear.issues({ labelId, projectId }).pipe(
         Effect.mapError((cause) => new IssueSourceError({ cause })),
@@ -308,7 +353,7 @@ export const LinearIssueSource = Layer.effect(
                   description: issue.description ?? "",
                   priority: issue.priority,
                   estimate: issue.estimate ?? null,
-                  state: linearStateToPrdState(issue.state),
+                  state: linearStateToPrdState(issue.state, teamId),
                   blockedBy: issue.blockedBy.map((r) => r.issue.identifier),
                   autoMerge: autoMergeLabelId.pipe(
                     Option.map((labelId) => issue.labelIds.includes(labelId)),
@@ -327,6 +372,7 @@ export const LinearIssueSource = Layer.effect(
           projectId: settings.project.id,
           labelId: settings.labelId,
           autoMergeLabelId: settings.autoMergeLabelId,
+          teamId: settings.teamId,
         })
       }),
       findById: Effect.fnUntraced(function* (projectId, issueId) {
@@ -355,7 +401,7 @@ export const LinearIssueSource = Layer.effect(
               description: issue.description,
               priority: issue.priority,
               estimate: issue.estimate,
-              stateId: prdStateToLinearStateId(issue.state),
+              stateId: prdStateToLinearStateId(issue.state, teamId),
             }),
           )
           const linearIssue = yield* linear.use(() => created.issue!)
@@ -391,7 +437,7 @@ export const LinearIssueSource = Layer.effect(
       ),
       updateIssue: Effect.fnUntraced(
         function* (options) {
-          const { autoMergeLabelId } = yield* Cache.get(
+          const { autoMergeLabelId, teamId } = yield* Cache.get(
             projectSettings,
             options.projectId,
           )
@@ -412,7 +458,7 @@ export const LinearIssueSource = Layer.effect(
             update.description = options.description
           }
           if (options.state) {
-            update.stateId = prdStateToLinearStateId(options.state)
+            update.stateId = prdStateToLinearStateId(options.state, teamId)
           }
           if (
             options.autoMerge !== undefined &&
@@ -475,7 +521,9 @@ export const LinearIssueSource = Layer.effect(
         Effect.mapError((cause) => new IssueSourceError({ cause })),
       ),
       cancelIssue: Effect.fnUntraced(
-        function* (_project, issueId) {
+        function* (projectId, issueId) {
+          const { teamId } = yield* Cache.get(projectSettings, projectId)
+          const { canceledState } = resolveTeamStates(teamId)
           const linearIssueId = identifierMap.get(issueId)!
           yield* linear.use((c) =>
             c.updateIssue(linearIssueId, {
@@ -878,6 +926,7 @@ class LinearState extends Persistable.Class<{
         id: Schema.String,
         name: Schema.String,
         type: Schema.String,
+        teamId: Schema.optional(Schema.String),
       }),
     ),
     viewer: Schema.Struct({
