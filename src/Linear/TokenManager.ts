@@ -102,11 +102,12 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
 `
           }),
         )
+        const server = createServer()
         yield* HttpRouter.serve(CallbackRoute, {
           disableListenLog: true,
           disableLogger: true,
         }).pipe(
-          Layer.provide(NodeHttpServer.layer(createServer, { port: 34338 })),
+          Layer.provide(NodeHttpServer.layer(() => server, { port: 34338 })),
           Layer.build,
           Effect.orDie,
         )
@@ -126,6 +127,10 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
         console.log("Open this URL to login to Linear:", url)
 
         const params = yield* Deferred.await(deferred)
+
+        // Close all keep-alive connections so the server can shut down
+        // immediately when the scope finalizer calls server.close()
+        server.closeAllConnections()
 
         const res = yield* HttpClientRequest.post(
           "https://api.linear.app/oauth/token",
