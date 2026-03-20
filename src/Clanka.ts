@@ -130,6 +130,7 @@ export const runClanka = Effect.fnUntraced(
               ? TaskChooseTools
               : TaskTools,
       }).pipe(Layer.merge(ClankaModels.get(options.model))),
+      { local: true },
     ),
   Effect.provide([NodeHttpClient.layerUndici, TaskToolsHandlers]),
 )

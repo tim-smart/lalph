@@ -52,8 +52,8 @@ importers:
         specifier: 7.0.0-dev.20260319.1
         version: 7.0.0-dev.20260319.1
       clanka:
-        specifier: ^0.2.18
-        version: 0.2.18(@effect/ai-openai-compat@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(@effect/ai-openai@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)(zod@4.3.6)
+        specifier: ^0.2.19
+        version: 0.2.19(@effect/ai-openai-compat@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(@effect/ai-openai@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)(zod@4.3.6)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -911,9 +911,9 @@ packages:
   chownr@1.1.4:
     resolution: {integrity: sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg==}
 
-  clanka@0.2.18:
-    resolution: {integrity: sha512-OFBvGqpB+hiv6Ijxo9VX+lLidyHrJSXDx7ahhK3YghpIY4S9nd79I4i0lndRkllGdmaiTl3/pMfrPYR7drAwZQ==}
-    version: 0.2.18
+  clanka@0.2.19:
+    resolution: {integrity: sha512-5A2bJJJL87+r2pGTid97OWpuH+NOr/Cp9cH49RsQ1acuWJflRs/jwMNhCUfr9W+kI1UUsNw7RQA6/9uJeqWpBg==}
+    version: 0.2.19
     peerDependencies:
       '@effect/ai-openai': 4.0.0-beta.35
       '@effect/ai-openai-compat': 4.0.0-beta.35
@@ -2924,7 +2924,7 @@ snapshots:
 
   chownr@1.1.4: {}
 
-  clanka@0.2.18(@effect/ai-openai-compat@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(@effect/ai-openai@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)(zod@4.3.6):
+  clanka@0.2.19(@effect/ai-openai-compat@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(@effect/ai-openai@4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98))(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)(zod@4.3.6):
     dependencies:
       '@effect/ai-openai': 4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)
       '@effect/ai-openai-compat': 4.0.0-beta.35(effect@https://pkg.pr.new/Effect-TS/effect-smol/effect@89c3e98)
