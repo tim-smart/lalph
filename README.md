@@ -4,9 +4,9 @@
   '--'
 ```
 
-A LLM agent orchestrator driven by your chosen source of issues.
+A 🤖 LLM agent orchestrator driven by your chosen source of issues.
 
-## Features
+## ✨ Features
 
 - Pull work from an issue source (GitHub Issues, Linear, etc.) and keep task state in sync
 - Projects to group execution settings (enabled state, concurrency, target branch, git flow, review agent)
@@ -15,7 +15,7 @@ A LLM agent orchestrator driven by your chosen source of issues.
 - Git worktrees to support multiple concurrent iterations
 - Optional PR flow with auto-merge and support for issue dependencies
 
-## Installation
+## 📦 Installation
 
 ```bash
 npm install -g lalph
@@ -27,7 +27,7 @@ or run with npx:
 npx -y lalph@latest
 ```
 
-## CLI usage
+## 💻 CLI usage
 
 - Run the main loop across enabled projects: `lalph`
 - Run a bounded set of iterations per enabled project: `lalph --iterations 1`
@@ -40,7 +40,7 @@ npx -y lalph@latest
 It is recommended to add `.lalph/` to your `.gitignore` to avoid committing your
 credentials.
 
-## Agent presets
+## 🤖 Agent presets
 
 Agent presets define which CLI agent runs tasks, the optional clanka model to
 use, and any extra arguments. Lalph always needs a default preset and will
@@ -57,7 +57,7 @@ lalph agents add
 `lalph agents ls` shows each preset's CLI agent, clanka model selection,
 extra args, command prefix, and any issue-source routing metadata.
 
-## Projects
+## 🗂️ Projects
 
 Projects bundle execution settings for the current repo: whether it is enabled
 for runs, how many tasks can run concurrently, which branch to target, what git
@@ -71,7 +71,7 @@ lalph projects add
 lalph projects toggle
 ```
 
-## Plan mode
+## 🧭 Plan mode
 
 Plan mode opens an editor so you can write a high-level plan. You can also pass
 `--file` / `-f` with a markdown file path to skip the editor. On save (or file
@@ -89,7 +89,7 @@ lalph plan --file ./my-plan.md
 lalph plan tasks .specs/my-spec.md
 ```
 
-## Creating issues
+## 📝 Creating issues
 
 `lalph issue` opens a new-issue template in your editor. When you save and close
 the file, the issue is created in the current issue source.
@@ -109,7 +109,7 @@ lalph issue
 lalph i
 ```
 
-## Development
+## 🛠️ Development
 
 - Install dependencies: `pnpm install`
 - Build the CLI: `pnpm build`
