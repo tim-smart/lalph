@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.98
+
+### Patch Changes
+
+- [`dbe74c6`](https://github.com/tim-smart/lalph/commit/dbe74c68dab2e3cc52a340ec401331f5f11f79c9) Thanks [@tim-smart](https://github.com/tim-smart)! - improve task polling latency
+
 ## 0.3.97
 
 ### Patch Changes
