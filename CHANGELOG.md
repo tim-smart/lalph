@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.97
+
+### Patch Changes
+
+- [`53fe420`](https://github.com/tim-smart/lalph/commit/53fe42058c6d20d290da6789911b84394ebbf665) Thanks [@tim-smart](https://github.com/tim-smart)! - improve current issue state
+
 ## 0.3.96
 
 ### Patch Changes
