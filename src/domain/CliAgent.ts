@@ -33,7 +33,7 @@ const clanka = new CliAgent({
   name: "clanka",
   commandPlan: ({ prompt, prdFilePath, dangerous }) =>
     ChildProcess.make(
-      "opencode",
+      "clanka",
       [
         "--prompt",
         prdFilePath

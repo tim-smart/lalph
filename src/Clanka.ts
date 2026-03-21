@@ -12,6 +12,7 @@ import {
   Stdio,
   Stream,
 } from "effect"
+import { Prompt as CliPrompt } from "effect/unstable/cli"
 import { TaskChooseTools, TaskTools, TaskToolsHandlers } from "./TaskTools.ts"
 import { layerClankaModel, ModelServices } from "./ClankaModels.ts"
 import { withStallTimeout } from "./shared/stream.ts"
@@ -135,4 +136,53 @@ export const runClanka = Effect.fnUntraced(
       { local: true },
     ),
   Effect.provide([ModelServices, TaskToolsHandlers]),
+)
+
+export const runClankaPlan = Effect.fnUntraced(
+  function* (options: {
+    readonly directory: string
+    readonly model: string
+    readonly prompt: Prompt.RawInput
+  }) {
+    const stdio = yield* Stdio.Stdio
+    const agent = yield* Agent.Agent
+    let nextPrompt = options.prompt
+
+    while (true) {
+      const output = yield* agent.send({
+        prompt: nextPrompt,
+        system: `ONLY call taskComplete by itself. NEVER call taskComplete alongside other functions, to ensure you first read output before deciding a task is done.`,
+      })
+
+      yield* output.pipe(
+        OutputFormatter.pretty({
+          outputTruncation: 20,
+        }),
+        Stream.run(stdio.stdout()),
+      )
+
+      console.log("")
+      nextPrompt = yield* CliPrompt.text({
+        message: ">",
+      })
+    }
+  },
+  Effect.scoped,
+  (effect, options) =>
+    Effect.provide(
+      effect,
+      Agent.layerLocal({
+        directory: options.directory,
+      }).pipe(
+        Layer.provide(SemanticSearchLayer),
+        Layer.merge(layerClankaModel(options.model)),
+      ),
+      { local: true },
+    ),
+  Effect.provide([
+    ModelServices,
+    TaskToolsHandlers,
+    Agent.ConversationMode.layer(true),
+  ]),
+  Effect.ignore(),
 )
