@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.103
+
+### Patch Changes
+
+- [`bcb1978`](https://github.com/tim-smart/lalph/commit/bcb1978334f365e21267a9c7a44d39cb99dcd1e5) Thanks [@tim-smart](https://github.com/tim-smart)! - use sub ref for issues.findById
+
 ## 0.3.102
 
 ### Patch Changes
