@@ -52,8 +52,8 @@ importers:
         specifier: 7.0.0-dev.20260322.1
         version: 7.0.0-dev.20260322.1
       clanka:
-        specifier: ^0.2.29
-        version: 0.2.29(@effect/ai-openai-compat@4.0.0-beta.36(effect@4.0.0-beta.36))(@effect/ai-openai@4.0.0-beta.36(effect@4.0.0-beta.36))(effect@4.0.0-beta.36)(ioredis@5.10.0)(zod@4.3.6)
+        specifier: ^0.2.30
+        version: 0.2.30(@effect/ai-openai-compat@4.0.0-beta.36(effect@4.0.0-beta.36))(@effect/ai-openai@4.0.0-beta.36(effect@4.0.0-beta.36))(effect@4.0.0-beta.36)(ioredis@5.10.0)(zod@4.3.6)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
@@ -906,8 +906,8 @@ packages:
   chownr@1.1.4:
     resolution: {integrity: sha512-jJ0bqzaylmJtVnNgzTeSOs8DPavpbYgEr/b0YL8/2GO3xJEhInFmhKMUnEJQjZumK7KXGFhUy89PrsJWlakBVg==}
 
-  clanka@0.2.29:
-    resolution: {integrity: sha512-Kd9K50P5zkXurUQP1pTOWEnYvF52SSlhUUtqq/zhkN6ahtmAm1LKPVHazdHEhtu8lBB8n9Gdr256RrRTJbxzNg==}
+  clanka@0.2.30:
+    resolution: {integrity: sha512-IoEMjLR1GTp+CXviloL78nokfn0V5ydOLvxLJMKBQ0aX8C9OL9MEOQz8NL3LGWkXsGwGc6NLQ8n8FZnawDcs5A==}
     hasBin: true
     peerDependencies:
       '@effect/ai-openai': 4.0.0-beta.36
@@ -2918,7 +2918,7 @@ snapshots:
 
   chownr@1.1.4: {}
 
-  clanka@0.2.29(@effect/ai-openai-compat@4.0.0-beta.36(effect@4.0.0-beta.36))(@effect/ai-openai@4.0.0-beta.36(effect@4.0.0-beta.36))(effect@4.0.0-beta.36)(ioredis@5.10.0)(zod@4.3.6):
+  clanka@0.2.30(@effect/ai-openai-compat@4.0.0-beta.36(effect@4.0.0-beta.36))(@effect/ai-openai@4.0.0-beta.36(effect@4.0.0-beta.36))(effect@4.0.0-beta.36)(ioredis@5.10.0)(zod@4.3.6):
     dependencies:
       '@effect/ai-openai': 4.0.0-beta.36(effect@4.0.0-beta.36)
       '@effect/ai-openai-compat': 4.0.0-beta.36(effect@4.0.0-beta.36)
