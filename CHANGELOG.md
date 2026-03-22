@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.100
+
+### Patch Changes
+
+- [`e847877`](https://github.com/tim-smart/lalph/commit/e8478779bcfd3cda2e84a841e204b6eb1362007a) Thanks [@tim-smart](https://github.com/tim-smart)! - ignore errors in scheduled refresh
+
 ## 0.3.99
 
 ### Patch Changes
