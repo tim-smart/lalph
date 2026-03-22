@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.99
+
+### Patch Changes
+
+- [`f56290a`](https://github.com/tim-smart/lalph/commit/f56290a4c60d7ad6889e4a617709791b67ce0cf6) Thanks [@tim-smart](https://github.com/tim-smart)! - update clanka
+
+- [`14e4f36`](https://github.com/tim-smart/lalph/commit/14e4f3601cb1d123f88d03ccf2ce7722ee7804a0) Thanks [@tim-smart](https://github.com/tim-smart)! - use clanka for plan mode
+
 ## 0.3.98
 
 ### Patch Changes
