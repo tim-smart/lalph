@@ -3,6 +3,7 @@ import {
   Effect,
   Layer,
   Option,
+  Redacted,
   Schedule,
   Schema,
   Semaphore,
@@ -16,7 +17,9 @@ import {
   HttpClientResponse,
 } from "effect/unstable/http"
 import { KeyValueStore } from "effect/unstable/persistence"
+import { Prompt } from "effect/unstable/cli"
 import { layerKvs } from "../Kvs.ts"
+import type { QuitError } from "effect/Terminal"
 
 const clientId = "Ov23liJMtg6leTI1Vu6m"
 
@@ -24,6 +27,7 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
   "lalph/Github/TokenManager",
   {
     make: Effect.gen(function* () {
+      const promptEnv = yield* Effect.services<Prompt.Environment>()
       const kvs = KeyValueStore.prefix(
         yield* KeyValueStore.KeyValueStore,
         "github.accessToken",
@@ -54,16 +58,26 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
             ),
         })
 
+      const promptPat = Effect.gen(function* () {
+        return yield* Prompt.password({
+          message:
+            "GitHub PAT with repo, read:user, read:project scopes (leave empty for OAuth)",
+          validate: (value) => Effect.succeed(value.trim()),
+        })
+      }).pipe(Effect.provideServices(promptEnv))
+
       const getNoLock: Effect.Effect<
         AccessToken,
-        HttpClientError.HttpClientError | Schema.SchemaError
+        HttpClientError.HttpClientError | QuitError | Schema.SchemaError
       > = Effect.gen(function* () {
-        if (Option.isNone(currentToken)) {
-          const newToken = yield* deviceCode
-          yield* set(Option.some(newToken))
-          return newToken
+        if (Option.isSome(currentToken)) {
+          return currentToken.value
         }
-        return currentToken.value
+        const token = Redacted.value(yield* promptPat)
+        const accessToken =
+          token.length > 0 ? new AccessToken({ token }) : yield* deviceCode
+        yield* set(Option.some(accessToken))
+        return accessToken
       })
       const get = Semaphore.makeUnsafe(1).withPermit(getNoLock)
 
