@@ -1,5 +1,15 @@
 # lalph
 
+## 0.3.105
+
+### Patch Changes
+
+- [#421](https://github.com/tim-smart/lalph/pull/421) [`b764397`](https://github.com/tim-smart/lalph/commit/b764397d82666add07163be66f1aac0896b6eedc) Thanks [@alvarosevilla95](https://github.com/alvarosevilla95)! - Support personal access token for GitHub authentication.
+
+- [#422](https://github.com/tim-smart/lalph/pull/422) [`7d7c295`](https://github.com/tim-smart/lalph/commit/7d7c295fc59c02c6ee912dd1cbec4adebf0dbf17) Thanks [@alvarosevilla95](https://github.com/alvarosevilla95)! - Accept GitHub pull request review decision enum values when decoding PR data.
+
+- [#424](https://github.com/tim-smart/lalph/pull/424) [`d163f47`](https://github.com/tim-smart/lalph/commit/d163f47340d28c7feec4b431b07b56029f817a33) Thanks [@tim-smart](https://github.com/tim-smart)! - Only update .lalph/prd.yml from issue-source changes marked as external, preventing internal refreshes from overwriting local edits.
+
 ## 0.3.104
 
 ### Patch Changes
