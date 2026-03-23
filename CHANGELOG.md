@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.109
+
+### Patch Changes
+
+- [`3d6c5b4`](https://github.com/tim-smart/lalph/commit/3d6c5b441db8e7e5167fc64135701062a0f85060) Thanks [@tim-smart](https://github.com/tim-smart)! - remove findById from Prd service
+
 ## 0.3.108
 
 ### Patch Changes
