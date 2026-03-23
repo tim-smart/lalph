@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.107
+
+### Patch Changes
+
+- [`aeaff3a`](https://github.com/tim-smart/lalph/commit/aeaff3a6dc7478d866cefd78f0b7f6ead87daf6f) Thanks [@tim-smart](https://github.com/tim-smart)! - custom review instructions override prompt completely
+
 ## 0.3.106
 
 ### Patch Changes
