@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.108
+
+### Patch Changes
+
+- [`acf4c9d`](https://github.com/tim-smart/lalph/commit/acf4c9de5a99038b482a811d59d51885ba8701be) Thanks [@tim-smart](https://github.com/tim-smart)! - fix updates cause clanka steer messages
+
 ## 0.3.107
 
 ### Patch Changes
