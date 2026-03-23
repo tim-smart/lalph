@@ -239,6 +239,7 @@ export class Prd extends ServiceMap.Service<
     )
 
     yield* SubscriptionRef.changes(issuesRef).pipe(
+      Stream.filter((change) => change._tag === "External"),
       Stream.runForEach((s) => updateSync(s.issues)),
       Effect.forkScoped,
     )
