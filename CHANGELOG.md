@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.106
+
+### Patch Changes
+
+- [#425](https://github.com/tim-smart/lalph/pull/425) [`77e3392`](https://github.com/tim-smart/lalph/commit/77e3392ee920d27ac3d21bbfc26a1ada00249acd) Thanks [@tim-smart](https://github.com/tim-smart)! - Update `IssueSource.make` to mutate cached issue state via `SubscriptionRef.update` after create / update / cancel operations instead of immediately re-fetching issues from the backing API.
+
 ## 0.3.105
 
 ### Patch Changes
