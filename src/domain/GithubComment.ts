@@ -36,7 +36,9 @@ export class PullRequestComments extends S.Class<PullRequestComments>(
 
 export class PullRequest extends S.Class<PullRequest>("PullRequest")({
   url: S.String,
-  reviewDecision: S.Null,
+  reviewDecision: S.NullOr(
+    S.Literals(["APPROVED", "CHANGES_REQUESTED", "REVIEW_REQUIRED"]),
+  ),
   reviews: S.suspend(() => Reviews),
   reviewThreads: S.suspend(() => ReviewThreads),
   comments: PullRequestComments,
