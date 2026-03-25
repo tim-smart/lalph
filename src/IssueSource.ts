@@ -5,6 +5,7 @@ import {
   Effect,
   FiberHandle,
   Option,
+  Schedule,
   Schema,
   ScopedCache,
   ServiceMap,
@@ -114,8 +115,9 @@ export class IssueSource extends ServiceMap.Service<
                 Effect.tap((issues) =>
                   SubscriptionRef.set(ref, IssuesChange.External({ issues })),
                 ),
-                Effect.ignoreCause,
                 Effect.delay(Duration.seconds(30)),
+                Effect.sandbox,
+                Effect.retry(Schedule.forever),
                 Stream.fromEffectDrain,
               ),
             ),
