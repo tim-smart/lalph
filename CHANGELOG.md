@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.114
+
+### Patch Changes
+
+- [`af754ff`](https://github.com/tim-smart/lalph/commit/af754ff072f32fd7ab11811787a252caf769d40f) Thanks [@tim-smart](https://github.com/tim-smart)! - retry issue refresh
+
 ## 0.3.113
 
 ### Patch Changes
