@@ -17,7 +17,8 @@ import { commandProjects } from "./commands/projects.ts"
 import { commandSh } from "./commands/sh.ts"
 import { commandAgents } from "./commands/agents.ts"
 import { commandFeatures } from "./commands/features.ts"
-import { FeatureStore } from "./FeatureStore.ts"
+import { FeatureStorageRoot, FeatureStore } from "./FeatureStore.ts"
+import { FeatureCreateWizard } from "./FeatureCreation.ts"
 
 commandRoot.pipe(
   Command.withSubcommands([
@@ -31,6 +32,8 @@ commandRoot.pipe(
     commandFeatures,
   ]),
   Command.provide(Settings.layer),
+  Command.provide(FeatureCreateWizard.layer),
+  Command.provide(FeatureStorageRoot.layer),
   Command.provide(FeatureStore.layer),
   Command.provide(TracingLayer),
   Command.provide(({ verbose }) => {

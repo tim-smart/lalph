@@ -437,6 +437,10 @@ state and supports both PR-mode and Ralph-mode features uniformly.
   surface reports persisted lifecycle status directly from local metadata for
   now. Rich derived display states such as `blocked`, `ready`, and
   `integrating` remain part of the later status-derivation step.
+- Implementation note: `lalph features create` now bootstraps the local
+  feature metadata entry and spec file path, with duplicate-name protection.
+  Git feature-branch creation and PR-mode parent issue creation remain deferred
+  to the later execution/integration work in this spec.
 
 ## Implementation Plan
 
@@ -452,6 +456,10 @@ state and supports both PR-mode and Ralph-mode features uniformly.
    - Initial inspection support is now in place via `lalph features ls` and
      `lalph features show <name>`, backed by `FeatureStore.list()` and
      `FeatureStore.load()` with command-level tests.
+   - `lalph features create` now guides users through project, execution mode,
+     feature name, branches, and spec source/path, then persists the feature
+     and bootstraps a new spec file when requested.
+   - `lalph features edit <name>` remains pending.
 3. [ ] Add `lalph run` command variants.
    - Implement `run issues`, `run feature <name>`, and `run all`.
    - Make bare `lalph` default to `run all`.
