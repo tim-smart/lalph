@@ -3,6 +3,7 @@ import * as OutputFormatter from "clanka/OutputFormatter"
 import {
   Cause,
   Config,
+  Duration,
   Effect,
   identity,
   Layer,
@@ -19,6 +20,7 @@ import type { Prompt } from "effect/unstable/ai"
 import { OpenAiClient, OpenAiEmbeddingModel } from "@effect/ai-openai"
 import { Worktree } from "./Worktree.ts"
 import { SemanticSearch } from "clanka"
+import { withStallTimeout } from "./shared/stream.ts"
 
 export const ClankaMuxerLayer = Layer.effectDiscard(
   Effect.gen(function* () {
@@ -73,6 +75,7 @@ export const runClanka = Effect.fnUntraced(
     readonly prompt: Prompt.RawInput
     readonly system?: string | undefined
     readonly maxContext?: number | undefined
+    readonly stallTimeout?: Duration.Duration | undefined
     readonly steer?: Stream.Stream<string> | undefined
     readonly mode?: "ralph" | "choose" | "default" | undefined
   }) {
@@ -99,7 +102,11 @@ export const runClanka = Effect.fnUntraced(
       )
     }
 
-    return yield* output.pipe(
+    const stream = options.stallTimeout
+      ? withStallTimeout(options.stallTimeout)(output)
+      : output
+
+    return yield* stream.pipe(
       options.maxContext
         ? Stream.tap((part) => {
             if (part._tag !== "Usage") return Effect.void

@@ -26,5 +26,6 @@ export const agentResearcher = Effect.fnUntraced(function* (options: {
     prompt: promptGen.promptResearch({
       task: options.task,
     }),
+    stallTimeout: options.stallTimeout,
   }).pipe(Effect.asSome)
 })

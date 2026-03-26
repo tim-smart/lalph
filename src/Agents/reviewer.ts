@@ -48,6 +48,7 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
           gitFlow,
         }),
       ),
+      stallTimeout: options.stallTimeout,
       mode,
     })
     return ExitCode(0)
