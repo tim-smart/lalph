@@ -433,6 +433,10 @@ state and supports both PR-mode and Ralph-mode features uniformly.
   `/Users/alvaro/Developer/cloned/lalph/.specs/feature-driven-execution.md`,
   but this checkout only contains the local `.specs/feature-driven-execution.md`
   path; implementation tracking was updated here instead.
+- Implementation note: the initial `features ls` and `features show` CLI
+  surface reports persisted lifecycle status directly from local metadata for
+  now. Rich derived display states such as `blocked`, `ready`, and
+  `integrating` remain part of the later status-derivation step.
 
 ## Implementation Plan
 
@@ -445,6 +449,9 @@ state and supports both PR-mode and Ralph-mode features uniformly.
 2. [ ] Add `lalph features` CLI commands.
    - Implement `create`, `ls`, `show`, and `edit`.
    - Build the guided feature creation wizard.
+   - Initial inspection support is now in place via `lalph features ls` and
+     `lalph features show <name>`, backed by `FeatureStore.list()` and
+     `FeatureStore.load()` with command-level tests.
 3. [ ] Add `lalph run` command variants.
    - Implement `run issues`, `run feature <name>`, and `run all`.
    - Make bare `lalph` default to `run all`.

@@ -3,5 +3,6 @@
 ---
 
 Add a first-pass feature metadata model and local `.lalph/features` persistence
-store, with tests covering round-tripping plus missing and invalid feature
-files.
+store, add the initial `lalph features ls` and `lalph features show <name>`
+inspection commands, and cover both the persistence layer and command surface
+with tests.
