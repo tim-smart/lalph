@@ -429,26 +429,32 @@ state and supports both PR-mode and Ralph-mode features uniformly.
   a rigid branch naming convention.
 - The unresolved scheduler policy should be captured as an explicit follow-up
   design decision rather than being improvised during implementation.
+- Implementation note: the task prompt referenced
+  `/Users/alvaro/Developer/cloned/lalph/.specs/feature-driven-execution.md`,
+  but this checkout only contains the local `.specs/feature-driven-execution.md`
+  path; implementation tracking was updated here instead.
 
 ## Implementation Plan
 
-1. Introduce the feature domain and persistence model.
+1. [x] Introduce the feature domain and persistence model.
    - Add local feature metadata storage under `.lalph/features/`.
    - Define the persisted lifecycle fields and references needed by both PR and
      Ralph modes.
-2. Add `lalph features` CLI commands.
+   - Completed with a first-pass `Feature` model, file-per-feature persistence,
+     and focused persistence tests.
+2. [ ] Add `lalph features` CLI commands.
    - Implement `create`, `ls`, `show`, and `edit`.
    - Build the guided feature creation wizard.
-3. Add `lalph run` command variants.
+3. [ ] Add `lalph run` command variants.
    - Implement `run issues`, `run feature <name>`, and `run all`.
    - Make bare `lalph` default to `run all`.
-4. Integrate feature-aware execution behavior.
+4. [ ] Integrate feature-aware execution behavior.
    - Preserve simple issue execution.
    - Add PR-mode feature execution against issue-source child tasks.
    - Add Ralph-mode feature execution against the spec file and feature branch.
-5. Add feature status derivation and integration PR automation.
+5. [ ] Add feature status derivation and integration PR automation.
    - Compute derived display status from local + external state.
    - Automatically create/open final integration PRs when features become ready.
-6. Resolve deferred UX follow-ups in later tasks.
+6. [ ] Resolve deferred UX follow-ups in later tasks.
    - Add manual finalize/pause/resume controls if needed.
    - Finalize `run all` scheduling policy.
