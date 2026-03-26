@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.116
+
+### Patch Changes
+
+- [`0770bfd`](https://github.com/tim-smart/lalph/commit/0770bfdde1fa5724e63004ca1c1db110737a6edc) Thanks [@tim-smart](https://github.com/tim-smart)! - use clanka TurnTimeout
+
 ## 0.3.115
 
 ### Patch Changes
