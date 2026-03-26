@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.115
+
+### Patch Changes
+
+- [`b299c57`](https://github.com/tim-smart/lalph/commit/b299c575f4f52de09fe6bdc1b28e5aa32f15f35f) Thanks [@tim-smart](https://github.com/tim-smart)! - add back stall timeout for clanka
+
 ## 0.3.114
 
 ### Patch Changes
