@@ -1,9 +1,10 @@
-import { Array, Data, Effect, Layer, Option, pipe, String } from "effect"
+import { Array, Data, Effect, Layer, Option, Path, pipe, String } from "effect"
 import { Project, ProjectId } from "./domain/Project.ts"
 import { allProjects, CurrentProjectId, Settings } from "./Settings.ts"
 import { Prompt } from "effect/unstable/cli"
 import { IssueSource } from "./IssueSource.ts"
 import { CurrentIssueSource } from "./CurrentIssueSource.ts"
+import { findProjectRoot } from "./shared/lalphDirectory.ts"
 
 export const layerProjectIdPrompt = Layer.effect(
   CurrentProjectId,
@@ -67,6 +68,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
   existing?: Project,
   fromPlanMode = false,
 ) {
+  const pathService = yield* Path.Path
   const projects = yield* getAllProjects
   const id = existing
     ? existing.id
@@ -122,9 +124,20 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
 
   let ralphSpec = Option.none<string>()
   if (gitFlow === "ralph" && !fromPlanMode) {
+    const cwd = pathService.resolve(".")
+    const relativeRoot = pipe(
+      yield* findProjectRoot(cwd),
+      Option.getOrElse(() => cwd),
+    )
     ralphSpec = yield* Prompt.file({
       message: "Path to Ralph spec file",
-    }).pipe(Effect.fromYieldable, Effect.map(Option.some))
+    }).pipe(
+      Effect.fromYieldable,
+      Effect.map((selectedPath) =>
+        pathService.relative(relativeRoot, selectedPath),
+      ),
+      Effect.map(Option.some),
+    )
   }
 
   const researchAgent = yield* Prompt.toggle({
