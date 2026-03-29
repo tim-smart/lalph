@@ -1,6 +1,6 @@
 import { Effect, FileSystem, Option, Path } from "effect"
 
-const findProjectRoot = Effect.fnUntraced(function* (cwd: string) {
+export const findProjectRoot = Effect.fnUntraced(function* (cwd: string) {
   const fs = yield* FileSystem.FileSystem
   const pathService = yield* Path.Path
 
