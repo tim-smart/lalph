@@ -9,7 +9,7 @@
     "lalph": "./dist/cli.mjs"
   },
   "scripts": {
-    "prepare": "husky && effect-language-service patch",
+    "prepare": "husky && effect-tsgo patch",
     "check": "concurrently \"pnpm tsgo --noEmit\" \"pnpm oxlint -c .oxlintrc.json\" \"pnpm build\"",
     "build": "tsdown",
     "prepublishOnly": "pnpm build"
@@ -48,6 +48,7 @@
     "@effect/ai-openai-compat": "4.0.0-beta.43",
     "@effect/language-service": "^0.84.2",
     "@effect/platform-node": "4.0.0-beta.43",
+    "@effect/tsgo": "0.1.0",
     "@linear/sdk": "^80.0.0",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@octokit/types": "^16.0.0",

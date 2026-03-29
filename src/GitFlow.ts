@@ -9,7 +9,6 @@ import { parseBranch } from "./shared/git.ts"
 import { AtomRegistry } from "effect/unstable/reactivity"
 import { CurrentProjectId } from "./Settings.ts"
 
-// @effect-diagnostics-next-line leakingRequirements:off
 export class GitFlow extends ServiceMap.Service<
   GitFlow,
   {

@@ -39,5 +39,6 @@
       }
     ]
   },
-  "include": ["src"]
+  "include": ["src"],
+  "$schema": "https://raw.githubusercontent.com/Effect-TS/tsgo/refs/heads/main/schema.json"
 }
