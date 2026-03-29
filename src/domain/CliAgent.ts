@@ -174,6 +174,8 @@ ${prompt}`
         stdout: "pipe",
         stderr: "pipe",
         stdin: "inherit",
+        env: { FORCE_COLOR: "1" },
+        extendEnv: true,
       },
     ),
   commandPlan: ({ prompt, prdFilePath, dangerous }) =>
