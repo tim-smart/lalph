@@ -58,14 +58,6 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
             ),
         })
 
-      const promptPat = Effect.gen(function* () {
-        return yield* Prompt.password({
-          message:
-            "GitHub PAT with repo, read:user, read:project scopes (leave empty for OAuth)",
-          validate: (value) => Effect.succeed(value.trim()),
-        })
-      }).pipe(Effect.provideServices(promptEnv))
-
       const getNoLock: Effect.Effect<
         AccessToken,
         HttpClientError.HttpClientError | QuitError | Schema.SchemaError
@@ -73,12 +65,17 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
         if (Option.isSome(currentToken)) {
           return currentToken.value
         }
-        const token = Redacted.value(yield* promptPat)
+        const prompt = Prompt.password({
+          message:
+            "GitHub PAT with repo, read:user, read:project scopes (leave empty for OAuth)",
+          validate: (value) => Effect.succeed(value.trim()),
+        })
+        const token = Redacted.value(yield* prompt)
         const accessToken =
           token.length > 0 ? new AccessToken({ token }) : yield* deviceCode
         yield* set(Option.some(accessToken))
         return accessToken
-      })
+      }).pipe(Effect.provideServices(promptEnv))
       const get = Semaphore.makeUnsafe(1).withPermit(getNoLock)
 
       const deviceCode = Effect.gen(function* () {

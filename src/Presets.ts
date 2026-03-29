@@ -131,9 +131,9 @@ export const addOrUpdatePreset = Effect.fnUntraced(function* (options?: {
 
   if (cliAgent.id === "clanka") {
     yield* Effect.log("Verifying Clanka model configuration...")
-    // @effect-diagnostics-next-line multipleEffectProvide:off
     yield* LanguageModel.generateText({ prompt: "say hello" }).pipe(
       Effect.ignore,
+      // @effect-diagnostics-next-line multipleEffectProvide:off
       Effect.provide(layerClankaModel(preset.extraArgs.join(" ")), {
         local: true,
       }),
