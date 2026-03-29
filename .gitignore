@@ -1,5 +1,4 @@
 .direnv/
-.repos/
 .lalph/
 node_modules/
 dist/

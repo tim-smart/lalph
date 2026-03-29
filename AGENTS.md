@@ -22,7 +22,7 @@ the `.specs/README.md` file.
 
 # Learning more about the "effect" & "@effect/\*" packages
 
-`.repos/effect/LLMS.md` is an authoritative source of information about the
+`repos/effect/LLMS.md` is an authoritative source of information about the
 "effect" and "@effect/\*" packages. Read this before looking elsewhere for
 information about these packages. It contains the best practices for using
 effect.
