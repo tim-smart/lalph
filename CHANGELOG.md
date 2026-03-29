@@ -1,5 +1,15 @@
 # lalph
 
+## 0.3.123
+
+### Patch Changes
+
+- [`3ae8db3`](https://github.com/tim-smart/lalph/commit/3ae8db3844fdf42ca13fac599bc4fc55002cafcb) Thanks [@tim-smart](https://github.com/tim-smart)! - Update dependencies.
+
+- [#448](https://github.com/tim-smart/lalph/pull/448) [`bddea0f`](https://github.com/tim-smart/lalph/commit/bddea0f3ed3f214d1658ae90ae42e6d6118bf5b6) Thanks [@alvarosevilla95](https://github.com/alvarosevilla95)! - Store Ralph spec file selections relative to the current project root.
+
+- [#449](https://github.com/tim-smart/lalph/pull/449) [`07a0594`](https://github.com/tim-smart/lalph/commit/07a0594f342aa2af8d4b0327f33a41a68dafa8c6) Thanks [@alvarosevilla95](https://github.com/alvarosevilla95)! - fix: use colored output in codex
+
 ## 0.3.122
 
 ### Patch Changes
