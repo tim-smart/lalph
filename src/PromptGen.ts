@@ -420,7 +420,7 @@ ${options.plan}
      "specification": "path/to/specification/file.md"
    }
    \`\`\`
-5. Present the saved specification for review (include the full text in your response).
+5. Present the full path to the specification file for review.
 
 **Important:** You are only creating or updating a plan, not implementing any tasks yet.
 
