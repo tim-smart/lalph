@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.125
+
+### Patch Changes
+
+- [`2ae685e`](https://github.com/tim-smart/lalph/commit/2ae685efd2a71f254469d970648a83e4fdff900f) Thanks [@tim-smart](https://github.com/tim-smart)! - clarify plan interview process
+
 ## 0.3.124
 
 ### Patch Changes
