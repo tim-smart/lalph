@@ -23,7 +23,7 @@
           packages = with pkgs; [
             bun
             corepack
-            nodejs
+            nodejs_25
             (python313.withPackages (ps:
               with ps; [
                 httpx

@@ -384,6 +384,8 @@ ${options.plan}
    - If the user asks you to update an existing specification, find the relevant
      specification file in the \`${options.specsDirectory}\` directory and update it
      accordingly.
+   - When interviewing the user, ask one question at a time about anything that
+     needs clarification.
 2. Add a detailed implementation plan to the specification, breaking down the work into
    smaller, manageable tasks.
 3. Start two subagents to review the plan:
