@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.124
+
+### Patch Changes
+
+- [`6970348`](https://github.com/tim-smart/lalph/commit/69703487ddad648b35c5ae0fdd12e22097169715) Thanks [@tim-smart](https://github.com/tim-smart)! - only present path instead of full text in plan mode
+
 ## 0.3.123
 
 ### Patch Changes
