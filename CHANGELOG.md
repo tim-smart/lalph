@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.126
+
+### Patch Changes
+
+- [`363df2d`](https://github.com/tim-smart/lalph/commit/363df2d99281f4a15f8a4448316129a0f63a23bb) Thanks [@tim-smart](https://github.com/tim-smart)! - fix branch parsing
+
 ## 0.3.125
 
 ### Patch Changes
