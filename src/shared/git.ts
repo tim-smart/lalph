@@ -5,9 +5,10 @@ export const parseBranch = (
   readonly branch: string
   readonly branchWithRemote: string
 } => {
-  const parts = ref.split("/")
-  const remote = parts.length > 1 ? parts[0]! : "origin"
-  const branch = parts.length > 1 ? parts.slice(1).join("/") : parts[0]!
+  if (!ref.startsWith("origin/") && !ref.startsWith("upstream/")) {
+    return { remote: "origin", branch: ref, branchWithRemote: ref }
+  }
+  const [remote, branch] = ref.split("/", 2) as [string, string]
   const branchWithRemote = `${remote}/${branch}`
   return { remote, branch, branchWithRemote } as const
 }
