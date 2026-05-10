@@ -39,6 +39,9 @@ importers:
       '@effect/platform-node':
         specifier: 4.0.0-beta.43
         version: 4.0.0-beta.43(effect@4.0.0-beta.43)(ioredis@5.10.0)
+      '@effect/tsgo':
+        specifier: 0.1.0
+        version: 0.1.0
       '@linear/sdk':
         specifier: ^80.0.0
         version: 80.0.0(graphql@16.13.1)
@@ -226,6 +229,45 @@ packages:
     resolution: {integrity: sha512-VAMlkL3q7K6XPlCZ0l0BLsxsogUHIupkrMMQGHKbLFjhR/7NFfiI6ugPhExHTdiKZU3tUByYb7/3EcHilkcZpw==}
     peerDependencies:
       effect: ^4.0.0-beta.43
+
+  '@effect/tsgo-darwin-arm64@0.1.0':
+    resolution: {integrity: sha512-JhOvbiv4HV0LXnUdvfq8a0sn/dscVPce5GXyt1CsB77PfiQre8EkW+k+M/ph3/OGLqmAmbMkQGNR5jqphViqCQ==}
+    cpu: [arm64]
+    os: [darwin]
+
+  '@effect/tsgo-darwin-x64@0.1.0':
+    resolution: {integrity: sha512-A+zbwta9IQpI0MnFTIo7rs0g9lrolTWbyGHwb0oTjlzF+daWWAIFvSegbHVVYdDSqnjszbs1/HV56RVmJwtjjw==}
+    cpu: [x64]
+    os: [darwin]
+
+  '@effect/tsgo-linux-arm64@0.1.0':
+    resolution: {integrity: sha512-cyZXhLERlwkr4n2tLh9MQdx8N0DD4bF0mT96HtLh6xl1mRxhuztmJ9WAhtu/aB6QP6jovX2cYI/5z829cKWR3A==}
+    cpu: [arm64]
+    os: [linux]
+
+  '@effect/tsgo-linux-arm@0.1.0':
+    resolution: {integrity: sha512-Ry+Fn4f7K+dY9lnAlAFYj0fmt6HDrXFNHGr43fyeJcNzxALg2MV9CgDaZf1cAXkdR1Vem1ECvCZLq+zoXjrNYw==}
+    cpu: [arm]
+    os: [linux]
+
+  '@effect/tsgo-linux-x64@0.1.0':
+    resolution: {integrity: sha512-ijoa09JyBIZUHoyVBJ311ehWN2uGsvPhCNyb9I4m7K2yazMdTNb3ljNV/vOTwSZJO6pNgaSk9ao/+EbCTyGIlw==}
+    cpu: [x64]
+    os: [linux]
+
+  '@effect/tsgo-win32-arm64@0.1.0':
+    resolution: {integrity: sha512-0N6k86xL0EdEzMeI1Xdi+WGnykt1HnYagZrl0zq5zRtEwgdEseN0z70CCgpJIlxra8UTsSP4XRfBNhYdw09W7Q==}
+    cpu: [arm64]
+    os: [win32]
+
+  '@effect/tsgo-win32-x64@0.1.0':
+    resolution: {integrity: sha512-ohH6cxe/Ha81rTiJ4hEH+oKc1f/iD6wafyLvF38yKBfhwtJayxch+KBMibkajM/WI8PNKHD2HivQAxyKh2NEQg==}
+    cpu: [x64]
+    os: [win32]
+
+  '@effect/tsgo@0.1.0':
+    resolution: {integrity: sha512-tOXIYkGB4dpWRnnEnOcK/dG3LG0/r5/n0VKVzMFCr0azU27Ayenm8Ogx7kT/TeE3WAWry3Qebr2h4qRUzOb0eg==}
+    hasBin: true
 
   '@emnapi/core@1.9.1':
     resolution: {integrity: sha512-mukuNALVsoix/w1BJwFzwXBN/dHeejQtuVzcDsfOEsdpCumXb/E9j8w11h5S54tT1xhifGfbbSm/ICrObRb3KA==}
@@ -2318,6 +2360,37 @@ snapshots:
     dependencies:
       better-sqlite3: 12.8.0
       effect: 4.0.0-beta.43
+
+  '@effect/tsgo-darwin-arm64@0.1.0':
+    optional: true
+
+  '@effect/tsgo-darwin-x64@0.1.0':
+    optional: true
+
+  '@effect/tsgo-linux-arm64@0.1.0':
+    optional: true
+
+  '@effect/tsgo-linux-arm@0.1.0':
+    optional: true
+
+  '@effect/tsgo-linux-x64@0.1.0':
+    optional: true
+
+  '@effect/tsgo-win32-arm64@0.1.0':
+    optional: true
+
+  '@effect/tsgo-win32-x64@0.1.0':
+    optional: true
+
+  '@effect/tsgo@0.1.0':
+    optionalDependencies:
+      '@effect/tsgo-darwin-arm64': 0.1.0
+      '@effect/tsgo-darwin-x64': 0.1.0
+      '@effect/tsgo-linux-arm': 0.1.0
+      '@effect/tsgo-linux-arm64': 0.1.0
+      '@effect/tsgo-linux-x64': 0.1.0
+      '@effect/tsgo-win32-arm64': 0.1.0
+      '@effect/tsgo-win32-x64': 0.1.0
 
   '@emnapi/core@1.9.1':
     dependencies:
