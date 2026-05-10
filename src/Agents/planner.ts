@@ -31,7 +31,7 @@ export const agentPlanner = Effect.fnUntraced(function* (options: {
       prompt: promptGen.planPrompt(options),
       prdFilePath: options.ralph
         ? undefined
-        : pathService.join(".lalph", "prd.yml"),
+        : pathService.join(worktree.directory, ".lalph", "prd.yml"),
       dangerous: options.dangerous,
     }),
     ChildProcess.setCwd(worktree.directory),

@@ -21,7 +21,7 @@ export const agentWorker = Effect.fnUntraced(function* (options: {
   const worktree = yield* Worktree
 
   const prdFilePath = CurrentTask.$match(options.currentTask, {
-    task: () => pathService.join(".lalph", "prd.yml"),
+    task: () => pathService.join(worktree.directory, ".lalph", "prd.yml"),
     ralph: () => undefined,
   })
 
