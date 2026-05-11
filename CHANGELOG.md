@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.127
+
+### Patch Changes
+
+- [`ab20cbf`](https://github.com/tim-smart/lalph/commit/ab20cbf526c4c5086e8903c68795f693b6a2a7dc) Thanks [@tim-smart](https://github.com/tim-smart)! - fix parseBranch
+
 ## 0.3.126
 
 ### Patch Changes
