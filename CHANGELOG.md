@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.128
+
+### Patch Changes
+
+- [`4ca6578`](https://github.com/tim-smart/lalph/commit/4ca65780a3309d11edc2f2e2ddfe3351fa48a02f) Thanks [@tim-smart](https://github.com/tim-smart)! - fix gh schemas
+
 ## 0.3.127
 
 ### Patch Changes
