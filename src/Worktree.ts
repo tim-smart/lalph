@@ -163,6 +163,8 @@ const setupWorktree = Effect.fnUntraced(function* (options: {
     ? worktreeSetupPath
     : cwdSetupPath
 
+  yield* fs.chmod(setupPath, 0o755)
+
   yield* ChildProcess.make({
     cwd: options.directory,
     shell: process.env.SHELL ?? true,
