@@ -73,7 +73,7 @@ export class ReviewComment extends S.Class<ReviewComment>("ReviewComment")({
   author: Author,
   body: S.String,
   path: S.String,
-  originalLine: S.Number,
+  originalLine: S.NullOr(S.Number),
   diffHunk: S.String,
   createdAt: S.String,
 }) {}
