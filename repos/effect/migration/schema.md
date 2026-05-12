@@ -427,8 +427,8 @@ const schema = Schema.Struct({
 | v3 options                                 | v4 pattern                                                              |
 | ------------------------------------------ | ----------------------------------------------------------------------- |
 | `{ exact: true }`                          | `optionalKey(schema)`                                                   |
-| `{ default }`                              | `schema.pipe(withDecodingDefault(...))`                                 |
-| `{ exact: true, default }`                 | `schema.pipe(withDecodingDefaultKey(...))`                              |
+| `{ default }`                              | `schema.pipe(withDecodingDefaultType(...))`                             |
+| `{ exact: true, default }`                 | `schema.pipe(withDecodingDefaultTypeKey(...))`                          |
 | `{ nullable: true }`                       | `optional(NullOr(schema))` + `decodeTo` + filter null                   |
 | `{ nullable: true, exact: true }`          | `optionalKey(NullOr(schema))` + `decodeTo` + filter null                |
 | `{ nullable: true, default }`              | `optional(NullOr(schema))` + `decodeTo` + filter null + `orElseSome`    |
@@ -438,7 +438,7 @@ Key rules:
 
 - `exact: true` → use `optionalKey` instead of `optional`
 - `nullable: true` → wrap inner schema in `NullOr` and filter nulls via `Option.filter(Predicate.isNotNull)`
-- `default` → use `withDecodingDefault` (or `withDecodingDefaultKey` with `exact: true`)
+- `default` → use `withDecodingDefaultType` (or `withDecodingDefaultTypeKey` with `exact: true`)
 
 #### Example: `{ exact: true }` (simplest case)
 
@@ -477,10 +477,10 @@ const schema = Schema.Struct({
 v4
 
 ```ts
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
 
 const schema = Schema.Struct({
-  a: Schema.String.pipe(Schema.withDecodingDefault(() => ""))
+  a: Schema.String.pipe(Schema.withDecodingDefaultType(Effect.succeed("")))
 })
 ```
 
@@ -499,10 +499,10 @@ const schema = Schema.Struct({
 v4
 
 ```ts
-import { Schema } from "effect"
+import { Effect, Schema } from "effect"
 
 const schema = Schema.Struct({
-  a: Schema.String.pipe(Schema.withDecodingDefaultKey(() => ""))
+  a: Schema.String.pipe(Schema.withDecodingDefaultTypeKey(Effect.succeed("")))
 })
 ```
 
@@ -656,6 +656,56 @@ const a = Schema.String.check(Schema.makeFilter((s) => s.length > 0))
 
 // refinement
 const b = Schema.Option(Schema.String).pipe(Schema.refine(Option.isSome))
+```
+
+In v4, a `makeFilter` predicate can return any of the shapes described by `Schema.FilterOutput`:
+
+- `undefined` / `true` — success
+- `false` — generic failure
+- `string` — failure with that message
+- `SchemaIssue.Issue` — a fully-formed issue
+- `{ path, issue }` — failure at a nested path (`issue` is a `string` or `SchemaIssue.Issue`)
+- `ReadonlyArray<Schema.FilterIssue>` — several failures reported together (empty array = success, single element is unwrapped, otherwise grouped into an `Issue.Composite`)
+
+**Example** (Failure at a nested path)
+
+```ts
+import { Schema } from "effect"
+
+const schema = Schema.Struct({ password: Schema.String, confirmPassword: Schema.String }).check(
+  Schema.makeFilter((o) =>
+    o.password === o.confirmPassword
+      ? undefined
+      : { path: ["password"], issue: "password and confirmPassword must match" }
+  )
+)
+
+console.log(String(Schema.decodeUnknownExit(schema)({ password: "123456", confirmPassword: "1234567" })))
+// Failure(Cause([Fail(SchemaError: password and confirmPassword must match
+//   at ["password"])]))
+```
+
+**Example** (Reporting multiple failures at once)
+
+```ts
+import { Schema } from "effect"
+
+const schema = Schema.Struct({ a: Schema.Finite, b: Schema.Finite, c: Schema.Finite }).check(
+  Schema.makeFilter((o) => {
+    const issues: Array<Schema.FilterIssue> = []
+    if (o.a > 0) {
+      if (o.b <= 0) issues.push({ path: ["b"], issue: "b must be greater than 0" })
+      if (o.c <= 0) issues.push({ path: ["c"], issue: "c must be greater than 0" })
+    }
+    return issues
+  })
+)
+
+console.log(String(Schema.decodeUnknownExit(schema)({ a: 1, b: 0, c: 0 })))
+// Failure(Cause([Fail(SchemaError: b must be greater than 0
+//   at ["b"]
+// c must be greater than 0
+//   at ["c"])]))
 ```
 
 ### filterEffect
@@ -956,9 +1006,3 @@ function split(separator: string) {
   )
 }
 ```
-
-## Not covered
-
-The following v3 APIs are not yet documented in this migration guide. If you encounter them, check the v4 source or open an issue.
-
-`suspend`, `brand` / `fromBrand`, `Enum`, `instanceOf`, `is` / `asserts`, `mutable`, `TaggedStruct`, `withConstructorDefault`

@@ -1,10 +1,10 @@
+import * as Context from "effect/Context"
 import * as Layer from "effect/Layer"
 import * as Predicate from "effect/Predicate"
-import * as ServiceMap from "effect/ServiceMap"
 import type { ParsedOpenApi, ParsedOperation } from "./ParsedOperation.ts"
 import * as Utils from "./Utils.ts"
 
-export class OpenApiTransformer extends ServiceMap.Service<
+export class OpenApiTransformer extends Context.Service<
   OpenApiTransformer,
   {
     readonly imports: (importName: string, parsed: ParsedOpenApi) => string
@@ -269,6 +269,8 @@ export const make = (
     const payloadVarName = "options.payload"
     if (operation.payloadFormData) {
       pipeline.push(`HttpClientRequest.bodyFormData(${payloadVarName} as any)`)
+    } else if (operation.payloadFormUrlEncoded) {
+      pipeline.push(`HttpClientRequest.bodyUrlParams(${payloadVarName} as any)`)
     } else if (operation.payload) {
       pipeline.push(`HttpClientRequest.bodyJsonUnsafe(${payloadVarName})`)
     }

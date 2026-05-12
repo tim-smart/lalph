@@ -1,13 +1,13 @@
 /**
  * @since 4.0.0
  */
+import * as Context from "../../Context.ts"
 import * as Effect from "../../Effect.ts"
 import * as FileSystem from "../../FileSystem.ts"
 import { dual } from "../../Function.ts"
 import * as Layer from "../../Layer.ts"
 import * as Path from "../../Path.ts"
 import type * as Scope from "../../Scope.ts"
-import * as ServiceMap from "../../ServiceMap.ts"
 import * as Etag from "./Etag.ts"
 import * as HttpClient from "./HttpClient.ts"
 import * as ClientRequest from "./HttpClientRequest.ts"
@@ -20,7 +20,7 @@ import type { HttpServerResponse } from "./HttpServerResponse.ts"
  * @since 4.0.0
  * @category models
  */
-export class HttpServer extends ServiceMap.Service<HttpServer, {
+export class HttpServer extends Context.Service<HttpServer, {
   readonly serve: {
     <E, R>(effect: Effect.Effect<HttpServerResponse, E, R>): Effect.Effect<
       void,
@@ -177,7 +177,7 @@ export const addressFormattedWith = <A, E, R>(
   f: (address: string) => Effect.Effect<A, E, R>
 ): Effect.Effect<A, E, HttpServer | R> =>
   Effect.flatMap(
-    HttpServer.asEffect(),
+    HttpServer,
     (server) => f(formatAddress(server.address))
   )
 

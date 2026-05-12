@@ -39,18 +39,16 @@
  * @since 1.0.0
  */
 import type * as Cause from "../../Cause.ts"
+import * as Context from "../../Context.ts"
 import * as Effect from "../../Effect.ts"
+import * as Effectable from "../../Effectable.ts"
 import * as Fiber from "../../Fiber.ts"
 import { identity } from "../../Function.ts"
-import type { Inspectable } from "../../Inspectable.ts"
-import { PipeInspectableProto, YieldableProto } from "../../internal/core.ts"
 import * as Layer from "../../Layer.ts"
-import type { Pipeable } from "../../Pipeable.ts"
 import * as Predicate from "../../Predicate.ts"
 import * as Queue from "../../Queue.ts"
 import * as Schema from "../../Schema.ts"
 import type * as Scope from "../../Scope.ts"
-import * as ServiceMap from "../../ServiceMap.ts"
 import * as Stream from "../../Stream.ts"
 import * as AiError from "./AiError.ts"
 import type * as Tool from "./Tool.ts"
@@ -98,14 +96,11 @@ const TypeId = "~effect/ai/Toolkit" as const
  * @category models
  */
 export interface Toolkit<in out Tools extends Record<string, Tool.Any>> extends
-  Effect.Yieldable<
-    Toolkit<Tools>,
+  Effect.Effect<
     WithHandler<Tools>,
     never,
     Tool.HandlersFor<Tools>
-  >,
-  Inspectable,
-  Pipeable
+  >
 {
   new(_: never): {}
 
@@ -122,12 +117,12 @@ export interface Toolkit<in out Tools extends Record<string, Tool.Any>> extends
   of<Handlers extends HandlersFrom<Tools>>(handlers: Handlers): Handlers
 
   /**
-   * Converts a toolkit into a `ServiceMap` containing handlers for each tool
+   * Converts a toolkit into a `Context` containing handlers for each tool
    * in the toolkit.
    */
   toHandlers<Handlers extends HandlersFrom<Tools>, EX = never, RX = never>(
     build: Handlers | Effect.Effect<Handlers, EX, RX>
-  ): Effect.Effect<ServiceMap.ServiceMap<Tool.HandlersFor<Tools>>, EX, RX>
+  ): Effect.Effect<Context.Context<Tool.HandlersFor<Tools>>, EX, RX>
 
   /**
    * Converts a toolkit into a `Layer` containing handlers for each tool in the
@@ -257,39 +252,13 @@ export interface WithHandler<in out Tools extends Record<string, Tool.Any>> {
 export type WithHandlerTools<T> = T extends WithHandler<infer Tools> ? Tools : never
 
 const Proto = {
-  ...YieldableProto,
-  ...PipeInspectableProto,
-  [TypeId]: TypeId,
-  of: identity,
-  toHandlers(
-    this: Toolkit<Record<string, Tool.Any>>,
-    build: Record<string, (params: any) => any> | Effect.Effect<Record<string, (params: any) => any>>
-  ) {
-    return Effect.gen({ self: this }, function*() {
-      const services = yield* Effect.services<never>()
-      const handlers = Effect.isEffect(build) ? yield* build : build
-      const serviceMap = new Map<string, unknown>()
-      for (const [name, handler] of Object.entries(handlers)) {
-        const tool = this.tools[name]!
-        serviceMap.set(tool.id, { name, handler, services })
-      }
-      return ServiceMap.makeUnsafe(serviceMap)
-    })
-  },
-  toLayer(
-    this: Toolkit<Record<string, Tool.Any>>,
-    build: Record<string, (params: any) => any> | Effect.Effect<Record<string, (params: any) => any>>
-  ) {
-    return Layer.effectServices(this.toHandlers(build))
-  },
-  asEffect(this: Toolkit<Record<string, Tool.Any>>) {
-    return Effect.gen({ self: this }, function*() {
+  ...Effectable.Prototype({
+    label: "Toolkit",
+    evaluate: Effect.fnUntraced(function*(this: Toolkit<Record<string, Tool.Any>>, parent) {
       const tools = this.tools
-
-      const services = yield* Effect.services<never>()
-
+      const services = parent.context
       const schemasCache = new WeakMap<any, {
-        readonly services: ServiceMap.ServiceMap<never>
+        readonly context: Context.Context<never>
         readonly handler: Tool.Handler<any>["handler"]
         readonly decodeParameters: (u: unknown) => Effect.Effect<unknown, Schema.SchemaError>
         readonly decodeResult: (u: unknown) => Effect.Effect<unknown, Schema.SchemaError>
@@ -309,7 +278,7 @@ const Proto = {
           const decodeResult = Schema.decodeUnknownEffect(resultSchema) as any
           const encodeResult = Schema.encodeUnknownEffect(resultSchema) as any
           schemas = {
-            services: handler.services,
+            context: handler.context,
             handler: handler.handler,
             decodeParameters,
             decodeResult,
@@ -375,7 +344,7 @@ const Proto = {
 
         const fiber = yield* schemas.handler(decodedParams, context).pipe(
           Effect.flatMap((result) => Queue.offer(queue, { result, isFailure: false, preliminary: false })),
-          Effect.updateServices((input) => ServiceMap.merge(schemas.services, input)),
+          Effect.updateContext((input) => Context.merge(schemas.context, input)),
           Effect.matchCauseEffect({
             onFailure: (cause) => Queue.failCause(queue, cause),
             onSuccess: () => Queue.end(queue)
@@ -441,6 +410,29 @@ const Proto = {
         handle: handle as any
       } satisfies WithHandler<Record<string, any>>
     })
+  }),
+  [TypeId]: TypeId,
+  of: identity,
+  toHandlers(
+    this: Toolkit<Record<string, Tool.Any>>,
+    build: Record<string, (params: any) => any> | Effect.Effect<Record<string, (params: any) => any>>
+  ) {
+    return Effect.gen({ self: this }, function*() {
+      const services = yield* Effect.context<never>()
+      const handlers = Effect.isEffect(build) ? yield* build : build
+      const context = new Map<string, unknown>()
+      for (const [name, handler] of Object.entries(handlers)) {
+        const tool = this.tools[name]!
+        context.set(tool.id, { name, handler, context: services })
+      }
+      return Context.makeUnsafe(context)
+    })
+  },
+  toLayer(
+    this: Toolkit<Record<string, Tool.Any>>,
+    build: Record<string, (params: any) => any> | Effect.Effect<Record<string, (params: any) => any>>
+  ) {
+    return Layer.effectContext(this.toHandlers(build))
   },
   toJSON(this: Toolkit<any>): unknown {
     return {

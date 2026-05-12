@@ -3,15 +3,13 @@
  * @category models
  */
 import type * as Cause from "../../Cause.ts"
-import type { Input } from "../../Duration.ts"
 import * as Effect from "../../Effect.ts"
-import { identity } from "../../Function.ts"
 import * as RequestResolver from "../../RequestResolver.ts"
 import type * as Schema from "../../Schema.ts"
 import type { Scope } from "../../Scope.ts"
 import type * as Model from "../schema/Model.ts"
 import { SqlClient } from "./SqlClient.ts"
-import type { SqlError } from "./SqlError.ts"
+import type { ResultLengthMismatch, SqlError } from "./SqlError.ts"
 import * as SqlResolver from "./SqlResolver.ts"
 import * as SqlSchema from "./SqlSchema.ts"
 
@@ -23,11 +21,13 @@ import * as SqlSchema from "./SqlSchema.ts"
  */
 export const makeRepository = <
   S extends Model.Any,
-  Id extends (keyof S["Type"]) & (keyof S["update"]["Type"]) & (keyof S["fields"])
+  Id extends (keyof S["Type"]) & (keyof S["update"]["Type"]) & (keyof S["fields"]),
+  SoftDelete extends keyof S["fields"] = never
 >(Model: S, options: {
   readonly tableName: string
   readonly spanPrefix: string
   readonly idColumn: Id
+  readonly softDeleteColumn?: SoftDelete | undefined
 }): Effect.Effect<
   {
     readonly insert: (
@@ -68,6 +68,12 @@ export const makeRepository = <
     const sql = yield* SqlClient
     const idSchema = Model.fields[options.idColumn] as Schema.Top
     const idColumn = options.idColumn as string
+    const softDeleteColumn = options.softDeleteColumn as string | undefined
+    const withSoftDeleteFilter = (where: any) =>
+      softDeleteColumn === undefined ? where : sql.and([where, sql`${sql(softDeleteColumn)} is null`])
+    const setSoftDeleted = softDeleteColumn === undefined
+      ? undefined
+      : sql`${sql(softDeleteColumn)} = CURRENT_TIMESTAMP`
 
     const insertSchema = SqlSchema.findOne({
       Request: Model.insert,
@@ -76,9 +82,10 @@ export const makeRepository = <
         sql.onDialectOrElse({
           mysql: () =>
             sql`insert into ${sql(options.tableName)} ${sql.insert(request as any)};
-select * from ${sql(options.tableName)} where ${sql(idColumn)} = LAST_INSERT_ID();`.unprepared.pipe(
-              Effect.map(([, results]) => results as any)
-            ),
+select * from ${sql(options.tableName)} where ${withSoftDeleteFilter(sql`${sql(idColumn)} = LAST_INSERT_ID()`)};`
+              .unprepared.pipe(
+                Effect.map(([, results]) => results as any)
+              ),
           orElse: () => sql`insert into ${sql(options.tableName)} ${sql.insert(request as any).returning("*")}`
         })
     })
@@ -113,15 +120,16 @@ select * from ${sql(options.tableName)} where ${sql(idColumn)} = LAST_INSERT_ID(
       execute: (request: any) =>
         sql.onDialectOrElse({
           mysql: () =>
-            sql`update ${sql(options.tableName)} set ${sql.update(request, [idColumn])} where ${sql(idColumn)} = ${
-              request[idColumn]
+            sql`update ${sql(options.tableName)} set ${sql.update(request, [idColumn])} where ${
+              withSoftDeleteFilter(sql`${sql(idColumn)} = ${request[idColumn]}`)
             };
-select * from ${sql(options.tableName)} where ${sql(idColumn)} = ${request[idColumn]};`.unprepared.pipe(
-              Effect.map(([, results]) => results as any)
-            ),
+select * from ${sql(options.tableName)} where ${withSoftDeleteFilter(sql`${sql(idColumn)} = ${request[idColumn]}`)};`
+              .unprepared.pipe(
+                Effect.map(([, results]) => results as any)
+              ),
           orElse: () =>
-            sql`update ${sql(options.tableName)} set ${sql.update(request, [idColumn])} where ${sql(idColumn)} = ${
-              request[idColumn]
+            sql`update ${sql(options.tableName)} set ${sql.update(request, [idColumn])} where ${
+              withSoftDeleteFilter(sql`${sql(idColumn)} = ${request[idColumn]}`)
             } returning *`
         })
     })
@@ -144,8 +152,8 @@ select * from ${sql(options.tableName)} where ${sql(idColumn)} = ${request[idCol
     const updateVoidSchema = SqlSchema.void({
       Request: Model.update,
       execute: (request: any) =>
-        sql`update ${sql(options.tableName)} set ${sql.update(request, [idColumn])} where ${sql(idColumn)} = ${
-          request[idColumn]
+        sql`update ${sql(options.tableName)} set ${sql.update(request, [idColumn])} where ${
+          withSoftDeleteFilter(sql`${sql(idColumn)} = ${request[idColumn]}`)
         }`
     })
     const updateVoid = (
@@ -162,7 +170,8 @@ select * from ${sql(options.tableName)} where ${sql(idColumn)} = ${request[idCol
     const findByIdSchema = SqlSchema.findOne({
       Request: idSchema,
       Result: Model,
-      execute: (id: any) => sql`select * from ${sql(options.tableName)} where ${sql(idColumn)} = ${id}`
+      execute: (id: any) =>
+        sql`select * from ${sql(options.tableName)} where ${withSoftDeleteFilter(sql`${sql(idColumn)} = ${id}`)}`
     })
     const findById = (
       id: S["fields"][Id]["Type"]
@@ -179,7 +188,12 @@ select * from ${sql(options.tableName)} where ${sql(idColumn)} = ${request[idCol
 
     const deleteSchema = SqlSchema.void({
       Request: idSchema,
-      execute: (id: any) => sql`delete from ${sql(options.tableName)} where ${sql(idColumn)} = ${id}`
+      execute: (id: any) =>
+        softDeleteColumn === undefined
+          ? sql`delete from ${sql(options.tableName)} where ${sql(idColumn)} = ${id}`
+          : sql`update ${sql(options.tableName)} set ${setSoftDeleted} where ${
+            withSoftDeleteFilter(sql`${sql(idColumn)} = ${id}`)
+          }`
     })
     const delete_ = (
       id: S["fields"][Id]["Type"]
@@ -201,40 +215,47 @@ select * from ${sql(options.tableName)} where ${sql(idColumn)} = ${request[idCol
  * @since 4.0.0
  * @category repository
  */
-export const makeDataLoaders = <
+export const makeResolvers = <
   S extends Model.Any,
-  Id extends (keyof S["Type"]) & (keyof S["update"]["Type"]) & (keyof S["fields"])
+  Id extends (keyof S["Type"]) & (keyof S["update"]["Type"]) & (keyof S["fields"]),
+  SoftDelete extends keyof S["fields"] = never
 >(
   Model: S,
   options: {
     readonly tableName: string
     readonly spanPrefix: string
     readonly idColumn: Id
-    readonly window: Input
-    readonly maxBatchSize?: number | undefined
+    readonly softDeleteColumn?: SoftDelete | undefined
   }
 ): Effect.Effect<
   {
-    readonly insert: (
-      insert: S["insert"]["Type"]
-    ) => Effect.Effect<
-      S["Type"],
-      SqlError | Schema.SchemaError,
-      S["DecodingServices"] | S["insert"]["EncodingServices"]
+    readonly insert: RequestResolver.RequestResolver<
+      SqlResolver.SqlRequest<
+        S["insert"]["Type"],
+        S["Type"],
+        ResultLengthMismatch | SqlError,
+        S["insert"]["EncodingServices"]
+      >
     >
-    readonly insertVoid: (
-      insert: S["insert"]["Type"]
-    ) => Effect.Effect<void, SqlError | Schema.SchemaError, S["insert"]["EncodingServices"]>
-    readonly findById: (
-      id: S["fields"][Id]["Type"]
-    ) => Effect.Effect<
-      S["Type"],
-      SqlError | Schema.SchemaError | Cause.NoSuchElementError,
-      S["DecodingServices"] | S["fields"][Id]["EncodingServices"]
+    readonly insertVoid: RequestResolver.RequestResolver<
+      SqlResolver.SqlRequest<S["insert"]["Type"], void, SqlError, S["insert"]["EncodingServices"]>
     >
-    readonly delete: (
-      id: S["fields"][Id]["Type"]
-    ) => Effect.Effect<void, SqlError | Schema.SchemaError, S["fields"][Id]["EncodingServices"]>
+    readonly findById: RequestResolver.RequestResolver<
+      SqlResolver.SqlRequest<
+        S["fields"][Id]["Type"],
+        S["Type"],
+        Cause.NoSuchElementError | SqlError,
+        S["DecodingServices"] | S["fields"][Id]["EncodingServices"]
+      >
+    >
+    readonly delete: RequestResolver.RequestResolver<
+      SqlResolver.SqlRequest<
+        S["fields"][Id]["Type"],
+        void,
+        SqlError,
+        S["fields"][Id]["EncodingServices"]
+      >
+    >
   },
   never,
   SqlClient | Scope
@@ -243,9 +264,21 @@ export const makeDataLoaders = <
     const sql = yield* SqlClient
     const idSchema = Model.fields[options.idColumn] as Schema.Top
     const idColumn = options.idColumn as string
-    const setMaxBatchSize = options.maxBatchSize ? RequestResolver.batchN(options.maxBatchSize) : identity
+    const softDeleteColumn = options.softDeleteColumn as string | undefined
+    const withSoftDeleteFilter = (where: any) =>
+      softDeleteColumn === undefined ? where : sql.and([where, sql`${sql(softDeleteColumn)} is null`])
+    const setSoftDeleted = softDeleteColumn === undefined
+      ? undefined
+      : sql`${sql(softDeleteColumn)} = CURRENT_TIMESTAMP`
 
-    const insertResolver = SqlResolver.ordered({
+    const insert: RequestResolver.RequestResolver<
+      SqlResolver.SqlRequest<
+        S["insert"]["Type"],
+        S["Type"],
+        ResultLengthMismatch | SqlError,
+        S["DecodingServices"] | S["insert"]["EncodingServices"]
+      >
+    > = SqlResolver.ordered({
       Request: Model.insert,
       Result: Model,
       execute: (request: any) =>
@@ -253,92 +286,62 @@ export const makeDataLoaders = <
           mysql: () =>
             Effect.forEach(request, (request: any) =>
               sql`insert into ${sql(options.tableName)} ${sql.insert(request)};
-select * from ${sql(options.tableName)} where ${sql(idColumn)} = LAST_INSERT_ID();`.unprepared.pipe(
-                Effect.map(([, results]) => results[0] as any)
-              ), { concurrency: 10 }),
+select * from ${sql(options.tableName)} where ${withSoftDeleteFilter(sql`${sql(idColumn)} = LAST_INSERT_ID()`)};`
+                .unprepared.pipe(
+                  Effect.map(([, results]) => results[0] as any)
+                ), { concurrency: 10 }),
           orElse: () => sql`insert into ${sql(options.tableName)} ${sql.insert(request).returning("*")}`
         })
     }).pipe(
-      RequestResolver.setDelay(options.window),
-      setMaxBatchSize,
       RequestResolver.withSpan(`${options.spanPrefix}.insertResolver`)
     )
-    const insertExecute = SqlResolver.request(insertResolver)
-    const insert = (
-      insert: S["insert"]["Type"]
-    ): Effect.Effect<
-      S["Type"],
-      SqlError | Schema.SchemaError,
-      S["DecodingServices"] | S["insert"]["EncodingServices"]
-    > =>
-      insertExecute(insert).pipe(
-        Effect.catchTag("ResultLengthMismatch", Effect.die),
-        Effect.withSpan(`${options.spanPrefix}.insert`, {}, {
-          captureStackTrace: false
-        })
-      ) as any
 
-    const insertVoidResolver = SqlResolver.void({
+    const insertVoid: RequestResolver.RequestResolver<
+      SqlResolver.SqlRequest<S["insert"]["Type"], void, Schema.SchemaError | SqlError, S["insert"]["EncodingServices"]>
+    > = SqlResolver.void({
       Request: Model.insert,
       execute: (request: any) => sql`insert into ${sql(options.tableName)} ${sql.insert(request)}`
     }).pipe(
-      RequestResolver.setDelay(options.window),
-      setMaxBatchSize,
       RequestResolver.withSpan(`${options.spanPrefix}.insertVoidResolver`)
     )
-    const insertVoidExecute = SqlResolver.request(insertVoidResolver)
-    const insertVoid = (
-      insert: S["insert"]["Type"]
-    ): Effect.Effect<void, SqlError | Schema.SchemaError, S["insert"]["EncodingServices"]> =>
-      insertVoidExecute(insert).pipe(
-        Effect.withSpan(`${options.spanPrefix}.insertVoid`, {}, {
-          captureStackTrace: false
-        })
-      ) as any
 
-    const findByIdResolver = SqlResolver.findById({
+    const findById: RequestResolver.RequestResolver<
+      SqlResolver.SqlRequest<
+        S["fields"][Id]["Type"],
+        S["Type"],
+        Cause.NoSuchElementError | Schema.SchemaError | SqlError,
+        S["DecodingServices"] | S["fields"][Id]["EncodingServices"]
+      >
+    > = SqlResolver.findById({
       Id: idSchema,
       Result: Model,
       ResultId(request: any) {
         return request[idColumn]
       },
-      execute: (ids: any) => sql`select * from ${sql(options.tableName)} where ${sql.in(idColumn, ids)}`
+      execute: (ids: any) =>
+        sql`select * from ${sql(options.tableName)} where ${withSoftDeleteFilter(sql.in(idColumn, ids))}`
     }).pipe(
-      RequestResolver.setDelay(options.window),
-      setMaxBatchSize,
       RequestResolver.withSpan(`${options.spanPrefix}.findByIdResolver`)
     )
-    const findByIdExecute = SqlResolver.request(findByIdResolver)
-    const findById = (
-      id: S["fields"][Id]["Type"]
-    ): Effect.Effect<
-      S["Type"],
-      Cause.NoSuchElementError | SqlError | Schema.SchemaError,
-      S["DecodingServices"] | S["fields"][Id]["EncodingServices"]
-    > =>
-      findByIdExecute(id).pipe(
-        Effect.withSpan(`${options.spanPrefix}.findById`, { attributes: { id } }, {
-          captureStackTrace: false
-        })
-      ) as any
 
-    const deleteResolver = SqlResolver.void({
+    const delete_: RequestResolver.RequestResolver<
+      SqlResolver.SqlRequest<
+        S["fields"][Id]["Type"],
+        void,
+        Schema.SchemaError | SqlError,
+        S["fields"][Id]["EncodingServices"]
+      >
+    > = SqlResolver.void({
       Request: idSchema,
-      execute: (ids: any) => sql`delete from ${sql(options.tableName)} where ${sql.in(idColumn, ids)}`
+      execute: (ids: any) =>
+        softDeleteColumn === undefined
+          ? sql`delete from ${sql(options.tableName)} where ${sql.in(idColumn, ids)}`
+          : sql`update ${sql(options.tableName)} set ${setSoftDeleted} where ${
+            withSoftDeleteFilter(sql.in(idColumn, ids))
+          }`
     }).pipe(
-      RequestResolver.setDelay(options.window),
-      setMaxBatchSize,
       RequestResolver.withSpan(`${options.spanPrefix}.deleteResolver`)
     )
-    const deleteExecute = SqlResolver.request(deleteResolver)
-    const delete_ = (
-      id: S["fields"][Id]["Type"]
-    ): Effect.Effect<void, SqlError | Schema.SchemaError, S["fields"][Id]["EncodingServices"]> =>
-      deleteExecute(id).pipe(
-        Effect.withSpan(`${options.spanPrefix}.delete`, { attributes: { id } }, {
-          captureStackTrace: false
-        })
-      ) as any
 
     return { insert, insertVoid, findById, delete: delete_ } as const
   })

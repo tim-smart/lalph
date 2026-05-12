@@ -71,6 +71,7 @@
 import type * as Arr from "./Array.ts"
 import type * as Cause from "./Cause.ts"
 import type { Clock } from "./Clock.ts"
+import * as Context from "./Context.ts"
 import * as Duration from "./Duration.ts"
 import type { ExecutionPlan } from "./ExecutionPlan.ts"
 import * as Exit from "./Exit.ts"
@@ -78,6 +79,7 @@ import type { Fiber } from "./Fiber.ts"
 import type * as Filter from "./Filter.ts"
 import { constant, dual, type LazyArg } from "./Function.ts"
 import type { TypeLambda } from "./HKT.ts"
+import type { Inspectable } from "./Inspectable.ts"
 import * as core from "./internal/core.ts"
 import * as internal from "./internal/effect.ts"
 import * as internalExecutionPlan from "./internal/executionPlan.ts"
@@ -98,7 +100,6 @@ import type * as Result from "./Result.ts"
 import type { Schedule } from "./Schedule.ts"
 import type { Scheduler } from "./Scheduler.ts"
 import type { Scope } from "./Scope.ts"
-import * as ServiceMap from "./ServiceMap.ts"
 import type {
   AnySpan,
   ParentSpan,
@@ -128,9 +129,19 @@ import type {
   unassigned
 } from "./Types.ts"
 import type * as Unify from "./Unify.ts"
-import { internalCall, SingleShotGen } from "./Utils.ts"
+import { internalCall } from "./Utils.ts"
 
-const TypeId = core.EffectTypeId
+/**
+ * @category Type identifiers
+ * @since 2.0.0
+ */
+export type TypeId = "~effect/Effect"
+
+/**
+ * @category Type identifiers
+ * @since 2.0.0
+ */
+export const TypeId: TypeId = core.EffectTypeId
 
 /**
  * The `Effect` interface defines a value that lazily describes a workflow or
@@ -169,58 +180,12 @@ const TypeId = core.EffectTypeId
  * @since 2.0.0
  * @category Models
  */
-export interface Effect<out A, out E = never, out R = never> extends Pipeable, Yieldable<Effect<A, E, R>, A, E, R> {
+export interface Effect<out A, out E = never, out R = never> extends Pipeable, Inspectable {
   readonly [TypeId]: Variance<A, E, R>
+  [Symbol.iterator](): EffectIterator<Effect<A, E, R>>
   [Unify.typeSymbol]?: unknown
   [Unify.unifySymbol]?: EffectUnify<this>
   [Unify.ignoreSymbol]?: {}
-}
-
-/**
- * A type that can be yielded in an Effect generator function.
- *
- * The `Yieldable` interface allows values to be used with the `yield*` syntax
- * in Effect generator functions, providing a clean way to sequence effectful operations.
- *
- * @example
- * ```ts
- * import { Effect } from "effect"
- *
- * // Effects implement Yieldable and can be used with yield*
- * const effect1 = Effect.succeed(10)
- * const effect2 = Effect.succeed(20)
- *
- * const program = Effect.gen(function*() {
- *   const a = yield* effect1 // yields the Effect which implements Yieldable
- *   const b = yield* effect2
- *   return a + b
- * })
- *
- * Effect.runPromise(program).then(console.log) // 30
- * ```
- *
- * @since 4.0.0
- * @category Yieldable
- */
-export interface Yieldable<
-  out Self extends Yieldable<any, any, any, any>,
-  out A,
-  out E = never,
-  out R = never
-> {
-  asEffect(): Effect<A, E, R>
-  [Symbol.iterator](): EffectIterator<Self>
-}
-
-/**
- * @since 4.0.0
- * @category Yieldable
- */
-export abstract class YieldableClass<A, E = never, R = never> implements Yieldable<any, A, E, R> {
-  [Symbol.iterator](): EffectIterator<this> {
-    return new SingleShotGen(this) as any
-  }
-  abstract asEffect(): Effect<A, E, R>
 }
 
 /**
@@ -316,34 +281,6 @@ export type Services<T> = T extends Effect<infer _A, infer _E, infer _R> ? _R
   : never
 
 /**
- * Namespace containing type utilities for Yieldable values.
- *
- * @since 4.0.0
- * @category Yieldable
- */
-export declare namespace Yieldable {
-  /**
-   * @since 4.0.0
-   * @category Yieldable
-   */
-  export type Any = Yieldable<any, any, any, any>
-
-  /**
-   * @since 4.0.0
-   * @category Yieldable
-   * @example
-   * ```ts
-   * import type { Effect } from "effect"
-   *
-   * // Extract the success type from a Yieldable
-   * type SuccessType = Effect.Yieldable.Success<Effect.Effect<string>> // string
-   * ```
-   */
-  export type Success<T> = T extends Yieldable<infer _Self, infer _A, infer _E, infer _R> ? _A
-    : never
-}
-
-/**
  * Tests if a value is an `Effect`.
  *
  * @example
@@ -381,10 +318,10 @@ export const isEffect: (u: unknown) => u is Effect<any, any, any> = core.isEffec
  * @since 2.0.0
  * @category Models
  */
-export interface EffectIterator<T extends Yieldable<any, any, any, any>> {
+export interface EffectIterator<T extends Effect<any, any, any>> {
   next(
     ...args: ReadonlyArray<any>
-  ): IteratorResult<T, Yieldable.Success<T>>
+  ): IteratorResult<T, Success<T>>
 }
 
 // ========================================================================
@@ -1562,18 +1499,18 @@ export const bind: {
  * @category Creating Effects
  */
 export const gen: {
-  <Eff extends Yieldable<any, any, any, any>, AEff>(
+  <Eff extends Effect<any, any, any>, AEff>(
     f: () => Generator<Eff, AEff, never>
   ): Effect<
     AEff,
     [Eff] extends [never] ? never
-      : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+      : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
       : never,
     [Eff] extends [never] ? never
-      : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+      : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
       : never
   >
-  <Self, Eff extends Yieldable<any, any, any, any>, AEff>(
+  <Self, Eff extends Effect<any, any, any>, AEff>(
     options: {
       readonly self: Self
     },
@@ -1581,10 +1518,10 @@ export const gen: {
   ): Effect<
     AEff,
     [Eff] extends [never] ? never
-      : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+      : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
       : never,
     [Eff] extends [never] ? never
-      : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+      : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
       : never
   >
 } = internal.gen
@@ -1598,7 +1535,7 @@ export namespace gen {
   /**
    * @since 4.0.0
    */
-  export type Return<A, E = never, R = never> = Generator<Yieldable<any, any, E, R>, A, any>
+  export type Return<A, E = never, R = never> = Generator<Effect<any, E, R>, A, any>
 }
 
 /**
@@ -1958,31 +1895,6 @@ export const fromOption: <A>(
  * @category Conversions
  */
 export const fromNullishOr: <A>(value: A) => Effect<NonNullable<A>, Cause.NoSuchElementError> = internal.fromNullishOr
-
-/**
- * Converts a yieldable value to an Effect.
- *
- * @example
- * ```ts
- * import { Effect } from "effect"
- * import * as Option from "effect/Option"
- *
- * // Option is yieldable in Effect
- * const program = Effect.gen(function*() {
- *   const value = yield* Effect.fromYieldable(Option.some(42))
- *   return value * 2
- * })
- *
- * Effect.runPromise(program).then(console.log)
- * // Output: 84
- * ```
- *
- * @since 4.0.0
- * @category Conversions
- */
-export const fromYieldable: <Self extends Yieldable.Any, A, E, R>(
-  yieldable: Yieldable<Self, A, E, R>
-) => Effect<A, E, R> = internal.fromYieldable
 
 // -----------------------------------------------------------------------------
 // Mapping
@@ -3907,6 +3819,7 @@ export declare namespace Retry {
   export type Return<R, E, A, O extends Options<E>> = Effect<
     A,
     | (O extends { schedule: Schedule<infer _O, infer _I, infer _E1, infer _R> } ? E
+      : O extends { times: number } ? E
       : O extends { until: Predicate.Refinement<E, infer E2> } ? E2
       : O extends { while: Predicate.Refinement<E, infer E2> } ? Exclude<E, E2>
       : E)
@@ -4238,9 +4151,9 @@ export const ignoreCause: <
  *
  * @example
  * ```ts
- * import { Effect, ExecutionPlan, Layer, ServiceMap } from "effect"
+ * import { Effect, ExecutionPlan, Layer, Context } from "effect"
  *
- * const Endpoint = ServiceMap.Service<{ url: string }>("Endpoint")
+ * const Endpoint = Context.Service<{ url: string }>("Endpoint")
  *
  * const fetchUrl = Effect.gen(function*() {
  *   const endpoint = yield* Effect.service(Endpoint)
@@ -4346,6 +4259,53 @@ export const orElseSucceed: {
     evaluate: LazyArg<A2>
   ): Effect<A | A2, never, R>
 } = internal.orElseSucceed
+
+/**
+ * Runs a sequence of effects and returns the result of the first successful
+ * one.
+ *
+ * **Details**
+ *
+ * This function executes the provided effects in sequence, stopping at the
+ * first success. If an effect succeeds, its result is returned immediately and
+ * no further effects in the sequence are executed.
+ *
+ * If all effects fail, the returned effect fails with the error from the last
+ * effect. If the collection is empty, the returned effect defects with an
+ * `Error` whose message is `"Received an empty collection of effects"`.
+ *
+ * **When to Use**
+ *
+ * Use `firstSuccessOf` when you have prioritized fallback strategies, such as
+ * attempting multiple APIs, reading configuration from several sources, or
+ * trying alternative resource locations in order.
+ *
+ * @example
+ * ```ts
+ * import { Effect } from "effect"
+ *
+ * const primary = Effect.fail("primary unavailable")
+ * const secondary = Effect.succeed("secondary result")
+ * const tertiary = Effect.sync(() => {
+ *   throw new Error("not evaluated")
+ * })
+ *
+ * const program = Effect.firstSuccessOf([
+ *   primary,
+ *   secondary,
+ *   tertiary
+ * ])
+ *
+ * console.log(Effect.runSync(program))
+ * // Output: "secondary result"
+ * ```
+ *
+ * @since 2.0.0
+ * @category Fallback
+ */
+export const firstSuccessOf: <Eff extends Effect<any, any, any>>(
+  effects: Iterable<Eff>
+) => Effect<Success<Eff>, Error<Eff>, Services<Eff>> = internal.firstSuccessOf
 
 // -----------------------------------------------------------------------------
 // Delays & timeouts
@@ -5513,7 +5473,7 @@ export const isSuccess: <A, E, R>(self: Effect<A, E, R>) => Effect<boolean, neve
 // -----------------------------------------------------------------------------
 
 /**
- * Returns the complete service map from the current context.
+ * Returns the complete context.
  *
  * This function allows you to access all services that are currently available
  * in the effect's environment. This can be useful for debugging, introspection,
@@ -5521,57 +5481,57 @@ export const isSuccess: <A, E, R>(self: Effect<A, E, R>) => Effect<boolean, neve
  *
  * @example
  * ```ts
- * import { Console, Effect, Option, ServiceMap } from "effect"
+ * import { Console, Effect, Option, Context } from "effect"
  *
- * const Logger = ServiceMap.Service<{
+ * const Logger = Context.Service<{
  *   log: (msg: string) => void
  * }>("Logger")
- * const Database = ServiceMap.Service<{
+ * const Database = Context.Service<{
  *   query: (sql: string) => string
  * }>("Database")
  *
  * const program = Effect.gen(function*() {
- *   const allServices = yield* Effect.services()
+ *   const allServices = yield* Effect.context()
  *
  *   // Check if specific services are available
- *   const loggerOption = ServiceMap.getOption(allServices, Logger)
- *   const databaseOption = ServiceMap.getOption(allServices, Database)
+ *   const loggerOption = Context.getOption(allServices, Logger)
+ *   const databaseOption = Context.getOption(allServices, Database)
  *
  *   yield* Console.log(`Logger available: ${Option.isSome(loggerOption)}`)
  *   yield* Console.log(`Database available: ${Option.isSome(databaseOption)}`)
  * })
  *
- * const serviceMap = ServiceMap.make(Logger, { log: console.log })
- *   .pipe(ServiceMap.add(Database, { query: () => "result" }))
+ * const context = Context.make(Logger, { log: console.log })
+ *   .pipe(Context.add(Database, { query: () => "result" }))
  *
- * const provided = Effect.provideServices(program, serviceMap)
+ * const provided = Effect.provideContext(program, context)
  * ```
  *
  * @since 2.0.0
  * @category Environment
  */
-export const services: <R = never>() => Effect<ServiceMap.ServiceMap<R>, never, R> = internal.services
+export const context: <R = never>() => Effect<Context.Context<R>, never, R> = internal.context
 
 /**
- * Transforms the current service map using the provided function.
+ * Transforms the current context using the provided function.
  *
- * This function allows you to access the complete service map and perform
+ * This function allows you to access the complete context and perform
  * computations based on all available services. This is useful when you need
  * to conditionally execute logic based on what services are available.
  *
  * @example
  * ```ts
- * import { Console, Effect, Option, ServiceMap } from "effect"
+ * import { Console, Effect, Option, Context } from "effect"
  *
- * const Logger = ServiceMap.Service<{
+ * const Logger = Context.Service<{
  *   log: (msg: string) => void
  * }>("Logger")
- * const Cache = ServiceMap.Service<{
+ * const Cache = Context.Service<{
  *   get: (key: string) => string | null
  * }>("Cache")
  *
- * const program = Effect.servicesWith((services) => {
- *   const cacheOption = ServiceMap.getOption(services, Cache)
+ * const program = Effect.contextWith((services) => {
+ *   const cacheOption = Context.getOption(services, Cache)
  *   const hasCache = Option.isSome(cacheOption)
  *
  *   if (hasCache) {
@@ -5596,9 +5556,9 @@ export const services: <R = never>() => Effect<ServiceMap.ServiceMap<R>, never, 
  * @since 2.0.0
  * @category Environment
  */
-export const servicesWith: <R, A, E, R2>(
-  f: (services: ServiceMap.ServiceMap<R>) => Effect<A, E, R2>
-) => Effect<A, E, R | R2> = internal.servicesWith
+export const contextWith: <R, A, E, R2>(
+  f: (context: Context.Context<R>) => Effect<A, E, R2>
+) => Effect<A, E, R | R2> = internal.contextWith
 
 /**
  * Provides dependencies to an effect using layers or a context. Use `options.local`
@@ -5607,13 +5567,13 @@ export const servicesWith: <R, A, E, R2>(
  *
  * @example
  * ```ts
- * import { Effect, Layer, ServiceMap } from "effect"
+ * import { Effect, Layer, Context } from "effect"
  *
  * interface Database {
  *   readonly query: (sql: string) => Effect.Effect<string>
  * }
  *
- * const Database = ServiceMap.Service<Database>("Database")
+ * const Database = Context.Service<Database>("Database")
  *
  * const DatabaseLive = Layer.succeed(Database)({
  *   query: Effect.fn("Database.query")((sql: string) => Effect.succeed(`Result for: ${sql}`))
@@ -5655,7 +5615,7 @@ export const provide: {
     self: Effect<A, E, R>
   ) => Effect<A, E | E2, RIn | Exclude<R, ROut>>
   <R2>(
-    context: ServiceMap.ServiceMap<R2>
+    context: Context.Context<R2>
   ): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, R2>>
   <A, E, R, const Layers extends [Layer.Any, ...Array<Layer.Any>]>(
     self: Effect<A, E, R>,
@@ -5677,34 +5637,34 @@ export const provide: {
   ): Effect<A, E | E2, RIn | Exclude<R, ROut>>
   <A, E, R, R2>(
     self: Effect<A, E, R>,
-    context: ServiceMap.ServiceMap<R2>
+    context: Context.Context<R2>
   ): Effect<A, E, Exclude<R, R2>>
 } = internalLayer.provide
 
 /**
- * Provides a service map to an effect, fulfilling its service requirements.
+ * Provides a context to an effect, fulfilling its service requirements.
  *
  * **Details**
  *
- * This function provides multiple services at once by supplying a service map
+ * This function provides multiple services at once by supplying a context
  * that contains all the required services. It removes the provided services
  * from the effect's requirements, making them available to the effect.
  *
  * @example
  * ```ts
- * import { Effect, ServiceMap } from "effect"
+ * import { Effect, Context } from "effect"
  *
  * // Define service keys
- * const Logger = ServiceMap.Service<{
+ * const Logger = Context.Service<{
  *   log: (msg: string) => void
  * }>("Logger")
- * const Database = ServiceMap.Service<{
+ * const Database = Context.Service<{
  *   query: (sql: string) => string
  * }>("Database")
  *
- * // Create service map with multiple services
- * const serviceMap = ServiceMap.make(Logger, { log: console.log })
- *   .pipe(ServiceMap.add(Database, { query: () => "result" }))
+ * // Create a context with multiple services
+ * const context = Context.make(Logger, { log: console.log })
+ *   .pipe(Context.add(Database, { query: () => "result" }))
  *
  * // An effect that requires both services
  * const program = Effect.gen(function*() {
@@ -5714,34 +5674,34 @@ export const provide: {
  *   return db.query("SELECT * FROM users")
  * })
  *
- * const provided = Effect.provideServices(program, serviceMap)
+ * const provided = Effect.provideContext(program, context)
  * ```
  *
  * @since 2.0.0
  * @category Environment
  */
-export const provideServices: {
+export const provideContext: {
   <XR>(
-    context: ServiceMap.ServiceMap<XR>
+    context: Context.Context<XR>
   ): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, XR>>
   <A, E, R, XR>(
     self: Effect<A, E, R>,
-    context: ServiceMap.ServiceMap<XR>
+    context: Context.Context<XR>
   ): Effect<A, E, Exclude<R, XR>>
-} = internal.provideServices
+} = internal.provideContext
 
 /**
  * Accesses a service from the context.
  *
  * @example
  * ```ts
- * import { Effect, ServiceMap } from "effect"
+ * import { Effect, Context } from "effect"
  *
  * interface Database {
  *   readonly query: (sql: string) => Effect.Effect<string>
  * }
  *
- * const Database = ServiceMap.Service<Database>("Database")
+ * const Database = Context.Service<Database>("Database")
  *
  * const program = Effect.gen(function*() {
  *   const db = yield* Effect.service(Database)
@@ -5750,9 +5710,9 @@ export const provideServices: {
  * ```
  *
  * @since 4.0.0
- * @category ServiceMap
+ * @category Context
  */
-export const service: <I, S>(service: ServiceMap.Key<I, S>) => Effect<S, never, I> = internal.service
+export const service: <I, S>(service: Context.Key<I, S>) => Effect<S, never, I> = internal.service
 
 /**
  * Optionally accesses a service from the environment.
@@ -5766,10 +5726,10 @@ export const service: <I, S>(service: ServiceMap.Key<I, S>) => Effect<S, never, 
  *
  * @example
  * ```ts
- * import { Effect, Option, ServiceMap } from "effect"
+ * import { Effect, Option, Context } from "effect"
  *
  * // Define a service key
- * const Logger = ServiceMap.Service<{
+ * const Logger = Context.Service<{
  *   log: (msg: string) => void
  * }>("Logger")
  *
@@ -5786,9 +5746,9 @@ export const service: <I, S>(service: ServiceMap.Key<I, S>) => Effect<S, never, 
  * ```
  *
  * @since 2.0.0
- * @category ServiceMap
+ * @category Context
  */
-export const serviceOption: <I, S>(key: ServiceMap.Key<I, S>) => Effect<Option<S>> = internal.serviceOption
+export const serviceOption: <I, S>(key: Context.Key<I, S>) => Effect<Option<S>> = internal.serviceOption
 
 /**
  * Provides part of the required context while leaving the rest unchanged.
@@ -5800,13 +5760,13 @@ export const serviceOption: <I, S>(key: ServiceMap.Key<I, S>) => Effect<Option<S
  *
  * @example
  * ```ts
- * import { Effect, ServiceMap } from "effect"
+ * import { Effect, Context } from "effect"
  *
  * // Define services
- * const Logger = ServiceMap.Service<{
+ * const Logger = Context.Service<{
  *   log: (msg: string) => void
  * }>("Logger")
- * const Config = ServiceMap.Service<{
+ * const Config = Context.Service<{
  *   name: string
  * }>("Config")
  *
@@ -5816,8 +5776,8 @@ export const serviceOption: <I, S>(key: ServiceMap.Key<I, S>) => Effect<Option<S
  *
  * // Transform services by providing Config while keeping Logger requirement
  * const configured = program.pipe(
- *   Effect.updateServices((services: ServiceMap.ServiceMap<typeof Logger>) =>
- *     ServiceMap.add(services, Config, { name: "World" })
+ *   Effect.updateContext((context: Context.Context<typeof Logger>) =>
+ *     Context.add(context, Config, { name: "World" })
  *   )
  * )
  *
@@ -5828,27 +5788,27 @@ export const serviceOption: <I, S>(key: ServiceMap.Key<I, S>) => Effect<Option<S
  * ```
  *
  * @since 4.0.0
- * @category ServiceMap
+ * @category Context
  */
-export const updateServices: {
+export const updateContext: {
   <R2, R>(
-    f: (services: ServiceMap.ServiceMap<R2>) => ServiceMap.ServiceMap<NoInfer<R>>
+    f: (context: Context.Context<R2>) => Context.Context<NoInfer<R>>
   ): <A, E>(self: Effect<A, E, R>) => Effect<A, E, R2>
   <A, E, R, R2>(
     self: Effect<A, E, R>,
-    f: (services: ServiceMap.ServiceMap<R2>) => ServiceMap.ServiceMap<NoInfer<R>>
+    f: (context: Context.Context<R2>) => Context.Context<NoInfer<R>>
   ): Effect<A, E, R2>
-} = internal.updateServices
+} = internal.updateContext
 
 /**
  * Updates the service with the required service entry.
  *
  * @example
  * ```ts
- * import { Console, Effect, ServiceMap } from "effect"
+ * import { Console, Effect, Context } from "effect"
  *
  * // Define a counter service
- * const Counter = ServiceMap.Service<{ count: number }>("Counter")
+ * const Counter = Context.Service<{ count: number }>("Counter")
  *
  * const program = Effect.gen(function*() {
  *   const updatedCounter = yield* Effect.service(Counter)
@@ -5866,16 +5826,16 @@ export const updateServices: {
  * ```
  *
  * @since 2.0.0
- * @category ServiceMap
+ * @category Context
  */
 export const updateService: {
   <I, A>(
-    service: ServiceMap.Key<I, A>,
+    service: Context.Key<I, A>,
     f: (value: A) => A
   ): <XA, E, R>(self: Effect<XA, E, R>) => Effect<XA, E, R | I>
   <XA, E, R, I, A>(
     self: Effect<XA, E, R>,
-    service: ServiceMap.Key<I, A>,
+    service: Context.Key<I, A>,
     f: (value: A) => A
   ): Effect<XA, E, R | I>
 } = internal.updateService
@@ -5894,10 +5854,10 @@ export const updateService: {
  *
  * @example
  * ```ts
- * import { Console, Effect, ServiceMap } from "effect"
+ * import { Console, Effect, Context } from "effect"
  *
  * // Define a service for configuration
- * const Config = ServiceMap.Service<{
+ * const Config = Context.Service<{
  *   apiUrl: string
  *   timeout: number
  * }>("Config")
@@ -5923,22 +5883,22 @@ export const updateService: {
  * ```
  *
  * @since 2.0.0
- * @category ServiceMap
+ * @category Context
  */
 export const provideService: {
   <I, S>(
-    service: ServiceMap.Key<I, S>
+    service: Context.Key<I, S>
   ): {
     (implementation: S): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, I>>
     <A, E, R>(self: Effect<A, E, R>, implementation: S): Effect<A, E, Exclude<R, I>>
   }
   <I, S>(
-    service: ServiceMap.Key<I, S>,
+    service: Context.Key<I, S>,
     implementation: S
   ): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E, Exclude<R, I>>
   <A, E, R, I, S>(
     self: Effect<A, E, R>,
-    service: ServiceMap.Key<I, S>,
+    service: Context.Key<I, S>,
     implementation: S
   ): Effect<A, E, Exclude<R, I>>
 } = internal.provideService
@@ -5955,13 +5915,13 @@ export const provideService: {
  *
  * @example
  * ```ts
- * import { Console, Effect, ServiceMap } from "effect"
+ * import { Console, Effect, Context } from "effect"
  *
  * // Define a database connection service
  * interface DatabaseConnection {
  *   readonly query: (sql: string) => Effect.Effect<string>
  * }
- * const Database = ServiceMap.Service<DatabaseConnection>("Database")
+ * const Database = Context.Service<DatabaseConnection>("Database")
  *
  * // Effect that creates a database connection
  * const createConnection = Effect.gen(function*() {
@@ -5993,16 +5953,16 @@ export const provideService: {
  * ```
  *
  * @since 2.0.0
- * @category ServiceMap
+ * @category Context
  */
 export const provideServiceEffect: {
   <I, S, E2, R2>(
-    service: ServiceMap.Key<I, S>,
+    service: Context.Key<I, S>,
     acquire: Effect<S, E2, R2>
   ): <A, E, R>(self: Effect<A, E, R>) => Effect<A, E | E2, Exclude<R, I> | R2>
   <A, E, R, I, S, E2, R2>(
     self: Effect<A, E, R>,
-    service: ServiceMap.Key<I, S>,
+    service: Context.Key<I, S>,
     acquire: Effect<S, E2, R2>
   ): Effect<A, E | E2, Exclude<R, I> | R2>
 } = internal.provideServiceEffect
@@ -6224,6 +6184,47 @@ export const acquireRelease: <A, E, R, R2>(
   release: (a: A, exit: Exit.Exit<unknown, unknown>) => Effect<unknown, never, R2>,
   options?: { readonly interruptible?: boolean }
 ) => Effect<A, E, R | R2 | Scope> = internal.acquireRelease
+
+/**
+ * This function constructs a scoped resource from an Effect that acquires a
+ * disposable value.
+ *
+ * The resource is automatically disposed when the surrounding
+ * {@link Scope} is closed, using {@link Symbol.dispose} for
+ * synchronous disposables or {@link Symbol.asyncDispose} for asynchronous
+ * disposables.
+ *
+ * This is similar to {@link acquireRelease}, but uses the standard
+ * JavaScript disposal protocal instead of requiring an explicit release
+ * function.
+ *
+ * @see {@link https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Statements/using}
+ *
+ * @example
+ * ```ts
+ * import sqlite from "node:sqlite";
+ * import { Effect } from "effect";
+ *
+ * const program = Effect.scoped(
+ *   Effect.gen(function* () {
+ *     // acquire database connection
+ *     // database will be closed when the scope is closed
+ *     const db = yield* Effect.acquireDisposable(
+ *       Effect.sync(() => new sqlite.DatabaseSync(":memory:"))
+ *     )
+ *
+ *     const row = db.prepare("SELECT 1 AS value").get()
+ *     yield* Effect.log(row) // { value: 1 }
+ *   })
+ * )
+ * ```
+ *
+ * @since 4.0.0
+ * @category Resource Management & Finalization
+ */
+export const acquireDisposable: <A extends AsyncDisposable | Disposable, E, R>(
+  acquire: Effect<A, E, R>
+) => Effect<A, E, R | Scope> = internal.acquireDisposable
 
 /**
  * This function is used to ensure that an `Effect` value that represents the
@@ -6979,6 +6980,14 @@ export const interruptibleMask: <A, E, R>(
   ) => Effect<A, E, R>
 ) => Effect<A, E, R> = internal.interruptibleMask
 
+/**
+ * Creates an AbortSignal that is managed by the provided scope.
+ *
+ * @since 4.0.0
+ * @category Interruption
+ */
+export const abortSignal: Effect<AbortSignal, never, Scope> = internal.abortSignal
+
 // -----------------------------------------------------------------------------
 // Repetition & Recursion
 // -----------------------------------------------------------------------------
@@ -7011,8 +7020,7 @@ export declare namespace Repeat {
    * ```
    */
   export type Return<R, E, A, O extends Options<A>> = Effect<
-    O extends { schedule: Schedule<infer Out, infer _I, infer _E, infer _R> } ? Out
-      : O extends { until: Predicate.Refinement<A, infer B> } ? B
+    O extends { until: Predicate.Refinement<A, infer B> } ? B
       : O extends { while: Predicate.Refinement<A, infer B> } ? Exclude<A, B>
       : A,
     | E
@@ -7953,7 +7961,7 @@ export const request: {
 
 /**
  * Low-level entry point that registers a request with a resolver and delivers the exit value via `onExit`.
- * Use this when you already have a `ServiceMap` and need to enqueue a request outside an `Effect`.
+ * Use this when you already have a `Context` and need to enqueue a request outside an `Effect`.
  *
  * It returns a canceler that removes the pending request entry.
  *
@@ -7965,7 +7973,7 @@ export const requestUnsafe: <A extends Request.Any>(
   options: {
     readonly resolver: RequestResolver<A>
     readonly onExit: (exit: Exit.Exit<Request.Success<A>, Request.Error<A>>) => void
-    readonly services: ServiceMap.ServiceMap<never>
+    readonly context: Context.Context<never>
   }
 ) => () => void = internalRequest.requestUnsafe
 
@@ -8314,15 +8322,15 @@ export const runFork: <A, E>(effect: Effect<A, E, never>, options?: RunOptions |
  *
  * @example
  * ```ts
- * import { Effect, ServiceMap } from "effect"
+ * import { Effect, Context } from "effect"
  *
  * interface Logger {
  *   log: (message: string) => void
  * }
  *
- * const Logger = ServiceMap.Service<Logger>("Logger")
+ * const Logger = Context.Service<Logger>("Logger")
  *
- * const services = ServiceMap.make(Logger, {
+ * const services = Context.make(Logger, {
  *   log: (message) => console.log(message)
  * })
  *
@@ -8339,7 +8347,7 @@ export const runFork: <A, E>(effect: Effect<A, E, never>, options?: RunOptions |
  * @category Running Effects
  */
 export const runForkWith: <R>(
-  services: ServiceMap.ServiceMap<R>
+  context: Context.Context<R>
 ) => <A, E>(effect: Effect<A, E, R>, options?: RunOptions | undefined) => Fiber<A, E> = internal.runForkWith
 
 /**
@@ -8349,15 +8357,15 @@ export const runForkWith: <R>(
  *
  * @example
  * ```ts
- * import { Console, Effect, Exit, ServiceMap } from "effect"
+ * import { Console, Effect, Exit, Context } from "effect"
  *
  * interface Logger {
  *   log: (message: string) => Effect.Effect<void>
  * }
  *
- * const Logger = ServiceMap.Service<Logger>("Logger")
+ * const Logger = Context.Service<Logger>("Logger")
  *
- * const services = ServiceMap.make(Logger, {
+ * const services = Context.make(Logger, {
  *   log: (message) => Console.log(message)
  * })
  *
@@ -8383,7 +8391,7 @@ export const runForkWith: <R>(
  * @category Running Effects
  */
 export const runCallbackWith: <R>(
-  services: ServiceMap.ServiceMap<R>
+  context: Context.Context<R>
 ) => <A, E>(
   effect: Effect<A, E, R>,
   options?: (RunOptions & { readonly onExit: (exit: Exit.Exit<A, E>) => void }) | undefined
@@ -8475,15 +8483,15 @@ export const runPromise: <A, E>(
  *
  * @example
  * ```ts
- * import { Effect, ServiceMap } from "effect"
+ * import { Effect, Context } from "effect"
  *
  * interface Config {
  *   apiUrl: string
  * }
  *
- * const Config = ServiceMap.Service<Config>("Config")
+ * const Config = Context.Service<Config>("Config")
  *
- * const services = ServiceMap.make(Config, {
+ * const context = Context.make(Config, {
  *   apiUrl: "https://api.example.com"
  * })
  *
@@ -8492,14 +8500,14 @@ export const runPromise: <A, E>(
  *   return `Connecting to ${config.apiUrl}`
  * })
  *
- * Effect.runPromiseWith(services)(program).then(console.log)
+ * Effect.runPromiseWith(context)(program).then(console.log)
  * ```
  *
  * @since 4.0.0
  * @category Running Effects
  */
 export const runPromiseWith: <R>(
-  services: ServiceMap.ServiceMap<R>
+  context: Context.Context<R>
 ) => <A, E>(effect: Effect<A, E, R>, options?: RunOptions | undefined) => Promise<A> = internal.runPromiseWith
 
 /**
@@ -8559,15 +8567,15 @@ export const runPromiseExit: <A, E>(
  *
  * @example
  * ```ts
- * import { Effect, Exit, ServiceMap } from "effect"
+ * import { Effect, Exit, Context } from "effect"
  *
  * interface Database {
  *   query: (sql: string) => string
  * }
  *
- * const Database = ServiceMap.Service<Database>("Database")
+ * const Database = Context.Service<Database>("Database")
  *
- * const services = ServiceMap.make(Database, {
+ * const services = Context.make(Database, {
  *   query: (sql) => `Result for: ${sql}`
  * })
  *
@@ -8587,7 +8595,7 @@ export const runPromiseExit: <A, E>(
  * @category Running Effects
  */
 export const runPromiseExitWith: <R>(
-  services: ServiceMap.ServiceMap<R>
+  context: Context.Context<R>
 ) => <A, E>(effect: Effect<A, E, R>, options?: RunOptions | undefined) => Promise<Exit.Exit<A, E>> =
   internal.runPromiseExitWith
 
@@ -8655,15 +8663,15 @@ export const runSync: <A, E>(effect: Effect<A, E>) => A = internal.runSync
  *
  * @example
  * ```ts
- * import { Effect, ServiceMap } from "effect"
+ * import { Effect, Context } from "effect"
  *
  * interface MathService {
  *   add: (a: number, b: number) => number
  * }
  *
- * const MathService = ServiceMap.Service<MathService>("MathService")
+ * const MathService = Context.Service<MathService>("MathService")
  *
- * const services = ServiceMap.make(MathService, {
+ * const context = Context.make(MathService, {
  *   add: (a, b) => a + b
  * })
  *
@@ -8672,7 +8680,7 @@ export const runSync: <A, E>(effect: Effect<A, E>) => A = internal.runSync
  *   return math.add(2, 3)
  * })
  *
- * const result = Effect.runSyncWith(services)(program)
+ * const result = Effect.runSyncWith(context)(program)
  * console.log(result) // 5
  * ```
  *
@@ -8680,7 +8688,7 @@ export const runSync: <A, E>(effect: Effect<A, E>) => A = internal.runSync
  * @category Running Effects
  */
 export const runSyncWith: <R>(
-  services: ServiceMap.ServiceMap<R>
+  context: Context.Context<R>
 ) => <A, E>(effect: Effect<A, E, R>) => A = internal.runSyncWith
 
 /**
@@ -8759,10 +8767,10 @@ export const runSyncExit: <A, E>(effect: Effect<A, E>) => Exit.Exit<A, E> = inte
  *
  * @example
  * ```ts
- * import { Effect, Exit, ServiceMap } from "effect"
+ * import { Effect, Exit, Context } from "effect"
  *
  * // Define a logger service
- * const Logger = ServiceMap.Service<{
+ * const Logger = Context.Service<{
  *   log: (msg: string) => void
  * }>("Logger")
  *
@@ -8772,12 +8780,12 @@ export const runSyncExit: <A, E>(effect: Effect<A, E>) => Exit.Exit<A, E> = inte
  *   return 42
  * })
  *
- * // Prepare services
- * const services = ServiceMap.make(Logger, {
+ * // Prepare context
+ * const context = Context.make(Logger, {
  *   log: (msg) => console.log(`[LOG] ${msg}`)
  * })
  *
- * const exit = Effect.runSyncExitWith(services)(program)
+ * const exit = Effect.runSyncExitWith(context)(program)
  *
  * if (Exit.isSuccess(exit)) {
  *   console.log(`Success: ${exit.value}`)
@@ -8793,7 +8801,7 @@ export const runSyncExit: <A, E>(effect: Effect<A, E>) => Exit.Exit<A, E> = inte
  * @category Running Effects
  */
 export const runSyncExitWith: <R>(
-  services: ServiceMap.ServiceMap<R>
+  context: Context.Context<R>
 ) => <A, E>(effect: Effect<A, E, R>) => Exit.Exit<A, E> = internal.runSyncExitWith
 
 // -----------------------------------------------------------------------------
@@ -8813,92 +8821,92 @@ export namespace fn {
    * @since 3.19.0
    * @category Models
    */
-  export type Return<A, E = never, R = never> = Generator<Yieldable<any, any, E, R>, A, any>
+  export type Return<A, E = never, R = never> = Generator<Effect<any, E, R>, A, any>
 
   /**
    * @since 3.11.0
    * @category Models
    */
   export type Untraced = {
-    <Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>>(
+    <Eff extends Effect<any, any, any>, AEff, Args extends Array<any>>(
       body: (this: unassigned, ...args: Args) => Generator<Eff, AEff, never>
     ): (...args: Args) => Effect<
       AEff,
       [Eff] extends [never] ? never
-        : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+        : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
         : never,
       [Eff] extends [never] ? never
-        : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+        : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
         : never
     >
-    <Self, Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>>(
+    <Self, Eff extends Effect<any, any, any>, AEff, Args extends Array<any>>(
       body: (this: Self, ...args: Args) => Generator<Eff, AEff, never>
     ): (this: Self, ...args: Args) => Effect<
       AEff,
       [Eff] extends [never] ? never
-        : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+        : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
         : never,
       [Eff] extends [never] ? never
-        : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+        : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
         : never
     >
 
-    <Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>, A>(
+    <Eff extends Effect<any, any, any>, AEff, Args extends Array<any>, A>(
       body: (this: unassigned, ...args: Args) => Generator<Eff, AEff, never>,
       a: (
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
       ) => A
     ): (...args: Args) => A
-    <Self, Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>, A>(
+    <Self, Eff extends Effect<any, any, any>, AEff, Args extends Array<any>, A>(
       body: (this: Self, ...args: Args) => Generator<Eff, AEff, never>,
       a: (
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
       ) => A
     ): (this: Self, ...args: Args) => A
-    <Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>, A, B>(
+    <Eff extends Effect<any, any, any>, AEff, Args extends Array<any>, A, B>(
       body: (this: unassigned, ...args: Args) => Generator<Eff, AEff, never>,
       a: (
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
       ) => A,
       b: (_: A, ...args: Args) => B
     ): (...args: Args) => B
-    <Self, Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>, A, B>(
+    <Self, Eff extends Effect<any, any, any>, AEff, Args extends Array<any>, A, B>(
       body: (this: Self, ...args: Args) => Generator<Eff, AEff, never>,
       a: (
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -8906,7 +8914,7 @@ export namespace fn {
       b: (_: A, ...args: Args) => B
     ): (this: Self, ...args: Args) => B
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -8918,10 +8926,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -8931,7 +8939,7 @@ export namespace fn {
     ): (...args: Args) => C
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -8943,10 +8951,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -8955,7 +8963,7 @@ export namespace fn {
       c: (_: B, ...args: Args) => C
     ): (this: Self, ...args: Args) => C
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -8968,10 +8976,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -8982,7 +8990,7 @@ export namespace fn {
     ): (...args: Args) => D
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -8995,10 +9003,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9008,7 +9016,7 @@ export namespace fn {
       d: (_: C, ...args: Args) => D
     ): (this: Self, ...args: Args) => D
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9022,10 +9030,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9037,7 +9045,7 @@ export namespace fn {
     ): (...args: Args) => E
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9051,10 +9059,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9065,7 +9073,7 @@ export namespace fn {
       e: (_: D, ...args: Args) => E
     ): (this: Self, ...args: Args) => E
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9080,10 +9088,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9096,7 +9104,7 @@ export namespace fn {
     ): (...args: Args) => F
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9111,10 +9119,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9126,7 +9134,7 @@ export namespace fn {
       f: (_: E, ...args: Args) => F
     ): (this: Self, ...args: Args) => F
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9142,10 +9150,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9159,7 +9167,7 @@ export namespace fn {
     ): (...args: Args) => G
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9175,10 +9183,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9191,7 +9199,7 @@ export namespace fn {
       g: (_: F, ...args: Args) => G
     ): (this: Self, ...args: Args) => G
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9208,10 +9216,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9226,7 +9234,7 @@ export namespace fn {
     ): (...args: Args) => H
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9243,10 +9251,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9260,7 +9268,7 @@ export namespace fn {
       h: (_: G, ...args: Args) => H
     ): (this: Self, ...args: Args) => H
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9278,10 +9286,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9297,7 +9305,7 @@ export namespace fn {
     ): (...args: Args) => I
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9315,10 +9323,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9333,7 +9341,7 @@ export namespace fn {
       i: (_: H, ...args: Args) => I
     ): (this: Self, ...args: Args) => I
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9352,10 +9360,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9372,7 +9380,7 @@ export namespace fn {
     ): (...args: Args) => J
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9391,10 +9399,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9410,7 +9418,7 @@ export namespace fn {
       j: (_: I, ...args: Args) => J
     ): (this: Self, ...args: Args) => J
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9430,10 +9438,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9451,7 +9459,7 @@ export namespace fn {
     ): (...args: Args) => K
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9471,10 +9479,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9491,7 +9499,7 @@ export namespace fn {
       k: (_: J, ...args: Args) => K
     ): (this: Self, ...args: Args) => K
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9512,10 +9520,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9534,7 +9542,7 @@ export namespace fn {
     ): (...args: Args) => L
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9555,10 +9563,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9576,7 +9584,7 @@ export namespace fn {
       l: (_: K, ...args: Args) => L
     ): (this: Self, ...args: Args) => L
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9598,10 +9606,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9621,7 +9629,7 @@ export namespace fn {
     ): (...args: Args) => M
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9643,10 +9651,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9665,7 +9673,7 @@ export namespace fn {
       m: (_: L, ...args: Args) => M
     ): (this: Self, ...args: Args) => M
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9688,10 +9696,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9712,7 +9720,7 @@ export namespace fn {
     ): (...args: Args) => N
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9735,10 +9743,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9758,7 +9766,7 @@ export namespace fn {
       n: (_: M, ...args: Args) => N
     ): (this: Self, ...args: Args) => N
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9782,10 +9790,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9807,7 +9815,7 @@ export namespace fn {
     ): (...args: Args) => O
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9831,10 +9839,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9855,7 +9863,7 @@ export namespace fn {
       o: (_: N, ...args: Args) => O
     ): (this: Self, ...args: Args) => O
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9880,10 +9888,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9906,7 +9914,7 @@ export namespace fn {
     ): (...args: Args) => P
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9931,10 +9939,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -9956,7 +9964,7 @@ export namespace fn {
       p: (_: O, ...args: Args) => P
     ): (this: Self, ...args: Args) => P
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -9982,10 +9990,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10009,7 +10017,7 @@ export namespace fn {
     ): (...args: Args) => Q
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10035,10 +10043,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10061,7 +10069,7 @@ export namespace fn {
       q: (_: P, ...args: Args) => Q
     ): (this: Self, ...args: Args) => Q
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10088,10 +10096,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10116,7 +10124,7 @@ export namespace fn {
     ): (...args: Args) => R
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10143,10 +10151,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10170,7 +10178,7 @@ export namespace fn {
       r: (_: Q, ...args: Args) => R
     ): (this: Self, ...args: Args) => R
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10198,10 +10206,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10227,7 +10235,7 @@ export namespace fn {
     ): (...args: Args) => S
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10255,10 +10263,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10283,7 +10291,7 @@ export namespace fn {
       s: (_: R, ...args: Args) => S
     ): (this: Self, ...args: Args) => S
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10312,10 +10320,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10342,7 +10350,7 @@ export namespace fn {
     ): (...args: Args) => T
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10371,10 +10379,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10406,131 +10414,131 @@ export namespace fn {
    * @category Models
    */
   export type Traced = {
-    <Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>>(
+    <Eff extends Effect<any, any, any>, AEff, Args extends Array<any>>(
       body: (this: unassigned, ...args: Args) => Generator<Eff, AEff, never> | (Eff & Effect<AEff, any, any>)
     ): (...args: Args) => Effect<
       AEff,
       [Eff] extends [never] ? never
-        : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+        : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
         : never,
       [Eff] extends [never] ? never
-        : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+        : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
         : never
     >
-    <Self, Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>>(
+    <Self, Eff extends Effect<any, any, any>, AEff, Args extends Array<any>>(
       body: (this: Self, ...args: Args) => Generator<Eff, AEff, never> | (Eff & Effect<AEff, any, any>)
     ): (this: Self, ...args: Args) => Effect<
       AEff,
       [Eff] extends [never] ? never
-        : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+        : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
         : never,
       [Eff] extends [never] ? never
-        : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+        : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
         : never
     >
-    <Self, Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>>(
+    <Self, Eff extends Effect<any, any, any>, AEff, Args extends Array<any>>(
       options: { readonly self: Self },
       body: (this: Self, ...args: Args) => Generator<Eff, AEff, never> | (Eff & Effect<AEff, any, any>)
     ): (...args: Args) => Effect<
       AEff,
       [Eff] extends [never] ? never
-        : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+        : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
         : never,
       [Eff] extends [never] ? never
-        : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+        : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
         : never
     >
 
-    <Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>, A>(
+    <Eff extends Effect<any, any, any>, AEff, Args extends Array<any>, A>(
       body: (this: unassigned, ...args: Args) => Generator<Eff, AEff, never> | (Eff & Effect<AEff, any, any>),
       a: (
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
       ) => A
     ): (...args: Args) => A
-    <Self, Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>, A>(
+    <Self, Eff extends Effect<any, any, any>, AEff, Args extends Array<any>, A>(
       body: (this: Self, ...args: Args) => Generator<Eff, AEff, never> | (Eff & Effect<AEff, any, any>),
       a: (
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
       ) => A
     ): (this: Self, ...args: Args) => A
-    <Self, Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>, A>(
+    <Self, Eff extends Effect<any, any, any>, AEff, Args extends Array<any>, A>(
       options: { readonly self: Self },
       body: (this: Self, ...args: Args) => Generator<Eff, AEff, never> | (Eff & Effect<AEff, any, any>),
       a: (
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
       ) => A
     ): (...args: Args) => A
 
-    <Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>, A, B>(
+    <Eff extends Effect<any, any, any>, AEff, Args extends Array<any>, A, B>(
       body: (this: unassigned, ...args: Args) => Generator<Eff, AEff, never> | (Eff & Effect<AEff, any, any>),
       a: (
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
       ) => A,
       b: (_: A, ...args: Args) => B
     ): (...args: Args) => B
-    <Self, Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>, A, B>(
+    <Self, Eff extends Effect<any, any, any>, AEff, Args extends Array<any>, A, B>(
       body: (this: Self, ...args: Args) => Generator<Eff, AEff, never> | (Eff & Effect<AEff, any, any>),
       a: (
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
       ) => A,
       b: (_: A, ...args: Args) => B
     ): (this: Self, ...args: Args) => B
-    <Self, Eff extends Yieldable<any, any, any, any>, AEff, Args extends Array<any>, A, B>(
+    <Self, Eff extends Effect<any, any, any>, AEff, Args extends Array<any>, A, B>(
       options: { readonly self: Self },
       body: (this: Self, ...args: Args) => Generator<Eff, AEff, never> | (Eff & Effect<AEff, any, any>),
       a: (
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10539,7 +10547,7 @@ export namespace fn {
     ): (...args: Args) => B
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10551,10 +10559,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10564,7 +10572,7 @@ export namespace fn {
     ): (...args: Args) => C
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10576,10 +10584,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10589,7 +10597,7 @@ export namespace fn {
     ): (this: Self, ...args: Args) => C
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10602,10 +10610,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10615,7 +10623,7 @@ export namespace fn {
     ): (...args: Args) => C
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10628,10 +10636,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10642,7 +10650,7 @@ export namespace fn {
     ): (...args: Args) => D
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10655,10 +10663,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10670,7 +10678,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10684,10 +10692,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10698,7 +10706,7 @@ export namespace fn {
     ): (...args: Args) => D
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10712,10 +10720,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10727,7 +10735,7 @@ export namespace fn {
     ): (...args: Args) => E
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10741,10 +10749,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10757,7 +10765,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10772,10 +10780,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10787,7 +10795,7 @@ export namespace fn {
     ): (...args: Args) => E
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10802,10 +10810,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10818,7 +10826,7 @@ export namespace fn {
     ): (...args: Args) => F
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10833,10 +10841,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10850,7 +10858,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10866,10 +10874,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10882,7 +10890,7 @@ export namespace fn {
     ): (...args: Args) => F
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10898,10 +10906,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10915,7 +10923,7 @@ export namespace fn {
     ): (...args: Args) => G
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10931,10 +10939,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10949,7 +10957,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -10966,10 +10974,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -10983,7 +10991,7 @@ export namespace fn {
     ): (...args: Args) => G
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11000,10 +11008,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11018,7 +11026,7 @@ export namespace fn {
     ): (...args: Args) => H
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11035,10 +11043,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11054,7 +11062,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11072,10 +11080,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11090,7 +11098,7 @@ export namespace fn {
     ): (...args: Args) => H
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11108,10 +11116,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11127,7 +11135,7 @@ export namespace fn {
     ): (...args: Args) => I
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11145,10 +11153,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11165,7 +11173,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11184,10 +11192,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11203,7 +11211,7 @@ export namespace fn {
     ): (...args: Args) => I
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11222,10 +11230,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11242,7 +11250,7 @@ export namespace fn {
     ): (...args: Args) => J
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11261,10 +11269,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11282,7 +11290,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11302,10 +11310,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11322,7 +11330,7 @@ export namespace fn {
     ): (...args: Args) => J
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11342,10 +11350,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11363,7 +11371,7 @@ export namespace fn {
     ): (...args: Args) => K
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11383,10 +11391,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11405,7 +11413,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11426,10 +11434,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11447,7 +11455,7 @@ export namespace fn {
     ): (...args: Args) => K
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11468,10 +11476,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11490,7 +11498,7 @@ export namespace fn {
     ): (...args: Args) => L
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11511,10 +11519,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11534,7 +11542,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11556,10 +11564,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11578,7 +11586,7 @@ export namespace fn {
     ): (...args: Args) => L
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11600,10 +11608,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11623,7 +11631,7 @@ export namespace fn {
     ): (...args: Args) => M
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11645,10 +11653,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11669,7 +11677,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11692,10 +11700,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11715,7 +11723,7 @@ export namespace fn {
     ): (...args: Args) => M
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11738,10 +11746,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11762,7 +11770,7 @@ export namespace fn {
     ): (...args: Args) => N
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11785,10 +11793,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11810,7 +11818,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11834,10 +11842,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11858,7 +11866,7 @@ export namespace fn {
     ): (...args: Args) => N
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11882,10 +11890,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11907,7 +11915,7 @@ export namespace fn {
     ): (...args: Args) => O
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11931,10 +11939,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -11957,7 +11965,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -11982,10 +11990,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12007,7 +12015,7 @@ export namespace fn {
     ): (...args: Args) => O
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12032,10 +12040,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12058,7 +12066,7 @@ export namespace fn {
     ): (...args: Args) => P
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12083,10 +12091,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12110,7 +12118,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12136,10 +12144,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12162,7 +12170,7 @@ export namespace fn {
     ): (...args: Args) => P
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12188,10 +12196,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12215,7 +12223,7 @@ export namespace fn {
     ): (...args: Args) => Q
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12241,10 +12249,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12269,7 +12277,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12296,10 +12304,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12323,7 +12331,7 @@ export namespace fn {
     ): (...args: Args) => Q
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12350,10 +12358,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12378,7 +12386,7 @@ export namespace fn {
     ): (...args: Args) => R
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12405,10 +12413,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12434,7 +12442,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12462,10 +12470,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12490,7 +12498,7 @@ export namespace fn {
     ): (...args: Args) => R
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12518,10 +12526,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12547,7 +12555,7 @@ export namespace fn {
     ): (...args: Args) => S
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12575,10 +12583,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12605,7 +12613,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12634,10 +12642,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12663,7 +12671,7 @@ export namespace fn {
     ): (...args: Args) => S
 
     <
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12692,10 +12700,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12722,7 +12730,7 @@ export namespace fn {
     ): (...args: Args) => T
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12751,10 +12759,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -12782,7 +12790,7 @@ export namespace fn {
 
     <
       Self,
-      Eff extends Yieldable<any, any, any, any>,
+      Eff extends Effect<any, any, any>,
       AEff,
       Args extends Array<any>,
       A,
@@ -12812,10 +12820,10 @@ export namespace fn {
         _: Effect<
           AEff,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer E, infer _R>] ? E
+            : [Eff] extends [Effect<infer _A, infer E, infer _R>] ? E
             : never,
           [Eff] extends [never] ? never
-            : [Eff] extends [Yieldable<infer _S, infer _A, infer _E, infer R>] ? R
+            : [Eff] extends [Effect<infer _A, infer _E, infer R>] ? R
             : never
         >,
         ...args: Args
@@ -13760,7 +13768,7 @@ export const trackDuration: {
  * @since 4.0.0
  * @category Transactions
  */
-export class Transaction extends ServiceMap.Service<
+export class Transaction extends Context.Service<
   Transaction,
   {
     retry: boolean
@@ -13820,7 +13828,7 @@ export const tx = <A, E, R>(
   effect: Effect<A, E, R>
 ): Effect<A, E, Exclude<R, Transaction>> =>
   withFiber((fiber) => {
-    if (fiber.services.mapUnsafe.has(Transaction.key)) {
+    if (fiber.context.mapUnsafe.has(Transaction.key)) {
       return effect as Effect<A, E, Exclude<R, Transaction>>
     }
     // Create transaction state only at the outermost boundary
@@ -13943,7 +13951,7 @@ function clearTransaction(state: Transaction["Service"]) {
  * ```
  */
 export const txRetry: Effect<never, never, Transaction> = flatMap(
-  Transaction.asEffect(),
+  Transaction,
   (state) => {
     state.retry = true
     return interrupt

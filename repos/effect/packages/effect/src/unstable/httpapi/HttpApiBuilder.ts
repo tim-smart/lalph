@@ -1,6 +1,7 @@
 /**
  * @since 4.0.0
  */
+import * as Context from "../../Context.ts"
 import * as Effect from "../../Effect.ts"
 import * as Encoding from "../../Encoding.ts"
 import * as Fiber from "../../Fiber.ts"
@@ -14,11 +15,10 @@ import { type Pipeable, pipeArguments } from "../../Pipeable.ts"
 import * as Redacted from "../../Redacted.ts"
 import * as Result from "../../Result.ts"
 import * as Schema from "../../Schema.ts"
-import type * as AST from "../../SchemaAST.ts"
+import * as AST from "../../SchemaAST.ts"
 import * as Issue from "../../SchemaIssue.ts"
 import * as Transformation from "../../SchemaTransformation.ts"
-import type * as Scope from "../../Scope.ts"
-import * as ServiceMap from "../../ServiceMap.ts"
+import * as Scope from "../../Scope.ts"
 import * as Stream from "../../Stream.ts"
 import type { Covariant, NoInfer } from "../../Types.ts"
 import * as UndefinedOr from "../../UndefinedOr.ts"
@@ -36,6 +36,7 @@ import * as Multipart from "../http/Multipart.ts"
 import * as UrlParams from "../http/UrlParams.ts"
 import type * as HttpApi from "./HttpApi.ts"
 import * as HttpApiEndpoint from "./HttpApiEndpoint.ts"
+import { HttpApiSchemaError } from "./HttpApiError.ts"
 import type * as HttpApiGroup from "./HttpApiGroup.ts"
 import * as HttpApiMiddleware from "./HttpApiMiddleware.ts"
 import * as HttpApiSchema from "./HttpApiSchema.ts"
@@ -64,7 +65,7 @@ export const layer = <Id extends string, Groups extends HttpApiGroup.Any>(
   | HttpApiGroup.ToService<Id, Groups>
 > =>
   HttpRouter.use(Effect.fnUntraced(function*(router) {
-    const services = yield* Effect.services<
+    const services = yield* Effect.context<
       | Etag.Generator
       | HttpRouter.HttpRouter
       | FileSystem
@@ -76,7 +77,7 @@ export const layer = <Id extends string, Groups extends HttpApiGroup.Any>(
       key.startsWith("effect/httpapi/HttpApiGroup/")
     )
     for (const group of Object.values(api.groups)) {
-      const groupRoutes = services.mapUnsafe.get(group.key) as Array<HttpRouter.Route<any, any>>
+      const groupRoutes = services.mapUnsafe.get(group.key)?.routes as Array<HttpRouter.Route<any, any>>
       if (groupRoutes === undefined) {
         const available = availableGroups.length === 0 ? "none" : availableGroups.join(", ")
         return yield* Effect.die(
@@ -119,18 +120,25 @@ export const group = <
   Handlers.Error<Return>,
   Exclude<Handlers.Context<Return>, Scope.Scope>
 > =>
-  Layer.effectServices(Effect.gen(function*() {
-    const services = yield* Effect.services<any>()
+  Layer.effectContext(Effect.gen(function*() {
+    const services = (yield* Effect.context<any>()).pipe(
+      Context.omit(Scope.Scope)
+    )
     const group = api.groups[groupName]!
     const result = build(makeHandlers(group))
     const handlers: Handlers<any, any> = Effect.isEffect(result)
       ? (yield* result as Effect.Effect<any, any, any>)
       : result
     const routes: Array<HttpRouter.Route<any, any>> = []
-    for (const item of handlers.handlers) {
+    for (const item of handlers.handlers.values()) {
       routes.push(handlerToRoute(group as any, item, services))
     }
-    return ServiceMap.makeUnsafe(new Map([[group.key, routes]]))
+    return Context.makeUnsafe(
+      new Map([[group.key, {
+        routes,
+        handlers: handlers.handlers
+      }]])
+    )
   })) as any
 
 /**
@@ -159,7 +167,7 @@ export interface Handlers<
     _Endpoints: Covariant<Endpoints>
   }
   readonly group: HttpApiGroup.AnyWithProps
-  readonly handlers: Set<Handlers.Item<R>>
+  readonly handlers: Map<string, Handlers.Item<R>>
 
   /**
    * Add the implementation for an `HttpApiEndpoint` to a `Handlers` group.
@@ -330,10 +338,16 @@ export const endpoint = <
   | HttpPlatform
   | Path
 > =>
-  Effect.servicesWith((services: ServiceMap.ServiceMap<any>) => {
+  Effect.contextWith((context: Context.Context<any>) => {
     const group = api.groups[groupName] as unknown as HttpApiGroup.AnyWithProps
     const endpoint = group.endpoints[endpointName] as unknown as HttpApiEndpoint.AnyWithProps
-    return Effect.succeed(handlerToHttpEffect(group, endpoint, services, handler as any, false))
+    return Effect.succeed(handlerToHttpEffect(
+      group,
+      endpoint,
+      Context.omit(Scope.Scope)(context),
+      handler as any,
+      false
+    ))
   })
 
 /**
@@ -350,7 +364,7 @@ export const securityDecode = <Security extends HttpApiSecurity.HttpApiSecurity>
   switch (self._tag) {
     case "Bearer": {
       return Effect.map(
-        HttpServerRequest.asEffect(),
+        HttpServerRequest,
         (request) => Redacted.make((request.headers.authorization ?? "").slice(bearerLen)) as any
       )
     }
@@ -378,9 +392,9 @@ export const securityDecode = <Security extends HttpApiSecurity.HttpApiSecurity>
         username: "",
         password: Redacted.make("")
       } as any
-      return HttpServerRequest.asEffect().pipe(
+      return HttpServerRequest.pipe(
         Effect.flatMap((request) =>
-          Encoding.decodeBase64String((request.headers.authorization ?? "").slice(basicLen)).asEffect()
+          Effect.fromResult(Encoding.decodeBase64String((request.headers.authorization ?? "").slice(basicLen)))
         ),
         Effect.match({
           onFailure: () => empty,
@@ -440,7 +454,7 @@ const HandlersProto = {
     options?: { readonly uninterruptible?: boolean | undefined } | undefined
   ) {
     const endpoint = this.group.endpoints[name]
-    this.handlers.add({
+    this.handlers.set(name, {
       endpoint,
       handler,
       isRaw: false,
@@ -455,7 +469,7 @@ const HandlersProto = {
     options?: { readonly uninterruptible?: boolean | undefined } | undefined
   ) {
     const endpoint = this.group.endpoints[name]
-    this.handlers.add({
+    this.handlers.set(name, {
       endpoint,
       handler,
       isRaw: true,
@@ -470,7 +484,7 @@ const makeHandlers = <R, Endpoints extends HttpApiEndpoint.Any>(
 ): Handlers<R, Endpoints> => {
   const self = Object.create(HandlersProto)
   self.group = group
-  self.handlers = new Set<Handlers.Item<R>>()
+  self.handlers = new Map<string, Handlers.Item<R>>()
   return self
 }
 
@@ -483,6 +497,7 @@ type PayloadDecoder =
   }
   | {
     readonly _tag: "Json" | "FormUrlEncoded" | "Uint8Array" | "Text"
+    readonly nullOnEmpty: boolean
     readonly decode: (input: unknown) => Effect.Effect<unknown, Schema.SchemaError, unknown>
   }
 
@@ -495,7 +510,11 @@ function buildPayloadDecoders(
     if (encoding._tag === "Multipart") {
       result.set(contentType, { _tag: "Multipart", mode: encoding.mode, limits: encoding.limits, decode })
     } else {
-      result.set(contentType, { _tag: encoding._tag, decode })
+      result.set(contentType, {
+        _tag: encoding._tag,
+        decode,
+        nullOnEmpty: schemas.some((s) => AST.isNull(AST.toEncoded(s.ast)))
+      })
     }
   })
   return result
@@ -518,21 +537,26 @@ function decodePayload(
   switch (_tag) {
     case "Multipart": {
       if (existing.mode === "buffered") {
-        return Effect.flatMap(
-          Effect.orDie(UndefinedOr.match(existing.limits, {
-            onUndefined: () => httpRequest.multipart,
-            onDefined: (limits) => Effect.provideServices(httpRequest.multipart, Multipart.limitsServices(limits))
-          })),
-          decode
-        )
+        let eff = Effect.orDie(httpRequest.multipart)
+        if (existing.limits) {
+          eff = Effect.provideContext(eff, Multipart.limitsServices(existing.limits))
+        }
+        return Effect.flatMap(eff, decode)
       }
-      return Effect.succeed(UndefinedOr.match(existing.limits, {
-        onUndefined: () => httpRequest.multipartStream,
-        onDefined: (limits) => Stream.provideServices(httpRequest.multipartStream, Multipart.limitsServices(limits))
-      }))
+      return Effect.succeed(
+        existing.limits
+          ? Stream.provideContext(httpRequest.multipartStream, Multipart.limitsServices(existing.limits))
+          : httpRequest.multipartStream
+      )
     }
     case "Json":
-      return Effect.flatMap(Effect.orDie(httpRequest.json), decode)
+      const json = Effect.orDie(Effect.flatMap(httpRequest.text, (text) => {
+        if (text === "") {
+          return existing.nullOnEmpty ? Effect.succeed(null) : Effect.undefined
+        }
+        return Effect.succeed(JSON.parse(text))
+      }))
+      return Effect.flatMap(json, decode)
     case "Text":
       return Effect.flatMap(Effect.orDie(httpRequest.text), decode)
     case "FormUrlEncoded": {
@@ -552,7 +576,7 @@ function decodePayload(
 function handlerToHttpEffect(
   group: HttpApiGroup.AnyWithProps,
   endpoint: HttpApiEndpoint.AnyWithProps,
-  services: ServiceMap.ServiceMap<any>,
+  context: Context.Context<any>,
   handler: HttpApiEndpoint.Handler<any, any, any>,
   isRaw: boolean
 ) {
@@ -568,26 +592,26 @@ function handlerToHttpEffect(
   return applyMiddleware(
     group,
     endpoint,
-    services,
+    context,
     Effect.gen(function*() {
       const fiber = Fiber.getCurrent()!
-      const services = fiber.services
-      const httpRequest = ServiceMap.getUnsafe(services, HttpServerRequest)
-      const routeContext = ServiceMap.getUnsafe(services, HttpRouter.RouteContext)
-      const query = ServiceMap.getUnsafe(services, Request.ParsedSearchParams)
+      const context = fiber.context
+      const httpRequest = Context.getUnsafe(context, HttpServerRequest)
+      const routeContext = Context.getUnsafe(context, HttpRouter.RouteContext)
+      const query = Context.getUnsafe(context, Request.ParsedSearchParams)
       const request: any = {
         request: httpRequest,
         endpoint,
         group
       }
       if (decodeParams) {
-        request.params = yield* decodeParams(routeContext.params)
+        request.params = yield* HttpApiSchemaError.wrap("Params", decodeParams(routeContext.params))
       }
       if (decodeHeaders) {
-        request.headers = yield* decodeHeaders(httpRequest.headers)
+        request.headers = yield* HttpApiSchemaError.wrap("Headers", decodeHeaders(httpRequest.headers))
       }
       if (decodeQuery) {
-        request.query = yield* decodeQuery(query)
+        request.query = yield* HttpApiSchemaError.wrap("Query", decodeQuery(query))
       }
       if (payloadBy) {
         const result = decodePayload(payloadBy, httpRequest, query)
@@ -595,29 +619,35 @@ function handlerToHttpEffect(
           return result
         }
         if (result !== undefined) {
-          request.payload = yield* result
+          request.payload = yield* HttpApiSchemaError.wrap("Payload", result)
         }
       }
       const response = yield* handler(request)
-      return Response.isHttpServerResponse(response) ? response : yield* encodeSuccess(response)
+      return Response.isHttpServerResponse(response)
+        ? response
+        : yield* HttpApiSchemaError.wrap("Body", encodeSuccess(response))
     })
   ).pipe(
     Effect.withErrorReporting,
-    Effect.catch((error) => Effect.orDie(encodeError(error))),
-    Effect.provideServices(services)
+    Effect.catch((error) => {
+      if (HttpApiSchemaError.is(error)) return Effect.die(error)
+      return Effect.orDie(encodeError(error))
+    }),
+    Effect.provideContext(context)
   )
 }
 
-function handlerToRoute(
+/** @internal */
+export function handlerToRoute(
   group: HttpApiGroup.AnyWithProps,
   handler: Handlers.Item<any>,
-  services: ServiceMap.ServiceMap<any>
+  context: Context.Context<any>
 ): HttpRouter.Route<any, any> {
   const endpoint = handler.endpoint
   return HttpRouter.route(
     endpoint.method,
     endpoint.path as HttpRouter.PathInput,
-    handlerToHttpEffect(group, endpoint, services, handler.handler, handler.isRaw),
+    handlerToHttpEffect(group, endpoint, context, handler.handler, handler.isRaw),
     { uninterruptible: handler.uninterruptible }
   )
 }
@@ -636,13 +666,13 @@ const getRequestMediaType = (request: HttpServerRequest): string => {
 const applyMiddleware = <A extends Effect.Effect<any, any, any>>(
   group: HttpApiGroup.AnyWithProps,
   endpoint: HttpApiEndpoint.AnyWithProps,
-  services: ServiceMap.ServiceMap<any>,
+  context: Context.Context<any>,
   handler: A
 ) => {
   const options = { group, endpoint }
   for (const key_ of endpoint.middlewares) {
     const key = key_ as any as HttpApiMiddleware.AnyService
-    const service = ServiceMap.getUnsafe(services, key as any) as HttpApiMiddleware.HttpApiMiddleware<any, any, any>
+    const service = Context.getUnsafe(context, key as any) as HttpApiMiddleware.HttpApiMiddleware<any, any, any>
     const apply = HttpApiMiddleware.isSecurity(key)
       ? makeSecurityMiddleware(key, service as any)
       : service
@@ -692,7 +722,7 @@ const makeSecurityMiddleware = (
       }
       return result.success
     }
-    return yield* lastResult!.asEffect()
+    return yield* Effect.fromResult(lastResult!)
   })
 
   securityMiddlewareCache.set(service, middleware)
@@ -711,6 +741,7 @@ function makeSuccessSchema(endpoint: HttpApiEndpoint.AnyWithProps): Schema.Encod
 
 function makeErrorSchema(endpoint: HttpApiEndpoint.AnyWithProps): Schema.Encoder<HttpServerResponse, unknown> {
   const schemas = HttpApiEndpoint.getErrorSchemas(endpoint).map(toResponseErrorSchema)
+  if (schemas.length === 0) return Schema.Never
   return schemas.length === 1 ? schemas[0] : Schema.Union(schemas)
 }
 

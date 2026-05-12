@@ -1,17 +1,19 @@
 /**
  * @since 4.0.0
  */
+import * as Arr from "../../Array.ts"
 import type { NonEmptyReadonlyArray } from "../../Array.ts"
 import type * as Brand from "../../Brand.ts"
-import type * as Cause from "../../Cause.ts"
+import * as Cause from "../../Cause.ts"
+import * as Context from "../../Context.ts"
 import * as Effect from "../../Effect.ts"
 import * as Encoding from "../../Encoding.ts"
 import * as Exit from "../../Exit.ts"
+import * as Filter from "../../Filter.ts"
 import { dual } from "../../Function.ts"
 import * as Option from "../../Option.ts"
 import * as Schema from "../../Schema.ts"
 import * as Getter from "../../SchemaGetter.ts"
-import * as ServiceMap from "../../ServiceMap.ts"
 import type * as Activity from "./Activity.ts"
 import * as Workflow from "./Workflow.ts"
 import type { WorkflowEngine, WorkflowInstance } from "./WorkflowEngine.ts"
@@ -91,18 +93,18 @@ export const make = <
   }
 }
 
-const EngineTag = ServiceMap.Service<WorkflowEngine, WorkflowEngine["Service"]>(
+const EngineTag = Context.Service<WorkflowEngine, WorkflowEngine["Service"]>(
   "effect/workflow/WorkflowEngine" satisfies typeof WorkflowEngine.key
 )
 
-const InstanceTag = ServiceMap.Service<
+const InstanceTag = Context.Service<
   WorkflowInstance,
   WorkflowInstance["Service"]
 >(
   "effect/workflow/WorkflowEngine/WorkflowInstance" satisfies typeof WorkflowInstance.key
 )
 
-const CurrentAttempt = ServiceMap.Reference<number>(
+const CurrentAttempt = Context.Reference<number>(
   "effect/workflow/Activity/CurrentAttempt" satisfies typeof Activity.CurrentAttempt.key,
   { defaultValue: () => 1 }
 )
@@ -184,14 +186,27 @@ export const into: {
     | Success["DecodingServices"]
     | Error["DecodingServices"]
   > =>
-    Effect.servicesWith(
-      (services: ServiceMap.ServiceMap<WorkflowEngine | WorkflowInstance>) => {
-        const engine = ServiceMap.get(services, EngineTag)
-        const instance = ServiceMap.get(services, InstanceTag)
+    Effect.contextWith(
+      (context: Context.Context<WorkflowEngine | WorkflowInstance>) => {
+        const engine = Context.get(context, EngineTag)
+        const parentInstance = Context.get(context, InstanceTag)
+        const instance = { ...parentInstance }
         return Effect.onExit(
-          effect,
+          Effect.provideService(effect, InstanceTag, instance),
           Effect.fnUntraced(function*(exit) {
-            if (instance.suspended) return
+            if (Exit.isFailure(exit)) {
+              const [reasons, interrupts] = Arr.partition(
+                exit.cause.reasons,
+                Filter.fromPredicate(Cause.isInterruptReason)
+              )
+              const hasInterruptsOnly = interrupts.length === exit.cause.reasons.length
+              if (hasInterruptsOnly && instance.suspended) {
+                parentInstance.suspended = true
+                return
+              } else if (interrupts.length > 0) {
+                exit = Exit.failCause(Cause.fromReasons(reasons))
+              }
+            }
             yield* engine.deferredDone(self, {
               workflowName: instance.workflow.name,
               executionId: instance.executionId,
@@ -238,7 +253,10 @@ export const raceAll = <
     if (Option.isSome(exit)) {
       return yield* Effect.flatten(exit.value) as Effect.Effect<any, any, any>
     }
-    return yield* into(Effect.raceAll(options.effects), deferred)
+    return yield* into(
+      Effect.raceAll(options.effects),
+      deferred
+    )
   })
 }
 

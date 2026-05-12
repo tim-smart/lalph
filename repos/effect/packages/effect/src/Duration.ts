@@ -87,6 +87,9 @@ export type Unit =
 /**
  * Valid input types that can be converted to a Duration.
  *
+ * String inputs accept values like `"10 seconds"`, `"500 millis"`,
+ * `"Infinity"`, and `"-Infinity"`.
+ *
  * @since 2.0.0
  * @category models
  */
@@ -96,6 +99,8 @@ export type Input =
   | bigint // nanos
   | readonly [seconds: number, nanos: number]
   | `${number} ${Unit}`
+  | "Infinity"
+  | "-Infinity"
   | DurationObject
 
 /**
@@ -140,7 +145,8 @@ const DURATION_REGEXP = /^(-?\d+(?:\.\d+)?)\s+(nanos?|micros?|millis?|seconds?|m
  *
  * const duration1 = Duration.fromInputUnsafe(1000) // 1000 milliseconds
  * const duration2 = Duration.fromInputUnsafe("5 seconds")
- * const duration3 = Duration.fromInputUnsafe([2, 500_000_000]) // 2 seconds and 500ms
+ * const duration3 = Duration.fromInputUnsafe("Infinity")
+ * const duration4 = Duration.fromInputUnsafe([2, 500_000_000]) // 2 seconds and 500ms
  * ```
  *
  * @since 2.0.0
@@ -153,6 +159,12 @@ export const fromInputUnsafe = (input: Input): Duration => {
     case "bigint":
       return nanos(input)
     case "string": {
+      if (input === "Infinity") {
+        return infinity
+      }
+      if (input === "-Infinity") {
+        return negativeInfinity
+      }
       const match = DURATION_REGEXP.exec(input)
       if (!match) break
       const [_, valueStr, unit] = match
@@ -666,8 +678,8 @@ export const weeks = (weeks: number): Duration => make(weeks * 604_800_000)
  * @since 2.0.0
  * @category getters
  */
-export const toMillis = (self: Duration): number =>
-  match(self, {
+export const toMillis = (self: Input): number =>
+  match(fromInputUnsafe(self), {
     onMillis: identity,
     onNanos: (nanos) => Number(nanos) / 1_000_000,
     onInfinity: () => Infinity,
@@ -688,8 +700,8 @@ export const toMillis = (self: Duration): number =>
  * @since 2.0.0
  * @category getters
  */
-export const toSeconds = (self: Duration): number =>
-  match(self, {
+export const toSeconds = (self: Input): number =>
+  match(fromInputUnsafe(self), {
     onMillis: (millis) => millis / 1_000,
     onNanos: (nanos) => Number(nanos) / 1_000_000_000,
     onInfinity: () => Infinity,
@@ -710,8 +722,8 @@ export const toSeconds = (self: Duration): number =>
  * @since 3.8.0
  * @category getters
  */
-export const toMinutes = (self: Duration): number =>
-  match(self, {
+export const toMinutes = (self: Input): number =>
+  match(fromInputUnsafe(self), {
     onMillis: (millis) => millis / 60_000,
     onNanos: (nanos) => Number(nanos) / 60_000_000_000,
     onInfinity: () => Infinity,
@@ -732,8 +744,8 @@ export const toMinutes = (self: Duration): number =>
  * @since 3.8.0
  * @category getters
  */
-export const toHours = (self: Duration): number =>
-  match(self, {
+export const toHours = (self: Input): number =>
+  match(fromInputUnsafe(self), {
     onMillis: (millis) => millis / 3_600_000,
     onNanos: (nanos) => Number(nanos) / 3_600_000_000_000,
     onInfinity: () => Infinity,
@@ -754,8 +766,8 @@ export const toHours = (self: Duration): number =>
  * @since 3.8.0
  * @category getters
  */
-export const toDays = (self: Duration): number =>
-  match(self, {
+export const toDays = (self: Input): number =>
+  match(fromInputUnsafe(self), {
     onMillis: (millis) => millis / 86_400_000,
     onNanos: (nanos) => Number(nanos) / 86_400_000_000_000,
     onInfinity: () => Infinity,
@@ -776,8 +788,8 @@ export const toDays = (self: Duration): number =>
  * @since 3.8.0
  * @category getters
  */
-export const toWeeks = (self: Duration): number =>
-  match(self, {
+export const toWeeks = (self: Input): number =>
+  match(fromInputUnsafe(self), {
     onMillis: (millis) => millis / 604_800_000,
     onNanos: (nanos) => Number(nanos) / 604_800_000_000_000,
     onInfinity: () => Infinity,
@@ -808,7 +820,8 @@ export const toWeeks = (self: Duration): number =>
  * @since 2.0.0
  * @category getters
  */
-export const toNanosUnsafe = (self: Duration): bigint => {
+export const toNanosUnsafe = (input: Input): bigint => {
+  const self = fromInputUnsafe(input)
   switch (self.value._tag) {
     case "Infinity":
     case "NegativeInfinity":
@@ -839,7 +852,7 @@ export const toNanosUnsafe = (self: Duration): bigint => {
  * @category getters
  * @since 4.0.0
  */
-export const toNanos: (self: Duration) => Option.Option<bigint> = Option.liftThrowable(toNanosUnsafe)
+export const toNanos: (self: Input) => Option.Option<bigint> = Option.liftThrowable(toNanosUnsafe)
 
 /**
  * Converts a Duration to high-resolution time format [seconds, nanoseconds].
@@ -856,7 +869,8 @@ export const toNanos: (self: Duration) => Option.Option<bigint> = Option.liftThr
  * @since 2.0.0
  * @category getters
  */
-export const toHrTime = (self: Duration): [seconds: number, nanos: number] => {
+export const toHrTime = (input: Input): [seconds: number, nanos: number] => {
+  const self = fromInputUnsafe(input)
   switch (self.value._tag) {
     case "Infinity":
       return [Infinity, 0]
@@ -864,7 +878,7 @@ export const toHrTime = (self: Duration): [seconds: number, nanos: number] => {
       return [-Infinity, 0]
     case "Nanos": {
       const n = self.value.nanos
-      const sign = n < bigint0 ? -1n : 1n
+      const sign = n < bigint0 ? -BigInt(1) : BigInt(1)
       const a = n < bigint0 ? -n : n
       return [
         Number(sign * (a / bigint1e9)),

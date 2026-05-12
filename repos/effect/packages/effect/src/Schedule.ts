@@ -30,6 +30,7 @@
  * @since 2.0.0
  */
 import * as Cause from "./Cause.ts"
+import * as Context from "./Context.ts"
 import * as Cron from "./Cron.ts"
 import type * as DateTime from "./DateTime.ts"
 import * as Duration from "./Duration.ts"
@@ -43,7 +44,6 @@ import { type Pipeable, pipeArguments } from "./Pipeable.ts"
 import { hasProperty } from "./Predicate.ts"
 import * as Pull from "./Pull.ts"
 import * as Result from "./Result.ts"
-import * as ServiceMap from "./ServiceMap.ts"
 import type { Contravariant, Covariant, Mutable } from "./Types.ts"
 
 const TypeId = "~effect/Schedule"
@@ -166,7 +166,7 @@ export interface Metadata<Output = unknown, Input = unknown> extends InputMetada
  * @since 4.0.0
  * @category Metadata
  */
-export const CurrentMetadata = ServiceMap.Reference<Metadata>("effect/Schedule/CurrentMetadata", {
+export const CurrentMetadata = Context.Reference<Metadata>("effect/Schedule/CurrentMetadata", {
   defaultValue: constant({
     input: undefined,
     output: undefined,
@@ -1390,7 +1390,7 @@ export const cron: {
   (expression: string, tz?: string | DateTime.TimeZone): Schedule<Duration.Duration, unknown, Cron.CronParseError>
 } = (expression: string | Cron.Cron, tz?: string | DateTime.TimeZone) => {
   const parsed = Cron.isCron(expression) ? Result.succeed(expression) : Cron.parse(expression, tz)
-  return fromStep(effect.map(parsed.asEffect(), (cron) => (now, _) =>
+  return fromStep(effect.map(effect.fromResult(parsed), (cron) => (now, _) =>
     effect.sync(() => {
       const next = Cron.next(cron, now).getTime()
       const duration = Duration.millis(next - now)

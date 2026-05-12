@@ -1,15 +1,15 @@
 /**
  * @since 4.0.0
  */
+import * as Context from "effect/Context"
 import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
+import * as Effectable from "effect/Effectable"
 import * as Fiber from "effect/Fiber"
-import * as Inspectable from "effect/Inspectable"
 import * as Layer from "effect/Layer"
-import * as Pipeable from "effect/Pipeable"
-import * as ServiceMap from "effect/ServiceMap"
+import * as MutableRef from "effect/MutableRef"
+import * as Semaphore from "effect/Semaphore"
 import * as Reactivity from "effect/unstable/reactivity/Reactivity"
-import * as Utils from "effect/Utils"
 import * as IndexedDb from "./IndexedDb.ts"
 import * as IndexedDbQueryBuilder from "./IndexedDbQueryBuilder.ts"
 import type * as IndexedDbTable from "./IndexedDbTable.ts"
@@ -18,26 +18,45 @@ import type * as IndexedDbVersion from "./IndexedDbVersion.ts"
 const TypeId = "~@effect/platform-browser/IndexedDbDatabase"
 const ErrorTypeId = "~@effect/platform-browser/IndexedDbDatabase/IndexedDbDatabaseError"
 
-const YieldableProto = {
-  [Symbol.iterator]() {
-    return new Utils.SingleShotGen(this) as any
-  }
-}
-
-const PipeInspectableProto = {
-  ...Pipeable.Prototype,
-  ...Inspectable.BaseProto,
-  toJSON(this: any) {
-    return { _id: "IndexedDbDatabase" }
-  }
-}
-
-const CommonProto = {
+const SchemaProto = {
   [TypeId]: {
     _A: (_: never) => _
   },
-  ...PipeInspectableProto,
-  ...YieldableProto
+  ...Effectable.Prototype<IndexedDbSchema<any, any, any>>({
+    label: "IndexedDbSchema",
+    evaluate() {
+      return this.getQueryBuilder
+    }
+  }),
+  get getQueryBuilder() {
+    const self = this as unknown as IndexedDbSchema<any, any, any>
+    return IndexedDbDatabase.useSync(({ database, IDBKeyRange, reactivity }) =>
+      IndexedDbQueryBuilder.make({
+        database,
+        IDBKeyRange,
+        tables: self.version.tables,
+        reactivity
+      })
+    )
+  },
+  add<Version extends IndexedDbVersion.AnyWithProps>(
+    this: IndexedDbSchema<any, any, any>,
+    version: Version,
+    migrate: (
+      fromQuery: Transaction<any>,
+      toQuery: Transaction<Version>
+    ) => Effect.Effect<void, Error>
+  ) {
+    return makeMigration({
+      fromVersion: this.version,
+      version,
+      migrate,
+      previous: this
+    })
+  },
+  layer(this: IndexedDbSchema<any, any, any>, databaseName: string) {
+    return layer(databaseName, this)
+  }
 }
 
 /**
@@ -74,12 +93,13 @@ export class IndexedDbDatabaseError extends Data.TaggedError(
  * @since 4.0.0
  * @category models
  */
-export class IndexedDbDatabase extends ServiceMap.Service<
+export class IndexedDbDatabase extends Context.Service<
   IndexedDbDatabase,
   {
-    readonly database: globalThis.IDBDatabase
+    readonly database: MutableRef.MutableRef<globalThis.IDBDatabase>
     readonly IDBKeyRange: typeof globalThis.IDBKeyRange
     readonly reactivity: Reactivity.Reactivity["Service"]
+    readonly rebuild: Effect.Effect<void, IndexedDbDatabaseError>
   }
 >()(TypeId) {}
 
@@ -92,9 +112,7 @@ export interface IndexedDbSchema<
   in out ToVersion extends IndexedDbVersion.AnyWithProps,
   out Error = never
 > extends
-  Pipeable.Pipeable,
-  Inspectable.Inspectable,
-  Effect.YieldableClass<
+  Effect.Effect<
     IndexedDbQueryBuilder.IndexedDbQueryBuilder<ToVersion>,
     never,
     IndexedDbDatabase
@@ -142,7 +160,7 @@ export interface IndexedDbSchema<
  */
 export interface Transaction<
   Source extends IndexedDbVersion.AnyWithProps = never
-> extends Pipeable.Pipeable, Omit<IndexedDbQueryBuilder.IndexedDbQueryBuilder<Source>, "transaction"> {
+> extends Omit<IndexedDbQueryBuilder.IndexedDbQueryBuilder<Source>, "transaction"> {
   readonly transaction: globalThis.IDBTransaction
 
   readonly createObjectStore: <
@@ -228,48 +246,16 @@ export const make = <
 >(
   initialVersion: InitialVersion,
   init: (toQuery: Transaction<InitialVersion>) => Effect.Effect<void, Error>
-): IndexedDbSchema<never, InitialVersion, Error> =>
-  (function() {
-    // oxlint-disable-next-line typescript/no-extraneous-class
-    class Initial {}
-    Object.assign(Initial, CommonProto)
-    ;(Initial as any).version = initialVersion
-    ;(Initial as any).migrate = init
-    ;(Initial as any)._tag = "Initial"
-    ;(Initial as any).add = <Version extends IndexedDbVersion.AnyWithProps>(
-      version: Version,
-      migrate: (
-        fromQuery: Transaction<InitialVersion>,
-        toQuery: Transaction<Version>
-      ) => Effect.Effect<void, Error>
-    ) =>
-      makeProto({
-        fromVersion: initialVersion,
-        version,
-        migrate,
-        previous: Initial as any
-      })
-    ;(Initial as any).getQueryBuilder = Effect.gen(function*() {
-      const { IDBKeyRange, database, reactivity } = yield* IndexedDbDatabase
-      return IndexedDbQueryBuilder.make({
-        database,
-        IDBKeyRange,
-        tables: initialVersion.tables,
-        transaction: undefined,
-        reactivity
-      })
-    })
-    ;(Initial as any).asEffect = function() {
-      return this.getQueryBuilder
-    }
-    ;(Initial as any).layer = <DatabaseName extends string>(
-      databaseName: DatabaseName
-    ) => layer(databaseName, Initial as any)
+): IndexedDbSchema<never, InitialVersion, Error> => {
+  // oxlint-disable-next-line typescript/no-extraneous-class
+  function Initial() {}
+  Object.setPrototypeOf(Initial, SchemaProto)
+  ;(Initial as any).version = initialVersion
+  ;(Initial as any).migrate = init
+  return Initial as any
+}
 
-    return Initial as any
-  })()
-
-const makeProto = <
+const makeMigration = <
   FromVersion extends IndexedDbVersion.AnyWithProps,
   ToVersion extends IndexedDbVersion.AnyWithProps,
   Error
@@ -283,35 +269,17 @@ const makeProto = <
     fromQuery: Transaction<FromVersion>,
     toQuery: Transaction<ToVersion>
   ) => Effect.Effect<void, Error>
-}): IndexedDbSchema<FromVersion, ToVersion, Error> =>
-  (function() {
-    // oxlint-disable-next-line typescript/no-extraneous-class
-    class Migration {}
-    Object.assign(Migration, CommonProto)
-    ;(Migration as any).previous = options.previous
-    ;(Migration as any).fromVersion = options.fromVersion
-    ;(Migration as any).version = options.version
-    ;(Migration as any).migrate = options.migrate
-    ;(Migration as any)._tag = "Migration"
-    ;(Migration as any).getQueryBuilder = Effect.gen(function*() {
-      const { IDBKeyRange, database, reactivity } = yield* IndexedDbDatabase
-      return IndexedDbQueryBuilder.make({
-        database,
-        IDBKeyRange,
-        tables: options.version.tables,
-        transaction: undefined,
-        reactivity
-      })
-    })
-    ;(Migration as any).asEffect = function() {
-      return this.getQueryBuilder
-    }
-    ;(Migration as any).layer = <DatabaseName extends string>(
-      databaseName: DatabaseName
-    ) => layer(databaseName, Migration as any)
+}): IndexedDbSchema<FromVersion, ToVersion, Error> => {
+  // oxlint-disable-next-line typescript/no-extraneous-class
+  function Migration() {}
+  Object.setPrototypeOf(Migration, SchemaProto)
+  ;(Migration as any).previous = options.previous
+  ;(Migration as any).fromVersion = options.fromVersion
+  ;(Migration as any).version = options.version
+  ;(Migration as any).migrate = options.migrate
 
-    return Migration as any
-  })()
+  return Migration as any
+}
 
 const layer = <DatabaseName extends string>(
   databaseName: DatabaseName,
@@ -322,8 +290,8 @@ const layer = <DatabaseName extends string>(
     Effect.gen(function*() {
       const { IDBKeyRange, indexedDB } = yield* IndexedDb.IndexedDb
       const reactivity = yield* Reactivity.Reactivity
-      const serviceMap = yield* Effect.services()
-      const runForkWith = Effect.runForkWith(serviceMap)
+      const context = yield* Effect.context()
+      const runForkWith = Effect.runForkWith(context)
 
       let oldVersion = 0
       const migrations: Array<Any> = []
@@ -334,145 +302,177 @@ const layer = <DatabaseName extends string>(
       }
 
       const version = migrations.length
-      const database = yield* Effect.acquireRelease(
-        Effect.callback<globalThis.IDBDatabase, IndexedDbDatabaseError>(
-          (resume) => {
-            const request = indexedDB.open(databaseName, version)
+      const database = MutableRef.make<globalThis.IDBDatabase>(null as any)
 
-            request.onblocked = (event) => {
-              resume(
-                Effect.fail(
-                  new IndexedDbDatabaseError({
-                    reason: "Blocked",
-                    cause: event
-                  })
-                )
+      const open = Effect.callback<
+        void,
+        IndexedDbDatabaseError
+      >((resume) => {
+        const request = indexedDB.open(databaseName, version)
+
+        request.onblocked = (event) => {
+          resume(
+            Effect.fail(
+              new IndexedDbDatabaseError({
+                reason: "Blocked",
+                cause: event
+              })
+            )
+          )
+        }
+
+        request.onerror = (event) => {
+          const idbRequest = event.target as IDBRequest<IDBDatabase>
+
+          resume(
+            Effect.fail(
+              new IndexedDbDatabaseError({
+                reason: "OpenError",
+                cause: idbRequest.error
+              })
+            )
+          )
+        }
+
+        let fiber: Fiber.Fiber<void, IndexedDbDatabaseError> | undefined
+        request.onupgradeneeded = (event) => {
+          const idbRequest = event.target as IDBRequest<IDBDatabase>
+          const db = idbRequest.result
+          const transaction = idbRequest.transaction
+          oldVersion = event.oldVersion
+
+          MutableRef.set(database, db)
+
+          if (transaction === null) {
+            return resume(
+              Effect.fail(
+                new IndexedDbDatabaseError({
+                  reason: "TransactionError",
+                  cause: null
+                })
               )
-            }
-
-            request.onerror = (event) => {
-              const idbRequest = event.target as IDBRequest<IDBDatabase>
-
-              resume(
-                Effect.fail(
-                  new IndexedDbDatabaseError({
-                    reason: "OpenError",
-                    cause: idbRequest.error
-                  })
-                )
-              )
-            }
-
-            let fiber: Fiber.Fiber<void, IndexedDbDatabaseError> | undefined
-            request.onupgradeneeded = (event) => {
-              const idbRequest = event.target as IDBRequest<IDBDatabase>
-              const database = idbRequest.result
-              const transaction = idbRequest.transaction
-              oldVersion = event.oldVersion
-
-              if (transaction === null) {
-                return resume(
-                  Effect.fail(
-                    new IndexedDbDatabaseError({
-                      reason: "TransactionError",
-                      cause: null
-                    })
-                  )
-                )
-              }
-
-              transaction.onabort = (event) => {
-                resume(
-                  Effect.fail(
-                    new IndexedDbDatabaseError({
-                      reason: "Aborted",
-                      cause: event
-                    })
-                  )
-                )
-              }
-
-              transaction.onerror = (event) => {
-                resume(
-                  Effect.fail(
-                    new IndexedDbDatabaseError({
-                      reason: "TransactionError",
-                      cause: event
-                    })
-                  )
-                )
-              }
-
-              const effect = Effect.forEach(
-                migrations.slice(oldVersion),
-                (untypedMigration) => {
-                  if (untypedMigration.previous === undefined) {
-                    const migration = untypedMigration as any as AnySchema
-                    const api = makeTransactionProto({
-                      database,
-                      IDBKeyRange,
-                      tables: migration.version.tables,
-                      transaction,
-                      reactivity
-                    })
-                    return (migration as any).migrate(api) as Effect.Effect<
-                      void,
-                      IndexedDbDatabaseError
-                    >
-                  } else if (untypedMigration.previous) {
-                    const migration = untypedMigration as any as AnySchema
-                    const fromApi = makeTransactionProto({
-                      database,
-                      IDBKeyRange,
-                      tables: migration.fromVersion.tables,
-                      transaction,
-                      reactivity
-                    })
-                    const toApi = makeTransactionProto({
-                      database,
-                      IDBKeyRange,
-                      tables: migration.version.tables,
-                      transaction,
-                      reactivity
-                    })
-                    return migration.migrate(fromApi, toApi) as Effect.Effect<
-                      void,
-                      IndexedDbDatabaseError
-                    >
-                  }
-
-                  return Effect.die(new Error("Invalid migration"))
-                },
-                { discard: true }
-              ).pipe(
-                Effect.mapError(
-                  (cause) =>
-                    new IndexedDbDatabaseError({
-                      reason: "UpgradeError",
-                      cause
-                    })
-                )
-              )
-              fiber = runForkWith(effect)
-              fiber.currentDispatcher.flush()
-            }
-
-            request.onsuccess = (event) => {
-              const idbRequest = event.target as IDBRequest<IDBDatabase>
-              const database = idbRequest.result
-              if (fiber) {
-                // ensure migration errors are propagated
-                resume(Effect.as(Fiber.join(fiber), database))
-              } else {
-                resume(Effect.succeed(database))
-              }
-            }
+            )
           }
-        ),
-        (database) => Effect.sync(() => database.close())
+
+          transaction.onabort = (event) => {
+            resume(
+              Effect.fail(
+                new IndexedDbDatabaseError({
+                  reason: "Aborted",
+                  cause: event
+                })
+              )
+            )
+          }
+
+          transaction.onerror = (event) => {
+            resume(
+              Effect.fail(
+                new IndexedDbDatabaseError({
+                  reason: "TransactionError",
+                  cause: event
+                })
+              )
+            )
+          }
+
+          const effect = Effect.forEach(
+            migrations.slice(oldVersion),
+            (untypedMigration) => {
+              if (untypedMigration.previous === undefined) {
+                const migration = untypedMigration as any as AnySchema
+                const api = makeTransactionProto({
+                  database,
+                  IDBKeyRange,
+                  tables: migration.version.tables,
+                  transaction,
+                  reactivity
+                })
+                return (migration as any).migrate(api) as Effect.Effect<
+                  void,
+                  IndexedDbDatabaseError
+                >
+              } else if (untypedMigration.previous) {
+                const migration = untypedMigration as any as AnySchema
+                const fromApi = makeTransactionProto({
+                  database,
+                  IDBKeyRange,
+                  tables: migration.fromVersion.tables,
+                  transaction,
+                  reactivity
+                })
+                const toApi = makeTransactionProto({
+                  database,
+                  IDBKeyRange,
+                  tables: migration.version.tables,
+                  transaction,
+                  reactivity
+                })
+                return migration.migrate(fromApi, toApi) as Effect.Effect<
+                  void,
+                  IndexedDbDatabaseError
+                >
+              }
+
+              return Effect.die(new Error("Invalid migration"))
+            },
+            { discard: true }
+          ).pipe(
+            Effect.mapError(
+              (cause) =>
+                new IndexedDbDatabaseError({
+                  reason: "UpgradeError",
+                  cause
+                })
+            ),
+            Effect.provideService(IndexedDbQueryBuilder.IndexedDbTransaction, transaction)
+          )
+          fiber = runForkWith(effect)
+          fiber.currentDispatcher.flush()
+        }
+
+        request.onsuccess = (event) => {
+          const idbRequest = event.target as IDBRequest<IDBDatabase>
+          const db = idbRequest.result
+          MutableRef.set(database, db)
+          if (fiber) {
+            // ensure migration errors are propagated
+            resume(Effect.asVoid(Fiber.join(fiber)))
+          } else {
+            resume(Effect.void)
+          }
+        }
+      })
+
+      yield* Effect.addFinalizer(() => {
+        database.current?.close()
+        return Effect.void
+      })
+      yield* open
+
+      const rebuildLock = Semaphore.makeUnsafe(1).withPermit
+      const rebuild = Effect.callback<void, IndexedDbDatabaseError>((resume) => {
+        database.current?.close()
+        const request = indexedDB.deleteDatabase(databaseName)
+        request.onerror = (_) => {
+          resume(
+            Effect.fail(
+              new IndexedDbDatabaseError({
+                reason: "OpenError",
+                cause: request.error
+              })
+            )
+          )
+        }
+        request.onsuccess = () => {
+          resume(Effect.void)
+        }
+      }).pipe(
+        Effect.flatMap(() => open),
+        rebuildLock
       )
 
-      return IndexedDbDatabase.of({ database, IDBKeyRange, reactivity })
+      return IndexedDbDatabase.of({ database, IDBKeyRange, rebuild, reactivity })
     })
   ).pipe(
     Layer.provide(Reactivity.layer)
@@ -493,7 +493,7 @@ const makeTransactionProto = <Source extends IndexedDbVersion.AnyWithProps>({
   transaction,
   reactivity
 }: {
-  readonly database: globalThis.IDBDatabase
+  readonly database: MutableRef.MutableRef<globalThis.IDBDatabase>
   readonly IDBKeyRange: typeof globalThis.IDBKeyRange
   readonly tables: ReadonlyMap<string, IndexedDbVersion.Tables<Source>>
   readonly transaction: globalThis.IDBTransaction
@@ -503,11 +503,11 @@ const makeTransactionProto = <Source extends IndexedDbVersion.AnyWithProps>({
     database,
     IDBKeyRange,
     tables,
-    transaction,
     reactivity
   }) as any
 
   migration.transaction = transaction
+
   migration.createObjectStore = Effect.fnUntraced(function*(table: string) {
     const createTable = yield* Effect.fromNullishOr(tables.get(table)).pipe(
       Effect.mapError(
@@ -521,7 +521,7 @@ const makeTransactionProto = <Source extends IndexedDbVersion.AnyWithProps>({
 
     return yield* Effect.try({
       try: () =>
-        database.createObjectStore(createTable.tableName, {
+        database.current.createObjectStore(createTable.tableName, {
           keyPath: createTable.keyPath,
           autoIncrement: createTable.autoIncrement
         }),
@@ -545,7 +545,7 @@ const makeTransactionProto = <Source extends IndexedDbVersion.AnyWithProps>({
     )
 
     return yield* Effect.try({
-      try: () => database.deleteObjectStore(createTable.tableName),
+      try: () => database.current.deleteObjectStore(createTable.tableName),
       catch: (cause) =>
         new IndexedDbDatabaseError({
           reason: "TransactionError",

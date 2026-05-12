@@ -1,11 +1,11 @@
-import { Array as Arr, Effect, Layer, Ref, ServiceMap } from "effect"
+import { Array as Arr, Context, Effect, Layer, Ref } from "effect"
 
 export interface TestAction {
   readonly command: string
   readonly details: Record<string, unknown>
 }
 
-export class TestActions extends ServiceMap.Service<TestActions, {
+export class TestActions extends Context.Service<TestActions, {
   readonly log: (action: TestAction) => Effect.Effect<void>
   readonly getActions: Effect.Effect<ReadonlyArray<TestAction>>
 }>()("TestActions") {}
@@ -25,7 +25,7 @@ export const logAction = (
   details: Record<string, unknown> = {}
 ): Effect.Effect<void, never, TestActions> =>
   Effect.flatMap(
-    TestActions.asEffect(),
+    TestActions,
     (actions) => actions.log({ command, details })
   )
 
@@ -33,4 +33,4 @@ export const getActions: Effect.Effect<
   ReadonlyArray<TestAction>,
   never,
   TestActions
-> = Effect.flatMap(TestActions.asEffect(), (actions) => actions.getActions)
+> = Effect.flatMap(TestActions, (actions) => actions.getActions)

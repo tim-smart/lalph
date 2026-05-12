@@ -1,12 +1,12 @@
 import * as Array from "effect/Array"
 import type * as Cause from "effect/Cause"
 import * as Console from "effect/Console"
+import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import * as Layer from "effect/Layer"
 import * as Option from "effect/Option"
 import * as Queue from "effect/Queue"
 import type * as Scope from "effect/Scope"
-import * as ServiceMap from "effect/ServiceMap"
 import * as Terminal from "effect/Terminal"
 
 // =============================================================================
@@ -30,7 +30,7 @@ export declare namespace MockTerminal {
 // Service
 // =============================================================================
 
-export const MockTerminal = ServiceMap.Service<Terminal.Terminal, MockTerminal>()(
+export const MockTerminal = Context.Service<Terminal.Terminal, MockTerminal>()(
   Terminal.Terminal.key
 )
 
@@ -85,7 +85,7 @@ export const layer: Layer.Layer<Terminal.Terminal> = Layer.effect(MockTerminal, 
 // =============================================================================
 
 export const columns: Effect.Effect<number, never, Terminal.Terminal> = Effect.flatMap(
-  MockTerminal.asEffect(),
+  MockTerminal,
   (terminal) => terminal.columns
 )
 
@@ -93,10 +93,10 @@ export const readInput: Effect.Effect<
   Queue.Dequeue<Terminal.UserInput, Cause.Done>,
   never,
   Terminal.Terminal | Scope.Scope
-> = Effect.flatMap(MockTerminal.asEffect(), (terminal) => terminal.readInput)
+> = Effect.flatMap(MockTerminal, (terminal) => terminal.readInput)
 
 export const readLine: Effect.Effect<string, Terminal.QuitError, Terminal.Terminal> = Effect.flatMap(
-  MockTerminal.asEffect(),
+  MockTerminal,
   (terminal) => terminal.readLine
 )
 
@@ -105,13 +105,13 @@ export const inputKey = (
   modifiers?: Partial<MockTerminal.Modifiers>
 ): Effect.Effect<void, never, Terminal.Terminal> =>
   Effect.flatMap(
-    MockTerminal.asEffect(),
+    MockTerminal,
     (terminal) => terminal.inputKey(key, modifiers)
   )
 
 export const inputText = (text: string): Effect.Effect<void, never, Terminal.Terminal> =>
   Effect.flatMap(
-    MockTerminal.asEffect(),
+    MockTerminal,
     (terminal) => terminal.inputText(text)
   )
 

@@ -1,4 +1,5 @@
 import type * as Cause from "../Cause.ts"
+import type * as Context from "../Context.ts"
 import type * as Effect from "../Effect.ts"
 import * as Equal from "../Equal.ts"
 import type * as Exit from "../Exit.ts"
@@ -9,7 +10,6 @@ import { NodeInspectSymbol } from "../Inspectable.ts"
 import { pipeArguments } from "../Pipeable.ts"
 import { hasProperty } from "../Predicate.ts"
 import type { StackFrame } from "../References.ts"
-import type * as ServiceMap from "../ServiceMap.ts"
 import type * as Types from "../Types.ts"
 import { SingleShotGen } from "../Utils.ts"
 import type { FiberImpl } from "./effect.ts"
@@ -96,29 +96,11 @@ export const StructuralProto = {
 }
 
 /** @internal */
-export const YieldableProto = {
-  [Symbol.iterator]() {
-    return new SingleShotGen(this) as any
-  }
-}
-
-/** @internal */
-export const YieldableErrorProto = {
-  ...YieldableProto,
-  pipe() {
-    return pipeArguments(this, arguments)
-  }
-}
-
-/** @internal */
 export const EffectProto = {
   [EffectTypeId]: effectVariance,
   ...PipeInspectableProto,
   [Symbol.iterator]() {
     return new SingleShotGen(this) as any
-  },
-  asEffect(): any {
-    return this
   },
   toJSON(this: Primitive) {
     return {
@@ -224,7 +206,7 @@ export abstract class ReasonBase<Tag extends string> implements Cause.Cause.Reas
   }
 
   annotate(
-    annotations: ServiceMap.ServiceMap<never>,
+    annotations: Context.Context<never>,
     options?: { readonly overwrite?: boolean | undefined }
   ): this {
     if (annotations.mapUnsafe.size === 0) return this
@@ -341,14 +323,14 @@ export const causeDie = (defect: unknown): Cause.Cause<never> => new CauseImpl([
 /** @internal */
 export const causeAnnotate: {
   (
-    annotations: ServiceMap.ServiceMap<never>,
+    annotations: Context.Context<never>,
     options?: {
       readonly overwrite?: boolean | undefined
     }
   ): <E>(self: Cause.Cause<E>) => Cause.Cause<E>
   <E>(
     self: Cause.Cause<E>,
-    annotations: ServiceMap.ServiceMap<never>,
+    annotations: Context.Context<never>,
     options?: {
       readonly overwrite?: boolean | undefined
     }
@@ -357,7 +339,7 @@ export const causeAnnotate: {
   (args) => isCause(args[0]),
   <E>(
     self: Cause.Cause<E>,
-    annotations: ServiceMap.ServiceMap<never>,
+    annotations: Context.Context<never>,
     options?: {
       readonly overwrite?: boolean | undefined
     }
@@ -535,12 +517,12 @@ export const exitSucceed: <A>(a: A) => Exit.Exit<A> = makeExit({
 /** @internal */
 export const StackTraceKey = {
   key: "effect/Cause/StackTrace" satisfies typeof Cause.StackTrace.key
-} as ServiceMap.Service<Cause.StackTrace, StackFrame>
+} as Context.Service<Cause.StackTrace, StackFrame>
 
 /** @internal */
 export const InterruptorStackTrace = {
   key: "effect/Cause/InterruptorStackTrace" satisfies typeof Cause.InterruptorStackTrace.key
-} as ServiceMap.Service<Cause.InterruptorStackTrace, StackFrame>
+} as Context.Service<Cause.InterruptorStackTrace, StackFrame>
 
 /** @internal */
 export const exitFailCause: <E>(cause: Cause.Cause<E>) => Exit.Exit<never, E> = makeExit({
@@ -584,12 +566,18 @@ export const YieldableError: new(
   message?: string,
   options?: ErrorOptions
 ) => Cause.YieldableError = (function() {
-  class YieldableError extends globalThis.Error {
-    asEffect() {
+  class YieldableError extends globalThis.Error {}
+  const proto = makePrimitiveProto({
+    op: "YieldableError",
+    [evaluate]() {
       return exitFail(this)
     }
-  }
-  Object.assign(YieldableError.prototype, YieldableErrorProto)
+  })
+  delete (proto as any).toString
+  Object.assign(
+    YieldableError.prototype,
+    proto
+  )
   return YieldableError as any
 })()
 
@@ -603,13 +591,14 @@ export const Error: new<A extends Record<string, any> = {}>(
       super(args?.message, args?.cause ? { cause: args.cause } : undefined)
       if (args) {
         Object.assign(this, args)
+        // @effect-diagnostics-next-line floatingEffect:off
         Object.defineProperty(this, plainArgsSymbol, {
           value: args,
           enumerable: false
         })
       }
     }
-    toJSON() {
+    override toJSON() {
       return { ...(this as any)[plainArgsSymbol], ...this }
     }
   } as any

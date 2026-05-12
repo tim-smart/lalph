@@ -2,6 +2,7 @@
  * @since 4.0.0
  */
 import type * as v1 from "kubernetes-types/core/v1.d.ts"
+import * as Context from "../../Context.ts"
 import * as Effect from "../../Effect.ts"
 import * as FileSystem from "../../FileSystem.ts"
 import { identity } from "../../Function.ts"
@@ -10,7 +11,6 @@ import * as Option from "../../Option.ts"
 import * as Result from "../../Result.ts"
 import * as Schedule from "../../Schedule.ts"
 import * as Schema from "../../Schema.ts"
-import * as ServiceMap from "../../ServiceMap.ts"
 import * as HttpClient from "../http/HttpClient.ts"
 import * as HttpClientError from "../http/HttpClientError.ts"
 import * as HttpClientRequest from "../http/HttpClientRequest.ts"
@@ -20,7 +20,7 @@ import * as HttpClientResponse from "../http/HttpClientResponse.ts"
  * @since 4.0.0
  * @category Tags
  */
-export class K8sHttpClient extends ServiceMap.Service<
+export class K8sHttpClient extends Context.Service<
   K8sHttpClient,
   HttpClient.HttpClient
 >()("effect/cluster/K8sHttpClient") {}
@@ -203,7 +203,7 @@ export class PodStatus extends Schema.Class<PodStatus>("@effect/cluster/K8sHttpC
   conditions: Schema.Array(Schema.Struct({
     type: Schema.String,
     status: Schema.String,
-    lastTransitionTime: Schema.String
+    lastTransitionTime: Schema.NullOr(Schema.String)
   })),
   podIP: Schema.String,
   hostIP: Schema.String
@@ -227,8 +227,8 @@ export class Pod extends Schema.Class<Pod>("@effect/cluster/K8sHttpClient/Pod")(
   }
 
   get isReadyOrInitializing(): boolean {
-    let initializedAt: string | undefined
-    let readyAt: string | undefined
+    let initializedAt: string | null | undefined
+    let readyAt: string | null | undefined
     for (let i = 0; i < this.status.conditions.length; i++) {
       const condition = this.status.conditions[i]
       switch (condition.type) {

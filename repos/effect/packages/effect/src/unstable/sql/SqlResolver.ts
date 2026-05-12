@@ -96,19 +96,19 @@ export const ordered = <Req extends Schema.Top, Res extends Schema.Top, _, E, R>
       E | ResultLengthMismatch,
       Req["EncodingServices"] | Res["DecodingServices"] | R
     >,
-    SqlClient.TransactionConnection["Service"] | undefined
+    SqlClient.TransactionConnection.Service | undefined
   >({
     key: transactionKey,
     resolver: Effect.fnUntraced(function*(entries) {
       const inputs = yield* partitionRequests(entries, options.Request)
       const results = yield* options.execute(inputs as any).pipe(
-        Effect.provideServices(entries[0].services)
+        Effect.provideContext(entries[0].context)
       )
       if (results.length !== inputs.length) {
         return yield* new ResultLengthMismatch({ expected: inputs.length, actual: results.length })
       }
       const decodedResults = yield* decodeArray(results).pipe(
-        Effect.provideServices(entries[0].services)
+        Effect.provideContext(entries[0].context)
       )
       for (let i = 0; i < entries.length; i++) {
         entries[i].completeUnsafe(Exit.succeed(decodedResults[i]))
@@ -152,17 +152,17 @@ export const grouped = <Req extends Schema.Top, Res extends Schema.Top, K, Row, 
       E | Schema.SchemaError | Cause.NoSuchElementError,
       Req["EncodingServices"] | Res["DecodingServices"] | R
     >,
-    SqlClient.TransactionConnection["Service"] | undefined
+    SqlClient.TransactionConnection.Service | undefined
   >({
     key: transactionKey,
     resolver: Effect.fnUntraced(function*(entries) {
       const inputs = yield* partitionRequests(entries, options.Request)
       const resultMap = MutableHashMap.empty<K, Arr.NonEmptyArray<Res["Type"]>>()
       const results = yield* options.execute(inputs as any).pipe(
-        Effect.provideServices(entries[0].services)
+        Effect.provideContext(entries[0].context)
       )
       const decodedResults = yield* decodeResults(results).pipe(
-        Effect.provideServices(entries[0].services)
+        Effect.provideContext(entries[0].context)
       )
       for (let i = 0, len = decodedResults.length; i < len; i++) {
         const result = decodedResults[i]
@@ -218,20 +218,16 @@ export const findById = <Id extends Schema.Top, Res extends Schema.Top, Row, E, 
       E | Schema.SchemaError | Cause.NoSuchElementError,
       Id["EncodingServices"] | Res["DecodingServices"] | R
     >,
-    SqlClient.TransactionConnection["Service"] | undefined
+    SqlClient.TransactionConnection.Service | undefined
   >({
-    key(entry) {
-      const conn = entry.services.mapUnsafe.get(SqlClient.TransactionConnection.key)
-      if (!conn) return undefined
-      return Equal.byReferenceUnsafe(conn)
-    },
+    key: transactionKey,
     resolver: Effect.fnUntraced(function*(entries) {
       const [inputs, idMap] = yield* partitionRequestsById(entries, options.Id)
       const results = yield* options.execute(inputs as any).pipe(
-        Effect.provideServices(entries[0].services)
+        Effect.provideContext(entries[0].context)
       )
       const decodedResults = yield* decodeResults(results).pipe(
-        Effect.provideServices(entries[0].services)
+        Effect.provideContext(entries[0].context)
       )
       for (let i = 0; i < decodedResults.length; i++) {
         const result = decodedResults[i]
@@ -275,13 +271,13 @@ const void_ = <Req extends Schema.Top, _, E, R>(
       E | Schema.SchemaError,
       Req["EncodingServices"] | R
     >,
-    SqlClient.TransactionConnection["Service"] | undefined
+    SqlClient.TransactionConnection.Service | undefined
   >({
     key: transactionKey,
     resolver: Effect.fnUntraced(function*(entries) {
       const inputs = yield* partitionRequests(entries, options.Request)
       yield* options.execute(inputs as any).pipe(
-        Effect.provideServices(entries[0].services)
+        Effect.provideContext(entries[0].context)
       )
       for (let i = 0; i < entries.length; i++) {
         entries[i].completeUnsafe(Exit.void)
@@ -320,7 +316,7 @@ const partitionRequests = function*<In, A, E, R, InE>(
 
   for (let i = 0; i < len; i++) {
     entry = requests[i]
-    yield (Effect.provideServices(handle(encode(entry.request.payload)), entry.services) as Effect.Effect<void>)
+    yield (Effect.provideContext(handle(encode(entry.request.payload)), entry.context) as Effect.Effect<void>)
   }
 
   return inputs
@@ -346,15 +342,17 @@ const partitionRequestsById = function*<In, A, E, R, InE>(
 
   for (let i = 0; i < len; i++) {
     entry = requests[i]
-    yield (Effect.provideServices(handle(encode(entry.request.payload)), entry.services) as Effect.Effect<void>)
+    yield (Effect.provideContext(handle(encode(entry.request.payload)), entry.context) as Effect.Effect<void>)
     MutableHashMap.set(byIdMap, entry.request.payload, entry)
   }
 
   return [inputs, byIdMap] as const
 }
 
-function transactionKey<A>(entry: Request.Entry<A>): SqlClient.TransactionConnection["Service"] | undefined {
-  const conn = entry.services.mapUnsafe.get(SqlClient.TransactionConnection.key)
+function transactionKey<A>(entry: Request.Entry<A>): SqlClient.TransactionConnection.Service | undefined {
+  const client = entry.context.mapUnsafe.get(SqlClient.SqlClient.key)
+  if (!client) return undefined
+  const conn = entry.context.mapUnsafe.get(client.transactionService.key)
   if (!conn) return undefined
   return Equal.byReferenceUnsafe(conn)
 }

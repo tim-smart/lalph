@@ -6,7 +6,7 @@
  */
 import { AnthropicClient, AnthropicLanguageModel } from "@effect/ai-anthropic"
 import { OpenAiClient, OpenAiLanguageModel } from "@effect/ai-openai"
-import { Config, Effect, ExecutionPlan, Layer, Schema, ServiceMap, Stream } from "effect"
+import { Config, Context, Effect, ExecutionPlan, Layer, Schema, Stream } from "effect"
 import { AiError, LanguageModel, Model, type Response } from "effect/unstable/ai"
 import { FetchHttpClient } from "effect/unstable/http"
 import { LaunchPlan } from "./fixtures/domain/LaunchPlan.ts"
@@ -55,7 +55,7 @@ const DraftPlan = ExecutionPlan.make(
   }
 )
 
-export class AiWriter extends ServiceMap.Service<AiWriter, {
+export class AiWriter extends Context.Service<AiWriter, {
   draftAnnouncement(product: string): Effect.Effect<{
     readonly provider: string
     readonly text: string
@@ -66,13 +66,13 @@ export class AiWriter extends ServiceMap.Service<AiWriter, {
   static readonly layer = Layer.effect(
     AiWriter,
     Effect.gen(function*() {
-      // Calling `withRequirements` on an `ExecutionPlan` will move the
+      // Calling `captureRequirements` on an `ExecutionPlan` will move the
       // requirements of the plan (in this case the ai clients) into the Layer
       // requirements.
-      const draftsModel = yield* DraftPlan.withRequirements
+      const draftsModel = yield* DraftPlan.captureRequirements
 
       // Use a different model for the launch plan extraction
-      const launchPlanModel = yield* OpenAiLanguageModel.model("gpt-4.1")
+      const launchPlanModel = yield* OpenAiLanguageModel.model("gpt-4.1").captureRequirements
 
       const draftAnnouncement = Effect.fn("AiWriter.draftAnnouncement")(
         function*(product: string) {
