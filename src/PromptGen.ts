@@ -1,17 +1,15 @@
-import { Effect, Layer, ServiceMap } from "effect"
+import { Effect, Layer, Context } from "effect"
 import { PrdIssue } from "./domain/PrdIssue.ts"
 import { CurrentIssueSource } from "./CurrentIssueSource.ts"
 import type { GitFlow } from "./GitFlow.ts"
 
-export class PromptGen extends ServiceMap.Service<PromptGen>()(
-  "lalph/PromptGen",
-  {
-    make: Effect.gen(function* () {
-      const sourceMeta = yield* CurrentIssueSource
+export class PromptGen extends Context.Service<PromptGen>()("lalph/PromptGen", {
+  make: Effect.gen(function* () {
+    const sourceMeta = yield* CurrentIssueSource
 
-      const prdNotes = (options?: {
-        readonly specsDirectory?: string | undefined
-      }) => `## prd.yml file
+    const prdNotes = (options?: {
+      readonly specsDirectory?: string | undefined
+    }) => `## prd.yml file
 
 **Important:** Wait 5 seconds between edits to allow the system to update the prd.yml file.
 If adding more than 10 tasks, wait 10 seconds.
@@ -51,9 +49,9 @@ To remove a task, simply delete the item from the prd.yml file.
 ${JSON.stringify(PrdIssue.jsonSchema, null, 2)}
 \`\`\``
 
-      const promptChoose = (options: {
-        readonly gitFlow: GitFlow["Service"]
-      }) => `Your job is to choose the next task to work on from the prd.yml file and save it in a task.json file.
+    const promptChoose = (options: {
+      readonly gitFlow: GitFlow["Service"]
+    }) => `Your job is to choose the next task to work on from the prd.yml file and save it in a task.json file.
 **DO NOT** implement the task yet.
 
 The following instructions should be done without interaction or asking for permission.
@@ -80,18 +78,18 @@ The following instructions should be done without interaction or asking for perm
   "githubPrNumber": null
 }
 \`\`\`${
-        options.gitFlow.requiresGithubPr
-          ? `
+      options.gitFlow.requiresGithubPr
+        ? `
 
 Set \`githubPrNumber\` to the PR number if one exists, otherwise use \`null\`.
 `
-          : "\n\nLeave `githubPrNumber` as null."
-      }
+        : "\n\nLeave `githubPrNumber` as null."
+    }
 `
 
-      const promptChooseClanka = (options: {
-        readonly gitFlow: GitFlow["Service"]
-      }) => `- Use the "listEligibleTasks" function to view the list of tasks that you can start working on.
+    const promptChooseClanka = (options: {
+      readonly gitFlow: GitFlow["Service"]
+    }) => `- Use the "listEligibleTasks" function to view the list of tasks that you can start working on.
   - **NO NOT PARSE THE yaml OUTPUT IN ANY WAY**
   - **DO NOT** implement the task yet.
   - **DO NOT** use the "delegate" function for any step in this workflow
@@ -113,18 +111,18 @@ ${
     : "\n  Leave `githubPrNumber` as null."
 }
 `
-      const promptChooseRalph = (options: {
-        readonly specFile: string
-      }) => `- Read the spec file at \`${options.specFile}\` to understand the current project.
+    const promptChooseRalph = (options: {
+      readonly specFile: string
+    }) => `- Read the spec file at \`${options.specFile}\` to understand the current project.
 - Choose the next most important task to work on from the specification.
 - If all of the tasks are complete then do nothing more. Otherwise, write the chosen task in a ".lalph/task.md" file.
 
 Note: The task should be a specific, actionable item that can be completed in a reasonable amount of time.
 `
 
-      const keyInformation = (options: {
-        readonly specsDirectory: string
-      }) => `## Important: Recording key information
+    const keyInformation = (options: {
+      readonly specsDirectory: string
+    }) => `## Important: Recording key information
 
 This session will time out after a certain period, so make sure to record
 key information that could speed up future work on the task in the description.
@@ -145,9 +143,9 @@ challenges faced.
 
 ${prdNotes(options)}`
 
-      const systemClanka = (options: {
-        readonly specsDirectory: string
-      }) => `## Important: Recording key information
+    const systemClanka = (options: {
+      readonly specsDirectory: string
+    }) => `## Important: Recording key information
 
 This session will time out after a certain period, so make sure to record
 key information that could speed up future work on the task in the description.
@@ -168,13 +166,13 @@ challenges faced.
 
 ${taskGuidelines(options)}`
 
-      const prompt = (options: {
-        readonly task: PrdIssue
-        readonly targetBranch: string | undefined
-        readonly specsDirectory: string
-        readonly githubPrNumber: number | undefined
-        readonly gitFlow: GitFlow["Service"]
-      }) => `# ${options.task.title}
+    const prompt = (options: {
+      readonly task: PrdIssue
+      readonly targetBranch: string | undefined
+      readonly specsDirectory: string
+      readonly githubPrNumber: number | undefined
+      readonly gitFlow: GitFlow["Service"]
+    }) => `# ${options.task.title}
 
 Task ID: ${options.task.id}
 
@@ -183,10 +181,10 @@ ${options.task.description}
 ### Instructions
 
 Your job is to implement the task described above.${
-        options.task.description.includes(options.specsDirectory)
-          ? `\nMake sure to review the prd.yml for any key information that may help you with this task.`
-          : ""
-      }
+      options.task.description.includes(options.specsDirectory)
+        ? `\nMake sure to review the prd.yml for any key information that may help you with this task.`
+        : ""
+    }
 
 1. ${options.gitFlow.setupInstructions(options)}
 2. Implement the task.
@@ -199,24 +197,24 @@ Your job is to implement the task described above.${
      \`description\`. More details below.
 3. Run any checks / feedback loops, such as type checks, unit tests, or linting.
 4. ${options.gitFlow.commitInstructions({
-        githubPrInstructions: sourceMeta.githubPrInstructions,
-        githubPrNumber: options.githubPrNumber,
-        taskId: options.task.id ?? "unknown",
-        targetBranch: options.targetBranch,
-      })}
+      githubPrInstructions: sourceMeta.githubPrInstructions,
+      githubPrNumber: options.githubPrNumber,
+      taskId: options.task.id ?? "unknown",
+      targetBranch: options.targetBranch,
+    })}
 5. **After ${options.gitFlow.requiresGithubPr ? "pushing" : "committing"}** your changes, update the prd.yml to reflect any changes in the task state.
    - Rewrite the notes in the description to include only the key discoveries and information that could speed up future work on other tasks. Make sure to preserve important information such as specification file references.
    - If you believe the task is complete, update the \`state\` to "in-review".
 
 ${keyInformation(options)}`
 
-      const promptClanka = (options: {
-        readonly task: PrdIssue
-        readonly targetBranch: string | undefined
-        readonly specsDirectory: string
-        readonly githubPrNumber: number | undefined
-        readonly gitFlow: GitFlow["Service"]
-      }) => `# ${options.task.title}
+    const promptClanka = (options: {
+      readonly task: PrdIssue
+      readonly targetBranch: string | undefined
+      readonly specsDirectory: string
+      readonly githubPrNumber: number | undefined
+      readonly gitFlow: GitFlow["Service"]
+    }) => `# ${options.task.title}
 
 Task ID: ${options.task.id}
 
@@ -225,10 +223,10 @@ ${options.task.description}
 ### Instructions
 
 All steps must be done before the task can be considered complete.${
-        options.task.description.includes(options.specsDirectory)
-          ? `\nMake sure to review the previous tasks (using "listTasks") for any key information that may help you with this task.`
-          : ""
-      }
+      options.task.description.includes(options.specsDirectory)
+        ? `\nMake sure to review the previous tasks (using "listTasks") for any key information that may help you with this task.`
+        : ""
+    }
 
 1. ${options.gitFlow.setupInstructions(options)}
 2. Implement the task.
@@ -238,21 +236,21 @@ All steps must be done before the task can be considered complete.${
      \`description\`. More details below.
 3. Run any checks / feedback loops, such as type checks, unit tests, or linting.
 4. ${options.gitFlow.commitInstructions({
-        githubPrInstructions: sourceMeta.githubPrInstructions,
-        githubPrNumber: options.githubPrNumber,
-        taskId: options.task.id ?? "unknown",
-        targetBranch: options.targetBranch,
-      })}
+      githubPrInstructions: sourceMeta.githubPrInstructions,
+      githubPrNumber: options.githubPrNumber,
+      taskId: options.task.id ?? "unknown",
+      targetBranch: options.targetBranch,
+    })}
 5. **After ${options.gitFlow.requiresGithubPr ? "pushing" : "committing"}** your changes, update current task to reflect any changes in the task state.
    - Rewrite the notes in the description to include only the key discoveries and information that could speed up future work on other tasks. Make sure to preserve important information such as specification file references.
    - If you believe the task is complete, update the \`state\` to "in-review".`
 
-      const promptRalph = (options: {
-        readonly task: string
-        readonly targetBranch: string | undefined
-        readonly specFile: string
-        readonly gitFlow: GitFlow["Service"]
-      }) => `${options.task}
+    const promptRalph = (options: {
+      readonly task: string
+      readonly targetBranch: string | undefined
+      readonly specFile: string
+      readonly gitFlow: GitFlow["Service"]
+    }) => `${options.task}
 
 ## Project specification
 
@@ -268,16 +266,16 @@ All steps must be done before the task can be considered complete.
 3. Run any checks / feedback loops, such as type checks, unit tests, or linting.
 4. Update the specification implementation plan at \`${options.specFile}\` to reflect changes to task states.
 4. ${options.gitFlow.commitInstructions({
-        githubPrInstructions: sourceMeta.githubPrInstructions,
-        githubPrNumber: undefined,
-        taskId: "unknown",
-        targetBranch: options.targetBranch,
-      })}
+      githubPrInstructions: sourceMeta.githubPrInstructions,
+      githubPrNumber: undefined,
+      taskId: "unknown",
+      targetBranch: options.targetBranch,
+    })}
 `
 
-      const promptResearch = (options: {
-        readonly task: PrdIssue
-      }) => `Your job is to gather all the necessary information and details to complete the task described below. Do not make any code changes yet, your job is just to research and gather information.
+    const promptResearch = (options: {
+      readonly task: PrdIssue
+    }) => `Your job is to gather all the necessary information and details to complete the task described below. Do not make any code changes yet, your job is just to research and gather information.
 
 In the final report:
 
@@ -293,10 +291,10 @@ Title: ${options.task.title}
 
 ${options.task.description}`
 
-      const promptReview = (options: {
-        readonly prompt: string
-        readonly gitFlow: GitFlow["Service"]
-      }) => `A previous engineer has completed a task from the instructions below.
+    const promptReview = (options: {
+      readonly prompt: string
+      readonly gitFlow: GitFlow["Service"]
+    }) => `A previous engineer has completed a task from the instructions below.
 
 You job is to meticulously review their work to ensure it meets the task requirements,
 follows best practices, and maintains high code quality. You should be extremely thorough
@@ -315,10 +313,10 @@ ${options.gitFlow.reviewInstructions}
 
 ${options.prompt}`
 
-      const promptTimeout = (options: {
-        readonly taskId: string
-        readonly specsDirectory: string
-      }) => `Your earlier attempt to complete the task with id \`${options.taskId}\` took too
+    const promptTimeout = (options: {
+      readonly taskId: string
+      readonly specsDirectory: string
+    }) => `Your earlier attempt to complete the task with id \`${options.taskId}\` took too
 long and has timed out. You can find the task details in the prd.yml file.
 
 The following instructions should be done without interaction or asking for
@@ -336,10 +334,10 @@ permission.
 
 ${prdNotes(options)}`
 
-      const promptTimeoutRalph = (options: {
-        readonly task: string
-        readonly specFile: string
-      }) => `Your earlier attempt to complete the following task took too
+    const promptTimeoutRalph = (options: {
+      readonly task: string
+      readonly specFile: string
+    }) => `Your earlier attempt to complete the following task took too
 long and has timed out.
 
 The following instructions should be done without interaction or asking for
@@ -352,10 +350,10 @@ permission.
 3. Commit the changes to the specification file without pushing.
 `
 
-      const promptTimeoutClanka = (options: {
-        readonly taskId: string
-        readonly specsDirectory: string
-      }) => `Your earlier attempt to complete the task with id \`${options.taskId}\` took too
+    const promptTimeoutClanka = (options: {
+      readonly taskId: string
+      readonly specsDirectory: string
+    }) => `Your earlier attempt to complete the task with id \`${options.taskId}\` took too
 long and has timed out.
 
 The following instructions should be done without interaction or asking for
@@ -369,10 +367,10 @@ permission.
    - Make sure to setup task dependencies using the \`blockedBy\` field as needed.
 5. If any specifications need updating based on your new understanding, update them.`
 
-      const planPrompt = (options: {
-        readonly plan: string
-        readonly specsDirectory: string
-      }) => `<request>
+    const planPrompt = (options: {
+      readonly plan: string
+      readonly specsDirectory: string
+    }) => `<request>
 ${options.plan}
 </request>
 
@@ -434,10 +432,10 @@ ${options.plan}
   \`${options.specsDirectory}\` directory, along with a brief overview of the specification.
   If the README.md file does not exist, create it.`
 
-      const promptPlanTasks = (options: {
-        readonly specsDirectory: string
-        readonly specificationPath: string
-      }) => `Your job is to convert the implementation plan in the specification file at
+    const promptPlanTasks = (options: {
+      readonly specsDirectory: string
+      readonly specificationPath: string
+    }) => `Your job is to convert the implementation plan in the specification file at
 \`${options.specificationPath}\` into tasks in the prd.yml file. Read the "### Adding tasks"
 section below extremely carefully for guidelines on creating tasks.
 
@@ -455,10 +453,10 @@ setup dependencies between the tasks using the \`blockedBy\` field.
  
 ${prdNotes(options)}`
 
-      const promptPlanTasksClanka = (options: {
-        readonly specsDirectory: string
-        readonly specificationPath: string
-      }) => `Your job is to convert the implementation plan in the specification file at
+    const promptPlanTasksClanka = (options: {
+      readonly specsDirectory: string
+      readonly specificationPath: string
+    }) => `Your job is to convert the implementation plan in the specification file at
 \`${options.specificationPath}\` into tasks.
 
 Before starting, read the entire task list to understand the context of existing tasks
@@ -472,26 +470,25 @@ Make sure to setup dependencies between the tasks using the \`blockedBy\` field.
 
 **Important:** You are only creating or updating a plan, not implementing any tasks yet.`
 
-      return {
-        promptChoose,
-        promptChooseClanka,
-        promptChooseRalph,
-        prompt,
-        promptRalph,
-        promptClanka,
-        promptResearch,
-        promptReview,
-        promptTimeout,
-        promptTimeoutClanka,
-        promptTimeoutRalph,
-        planPrompt,
-        promptPlanTasks,
-        promptPlanTasksClanka,
-        systemClanka,
-      } as const
-    }),
-  },
-) {
+    return {
+      promptChoose,
+      promptChooseClanka,
+      promptChooseRalph,
+      prompt,
+      promptRalph,
+      promptClanka,
+      promptResearch,
+      promptReview,
+      promptTimeout,
+      promptTimeoutClanka,
+      promptTimeoutRalph,
+      planPrompt,
+      promptPlanTasks,
+      promptPlanTasksClanka,
+      systemClanka,
+    } as const
+  }),
+}) {
   static layer = Layer.effect(this, this.make).pipe(
     Layer.provide(CurrentIssueSource.layer),
   )

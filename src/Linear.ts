@@ -3,7 +3,7 @@ import {
   Stream,
   Layer,
   Schema,
-  ServiceMap,
+  Context,
   Option,
   RcMap,
   DateTime,
@@ -30,7 +30,7 @@ import type { CliAgentPreset } from "./domain/CliAgentPreset.ts"
 import { Persistable, PersistedCache } from "effect/unstable/persistence"
 import { layerPersistence } from "./Persistence.ts"
 
-class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
+class Linear extends Context.Service<Linear>()("lalph/Linear", {
   make: Effect.gen(function* () {
     const tokens = yield* TokenManager
     const clients = yield* RcMap.make({
@@ -89,9 +89,8 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
         }),
       )
 
-    const cache = yield* PersistedCache.make<LinearState, never>({
-      storeId: "linear",
-      lookup(_) {
+    const cache = yield* PersistedCache.make(
+      (_: LinearState) => {
         const projects = Stream.runCollect(
           stream((client) =>
             client.projects({
@@ -130,8 +129,11 @@ class Linear extends ServiceMap.Service<Linear>()("lalph/Linear", {
           { concurrency: "unbounded" },
         ).pipe(Effect.orDie)
       },
-      timeToLive: (_) => Duration.infinity,
-    })
+      {
+        storeId: "linear",
+        timeToLive: (_) => Duration.infinity,
+      },
+    )
     const issues = (options: {
       readonly labelId: Option.Option<string>
       readonly projectId: string
@@ -567,7 +569,9 @@ export const LinearIssueSource = Layer.effect(
   }),
 ).pipe(Layer.provide([Linear.layer, Reactivity.layer, Settings.layer]))
 
-export class LinearError extends Schema.ErrorClass("lalph/LinearError")({
+export class LinearError extends Schema.ErrorClass<LinearError>(
+  "lalph/LinearError",
+)({
   _tag: Schema.tag("LinearError"),
   cause: Schema.Defect,
 }) {}
@@ -617,7 +621,7 @@ const getOrSelectProject = Effect.gen(function* () {
   const linear = yield* Linear
   const state = yield* linear.getState
   return yield* Settings.getProject(selectedProjectId).pipe(
-    Effect.flatMap((o) => o.asEffect()),
+    Effect.flatMap(Effect.fromOption),
     Effect.map((projectId) => state.projects.find((p) => p.id === projectId)!),
     Effect.catch(() => selectProject),
   )
@@ -668,7 +672,7 @@ const createLinearProject = Effect.gen(function* () {
       teamIds: [teamId],
     }),
   )
-  return ProjectSchema.makeUnsafe({
+  return ProjectSchema.make({
     id: created.projectId!,
     name: projectName,
     teams: teams.filter((team) => team.id === teamId),

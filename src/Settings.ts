@@ -1,12 +1,12 @@
 // oxlint-disable typescript/no-explicit-any
-import { Cache, Effect, Layer, Option, Schema, ServiceMap } from "effect"
+import { Cache, Effect, Layer, Option, Schema, Context } from "effect"
 import { KeyValueStore } from "effect/unstable/persistence"
 import { layerKvs, ProjectsKvs } from "./Kvs.ts"
 import { allCliAgents } from "./domain/CliAgent.ts"
 import { Project, ProjectId } from "./domain/Project.ts"
 import { Reactivity } from "effect/unstable/reactivity"
 
-export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
+export class Settings extends Context.Service<Settings>()("lalph/Settings", {
   make: Effect.gen(function* () {
     const kvs = yield* KeyValueStore.KeyValueStore
     const projectKvs = yield* ProjectsKvs
@@ -27,9 +27,9 @@ export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
         readonly projectId: ProjectId
         readonly setting: ProjectSetting<string, Schema.Codec<any, any>>
       }) {
-        const services = yield* projectKvs.services(options.projectId)
+        const services = yield* projectKvs.contextEffect(options.projectId)
         const store = KeyValueStore.toSchemaStore(
-          ServiceMap.get(services, KeyValueStore.KeyValueStore),
+          Context.get(services, KeyValueStore.KeyValueStore),
           options.setting.schema,
         )
         return yield* Effect.orDie(store.get(options.setting.name))
@@ -82,9 +82,9 @@ export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
         value: Option.Option<S["Type"]>,
       ) {
         const projectId = yield* CurrentProjectId
-        const services = yield* projectKvs.services(projectId)
+        const services = yield* projectKvs.contextEffect(projectId)
         const s = KeyValueStore.toSchemaStore(
-          ServiceMap.get(services, KeyValueStore.KeyValueStore),
+          Context.get(services, KeyValueStore.KeyValueStore),
           setting.schema,
         )
         const setCache = Cache.set(
@@ -150,7 +150,7 @@ export class Settings extends ServiceMap.Service<Settings>()("lalph/Settings", {
   }
 }
 
-export class CurrentProjectId extends ServiceMap.Service<
+export class CurrentProjectId extends Context.Service<
   CurrentProjectId,
   ProjectId
 >()("lalph/CurrentProjectId") {}

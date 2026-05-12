@@ -8,7 +8,7 @@ import {
   PlatformError,
   Schedule,
   Semaphore,
-  ServiceMap,
+  Context,
   Stream,
   SubscriptionRef,
 } from "effect"
@@ -18,7 +18,7 @@ import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 import { CurrentIssueSource } from "./CurrentIssueSource.ts"
 import { CurrentProjectId, Settings } from "./Settings.ts"
 
-export class Prd extends ServiceMap.Service<
+export class Prd extends Context.Service<
   Prd,
   {
     readonly path: string

@@ -132,7 +132,6 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
     ralphSpec = yield* Prompt.file({
       message: "Path to Ralph spec file",
     }).pipe(
-      Effect.fromYieldable,
       Effect.map((selectedPath) =>
         pathService.relative(relativeRoot, selectedPath),
       ),
@@ -150,7 +149,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
   })
 
   const project = new Project({
-    id: ProjectId.makeUnsafe(id),
+    id: ProjectId.make(id),
     enabled: existing ? existing.enabled : true,
     concurrency,
     targetBranch,

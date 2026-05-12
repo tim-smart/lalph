@@ -7,7 +7,7 @@ import {
   Schedule,
   Schema,
   Semaphore,
-  ServiceMap,
+  Context,
 } from "effect"
 import {
   FetchHttpClient,
@@ -23,11 +23,11 @@ import type { QuitError } from "effect/Terminal"
 
 const clientId = "Ov23liJMtg6leTI1Vu6m"
 
-export class TokenManager extends ServiceMap.Service<TokenManager>()(
+export class TokenManager extends Context.Service<TokenManager>()(
   "lalph/Github/TokenManager",
   {
     make: Effect.gen(function* () {
-      const promptEnv = yield* Effect.services<Prompt.Environment>()
+      const promptEnv = yield* Effect.context<Prompt.Environment>()
       const kvs = KeyValueStore.prefix(
         yield* KeyValueStore.KeyValueStore,
         "github.accessToken",
@@ -64,7 +64,7 @@ export class TokenManager extends ServiceMap.Service<TokenManager>()(
             "GitHub PAT with repo, read:user, read:project scopes (leave empty for OAuth)",
           validate: (value) => Effect.succeed(value.trim()),
         })
-      }).pipe(Effect.provideServices(promptEnv))
+      }).pipe(Effect.provideContext(promptEnv))
 
       const getNoLock: Effect.Effect<
         AccessToken,

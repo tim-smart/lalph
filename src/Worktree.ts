@@ -10,7 +10,7 @@ import {
   Path,
   PlatformError,
   Schema,
-  ServiceMap,
+  Context,
   Stream,
 } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
@@ -23,7 +23,7 @@ import { parseBranch } from "./shared/git.ts"
 import { resolveLalphDirectory } from "./shared/lalphDirectory.ts"
 import { withStallTimeout } from "./shared/stream.ts"
 
-export class Worktree extends ServiceMap.Service<Worktree>()("lalph/Worktree", {
+export class Worktree extends Context.Service<Worktree>()("lalph/Worktree", {
   make: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const pathService = yield* Path.Path
@@ -243,7 +243,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
 
   const execWithOutput = (options: { readonly cliAgent: AnyCliAgent }) =>
     Effect.fnUntraced(function* (command: ChildProcess.Command) {
-      const handle = yield* provide(command.asEffect())
+      const handle = yield* provide(command)
 
       yield* handle.all.pipe(
         Stream.decodeText(),
@@ -265,7 +265,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
       const registry = yield* AtomRegistry.AtomRegistry
       const worker = yield* CurrentWorkerState
 
-      const handle = yield* provide(command.asEffect())
+      const handle = yield* provide(command)
 
       yield* handle.all.pipe(
         Stream.decodeText(),
@@ -297,7 +297,7 @@ const makeExecHelpers = Effect.fnUntraced(function* (options: {
       const registry = yield* AtomRegistry.AtomRegistry
       const worker = yield* CurrentWorkerState
 
-      const handle = yield* provide(command.asEffect())
+      const handle = yield* provide(command)
 
       yield* handle.all.pipe(
         Stream.decodeText(),

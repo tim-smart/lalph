@@ -1,6 +1,6 @@
 // oxlint-disable typescript/no-explicit-any
 import { NodeHttpClient, NodeSocket } from "@effect/platform-node"
-import { Agent, Codex, Copilot } from "clanka"
+import { Agent, Codex, Copilot, DeviceCodeHandler } from "clanka"
 import { Effect, flow, Layer, Schema } from "effect"
 import { layerKvs } from "./Kvs.ts"
 
@@ -54,12 +54,16 @@ const resolve = (
       }).pipe(
         Layer.provide(NodeSocket.layerWebSocketConstructorWS),
         Layer.provide(Codex.layerClient),
+        Layer.provide(DeviceCodeHandler.layerConsole),
       )
     }
     case "copilot": {
       return Copilot.model(model, {
         ...reasoningToCopilotConfig(model, reasoning),
-      }).pipe(Layer.provide(Copilot.layerClient))
+      }).pipe(
+        Layer.provide(Copilot.layerClient),
+        Layer.provide(DeviceCodeHandler.layerConsole),
+      )
     }
   }
 }
@@ -79,12 +83,16 @@ const resolveSubagent = (
       }).pipe(
         Layer.provide(NodeSocket.layerWebSocketConstructorWS),
         Layer.provide(Codex.layerClient),
+        Layer.provide(DeviceCodeHandler.layerConsole),
       )
     }
     case "copilot": {
       return Copilot.model(model, {
         ...reasoningToCopilotConfig(model, flooredReasoning),
-      }).pipe(Layer.provide(Copilot.layerClient))
+      }).pipe(
+        Layer.provide(Copilot.layerClient),
+        Layer.provide(DeviceCodeHandler.layerConsole),
+      )
     }
   }
 }

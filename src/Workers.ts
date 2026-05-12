@@ -5,7 +5,7 @@ import {
   FiberMap,
   HashMap,
   pipe,
-  ServiceMap,
+  Context,
   Stream,
 } from "effect"
 import { Atom, AtomRegistry } from "effect/unstable/reactivity"
@@ -57,7 +57,7 @@ export const activeWorkerLoggingAtom = Atom.make(
   }),
 )
 
-export class CurrentWorkerState extends ServiceMap.Service<
+export class CurrentWorkerState extends Context.Service<
   CurrentWorkerState,
   {
     readonly state: Atom.Writable<WorkerState>

@@ -1,4 +1,4 @@
-import { Data, Duration, Effect, Layer, Option, ServiceMap } from "effect"
+import { Data, Duration, Effect, Layer, Option, Context } from "effect"
 import { IssueSource, type IssueSourceError } from "./IssueSource.ts"
 import type { PlatformError } from "effect/PlatformError"
 import type { Worktree } from "./Worktree.ts"
@@ -10,7 +10,7 @@ import { AtomRegistry } from "effect/unstable/reactivity"
 import { CurrentProjectId } from "./Settings.ts"
 
 // @effect-diagnostics-next-line leakingRequirements:off
-export class GitFlow extends ServiceMap.Service<
+export class GitFlow extends Context.Service<
   GitFlow,
   {
     readonly requiresGithubPr: boolean

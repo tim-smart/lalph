@@ -7,7 +7,7 @@ import {
   Schedule,
   Schema,
   ScopedRef,
-  ServiceMap,
+  Context,
   SubscriptionRef,
 } from "effect"
 import { allProjects, CurrentProjectId, Setting, Settings } from "./Settings.ts"
@@ -60,7 +60,7 @@ const getOrSelectIssueSource = Effect.gen(function* () {
   return yield* selectIssueSource
 })
 
-export class CurrentIssueSource extends ServiceMap.Service<
+export class CurrentIssueSource extends Context.Service<
   CurrentIssueSource,
   {
     readonly id: string
@@ -73,20 +73,20 @@ export class CurrentIssueSource extends ServiceMap.Service<
     readonly githubPrInstructions: string
   }
 >()("lalph/CurrentIssueSource") {
-  static layer = Layer.effectServices(
+  static layer = Layer.effectContext(
     Effect.gen(function* () {
       const settings = yield* Settings
       const source = yield* getOrSelectIssueSource
       const build = Layer.build(source.layer).pipe(
-        Effect.map(ServiceMap.get(IssueSource)),
+        Effect.map(Context.get(IssueSource)),
         Effect.withSpan("CurrentIssueSource.build"),
       )
       const ref = yield* ScopedRef.fromAcquire(build)
-      const services = yield* Effect.services<
+      const services = yield* Effect.context<
         Settings | ChildProcessSpawner | Prompt.Environment
       >()
       const refresh = ScopedRef.set(ref, build).pipe(
-        Effect.provideServices(services),
+        Effect.provideContext(services),
       )
       const unlessRalph =
         <B>(projectId: ProjectId, orElse: Effect.Effect<B>) =>
@@ -184,8 +184,8 @@ export class CurrentIssueSource extends ServiceMap.Service<
           ),
       })
 
-      return IssueSource.serviceMap(proxy).pipe(
-        ServiceMap.add(CurrentIssueSource, source),
+      return IssueSource.context(proxy).pipe(
+        Context.add(CurrentIssueSource, source),
       )
     }),
   ).pipe(Layer.provide([Settings.layer, PlatformServices]))

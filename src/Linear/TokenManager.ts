@@ -8,7 +8,7 @@ import {
   Schedule,
   Schema,
   Semaphore,
-  ServiceMap,
+  Context,
 } from "effect"
 import {
   FetchHttpClient,
@@ -27,7 +27,7 @@ import { layerKvs } from "../Kvs.ts"
 
 const clientId = "852ed0906088135c1f591d234a4eaa4b"
 
-export class TokenManager extends ServiceMap.Service<TokenManager>()(
+export class TokenManager extends Context.Service<TokenManager>()(
   "lalph/Linear/TokenManager",
   {
     make: Effect.gen(function* () {

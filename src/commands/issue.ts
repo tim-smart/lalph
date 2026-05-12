@@ -30,7 +30,7 @@ const FrontMatterSchema = Schema.toCodecJson(
 
 const handler = flow(
   Command.withHandler(
-    Effect.fnUntraced(function* () {
+    Effect.fnUntraced(function* (_: {}) {
       const editor = yield* Editor
 
       const content = yield* editor.editTemp({

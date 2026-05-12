@@ -16,7 +16,7 @@ export class CliAgentPreset extends Schema.Class<CliAgentPreset>(
   extraArgs: Schema.Array(Schema.String),
   sourceMetadata: Schema.Record(Schema.String, Schema.Any),
 }) {
-  static defaultId = CliAgentPresetId.makeUnsafe("default")
+  static defaultId = CliAgentPresetId.make("default")
 
   decodeMetadata<S extends Schema.Top>(
     source: string,

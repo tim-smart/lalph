@@ -95,7 +95,7 @@ export const addOrUpdatePreset = Effect.fnUntraced(function* (options?: {
   const id = options?.existing
     ? options.existing.id
     : (options?.idOverride ??
-      CliAgentPresetId.makeUnsafe(
+      CliAgentPresetId.make(
         yield* Prompt.text({
           message: "Preset name",
           validate(input) {
@@ -114,9 +114,7 @@ export const addOrUpdatePreset = Effect.fnUntraced(function* (options?: {
   const extraArgs = yield* Prompt.text({
     message: "Extra arguments? (leave empty for none)",
     default: options?.existing?.extraArgs.join(" ") ?? "",
-  })
-    .asEffect()
-    .pipe(Effect.map(parseCommand))
+  }).pipe(Effect.map(parseCommand))
   const commandPrefix = yield* promptForCommandPrefix(
     options?.existing?.commandPrefix,
   )

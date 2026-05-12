@@ -8,7 +8,7 @@ import {
   Schedule,
   Schema,
   ScopedCache,
-  ServiceMap,
+  Context,
   Stream,
   SubscriptionRef,
   pipe,
@@ -26,7 +26,7 @@ export type IssuesChange = Data.TaggedEnum<{
 }>
 export const IssuesChange = Data.taggedEnum<IssuesChange>()
 
-export class IssueSource extends ServiceMap.Service<
+export class IssueSource extends Context.Service<
   IssueSource,
   {
     readonly ref: (

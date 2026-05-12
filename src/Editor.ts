@@ -1,9 +1,9 @@
-import { Cause, Effect, FileSystem, Layer, ServiceMap } from "effect"
+import { Cause, Effect, FileSystem, Layer, Context } from "effect"
 import { configEditor } from "./shared/config.ts"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
 import { PlatformServices } from "./shared/platform.ts"
 
-export class Editor extends ServiceMap.Service<Editor>()("lalph/Editor", {
+export class Editor extends Context.Service<Editor>()("lalph/Editor", {
   make: Effect.gen(function* () {
     const fs = yield* FileSystem.FileSystem
     const editor = yield* configEditor

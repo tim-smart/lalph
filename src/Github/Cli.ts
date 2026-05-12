@@ -5,7 +5,7 @@ import {
   Layer,
   Option,
   Schema,
-  ServiceMap,
+  Context,
   String,
 } from "effect"
 import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
@@ -15,7 +15,7 @@ import {
   ReviewComment,
 } from "../domain/GithubComment.ts"
 
-export class GithubCli extends ServiceMap.Service<GithubCli>()(
+export class GithubCli extends Context.Service<GithubCli>()(
   "lalph/Github/Cli",
   {
     make: Effect.gen(function* () {

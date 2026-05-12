@@ -1,11 +1,11 @@
-import { Deferred, Effect, Random, Schema, ServiceMap, Struct } from "effect"
+import { Deferred, Effect, Random, Schema, Context, Struct } from "effect"
 import { Tool, Toolkit } from "effect/unstable/ai"
 import { PrdIssue } from "./domain/PrdIssue.ts"
 import { IssueSource } from "./IssueSource.ts"
 import { CurrentProjectId } from "./Settings.ts"
 import * as Yaml from "yaml"
 
-export class ChosenTaskDeferred extends ServiceMap.Reference(
+export class ChosenTaskDeferred extends Context.Reference(
   "lalph/TaskTools/ChosenTaskDeferred",
   {
     defaultValue: Deferred.makeUnsafe<{

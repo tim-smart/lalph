@@ -1,4 +1,4 @@
-import { Schema, Array, Equal, SchemaGetter } from "effect"
+import { Schema, Array, Equal, SchemaGetter, Effect } from "effect"
 import * as Yaml from "yaml"
 import { withEncodeDefault } from "../shared/schema.ts"
 
@@ -9,19 +9,19 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
         "The unique identifier of the issue. If null, it is considered a new issue.",
       documentation: "The unique identifier of the issue.",
     })
-    .pipe(withEncodeDefault(() => null)),
+    .pipe(withEncodeDefault(Effect.succeed(null))),
   title: Schema.String.annotate({
     description: "The title of the issue",
   }),
   description: Schema.String.annotate({
     description: "The description of the issue in markdown format.",
-  }).pipe(withEncodeDefault(() => "")),
+  }).pipe(withEncodeDefault(Effect.succeed(""))),
   priority: Schema.Finite.annotate({
     description:
       "The priority of the issue. 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.",
     documentation:
       "The priority of the issue. 0 = No priority, 1 = Urgent, 2 = High, 3 = Normal, 4 = Low.",
-  }).pipe(withEncodeDefault(() => 3)),
+  }).pipe(withEncodeDefault(Effect.succeed(3))),
   estimate: Schema.NullOr(Schema.Finite)
     .annotate({
       description:
@@ -29,7 +29,7 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
       documentation:
         "Null if no estimate is set. Roughly 1 point = 1 hour of work.",
     })
-    .pipe(withEncodeDefault(() => null)),
+    .pipe(withEncodeDefault(Effect.succeed(null))),
   state: Schema.Literals([
     "backlog",
     "todo",
@@ -41,18 +41,18 @@ export class PrdIssue extends Schema.Class<PrdIssue>("PrdIssue")({
       description: "The state of the issue.",
       documentation: "The state of the issue.",
     })
-    .pipe(withEncodeDefault(() => "todo")),
+    .pipe(withEncodeDefault(Effect.succeed("todo"))),
   blockedBy: Schema.Array(Schema.String)
     .annotate({
       description:
         "An array of issue IDs that block this issue. These issues must be completed before this issue can be worked on.",
       documentation: "An array of issue IDs that block this issue.",
     })
-    .pipe(withEncodeDefault(() => [])),
+    .pipe(withEncodeDefault(Effect.succeed([]))),
   autoMerge: Schema.Boolean.annotate({
     description:
       "Whether the issue should be auto-merged when complete. Read-only field",
-  }).pipe(withEncodeDefault(() => false)),
+  }).pipe(withEncodeDefault(Effect.succeed(false))),
 }) {
   static FromInput = Schema.Union([
     Schema.String,

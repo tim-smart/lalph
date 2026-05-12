@@ -62,9 +62,9 @@ export const commandPlan = Command.make("plan", {
         const editor = yield* Editor
         const fs = yield* FileSystem.FileSystem
 
-        const thePlan = yield* Effect.matchEffect(file.asEffect(), {
-          onFailure: () => editor.editTemp({ suffix: ".md" }),
-          onSuccess: (path) => fs.readFileString(path).pipe(Effect.asSome),
+        const thePlan = yield* Option.match(file, {
+          onNone: () => editor.editTemp({ suffix: ".md" }),
+          onSome: (path) => fs.readFileString(path).pipe(Effect.asSome),
         })
 
         if (Option.isNone(thePlan)) return

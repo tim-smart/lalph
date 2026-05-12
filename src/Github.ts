@@ -12,7 +12,7 @@ import {
   RcMap,
   Schedule,
   Schema,
-  ServiceMap,
+  Context,
   Stream,
   String,
   Unify,
@@ -60,7 +60,7 @@ type CachedGetResponse = {
   readonly url: string
 }
 
-export class Github extends ServiceMap.Service<Github, GithubService>()(
+export class Github extends Context.Service<Github, GithubService>()(
   "lalph/Github",
   {
     make: Effect.gen(function* () {
