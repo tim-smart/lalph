@@ -174,6 +174,7 @@ export const Mcp = Tool.providerDefined({
     server_label: Generated.MCPTool.fields.server_label,
     server_url: Generated.MCPTool.fields.server_url
   }),
+  parameters: Schema.Unknown,
   success: Schema.Struct({
     type: Generated.MCPToolCall.fields.type,
     name: Generated.MCPToolCall.fields.name,
@@ -203,7 +204,7 @@ export const Shell = Tool.providerDefined({
     action: Generated.FunctionShellCall.fields.action
   }),
   success: Schema.Struct({
-    output: Generated.FunctionShellCallOutputItemParam.fields.output
+    output: Generated.FunctionShellCallOutput.fields.output
   })
 })
 

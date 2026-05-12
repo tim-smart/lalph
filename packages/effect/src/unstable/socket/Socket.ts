@@ -4,6 +4,7 @@
 import type { NonEmptyReadonlyArray } from "../../Array.ts"
 import type * as Cause from "../../Cause.ts"
 import * as Channel from "../../Channel.ts"
+import * as Context from "../../Context.ts"
 import * as Deferred from "../../Deferred.ts"
 import type * as Duration from "../../Duration.ts"
 import * as Effect from "../../Effect.ts"
@@ -18,7 +19,6 @@ import * as Queue from "../../Queue.ts"
 import * as Result from "../../Result.ts"
 import * as Schema from "../../Schema.ts"
 import * as Scope from "../../Scope.ts"
-import * as ServiceMap from "../../ServiceMap.ts"
 
 /**
  * @since 4.0.0
@@ -36,7 +36,7 @@ export const isSocket = (u: unknown): u is Socket => Predicate.hasProperty(u, Ty
  * @since 4.0.0
  * @category tags
  */
-export const Socket: ServiceMap.Service<Socket, Socket> = ServiceMap.Service<Socket>("effect/socket/Socket")
+export const Socket: Context.Service<Socket, Socket> = Context.Service<Socket>("effect/socket/Socket")
 
 /**
  * @since 4.0.0
@@ -46,6 +46,12 @@ export interface Socket {
   readonly [TypeId]: typeof TypeId
   readonly run: <_, E = never, R = never>(
     handler: (_: Uint8Array) => Effect.Effect<_, E, R> | void,
+    options?: {
+      readonly onOpen?: Effect.Effect<void> | undefined
+    }
+  ) => Effect.Effect<void, SocketError | E, R>
+  readonly runString: <_, E = never, R = never>(
+    handler: (_: string) => Effect.Effect<_, E, R> | void,
     options?: {
       readonly onOpen?: Effect.Effect<void> | undefined
     }
@@ -62,6 +68,61 @@ export interface Socket {
     Scope.Scope
   >
 }
+
+/**
+ * @since 4.0.0
+ * @category Constructors
+ */
+export const make = (options: {
+  readonly runRaw: <_, E, R>(
+    handler: (_: string | Uint8Array) => Effect.Effect<_, E, R> | void,
+    options?: {
+      readonly onOpen?: Effect.Effect<void> | undefined
+    }
+  ) => Effect.Effect<void, SocketError | E, R>
+  readonly run?: <_, E, R>(
+    handler: (_: Uint8Array) => Effect.Effect<_, E, R> | void,
+    options?: {
+      readonly onOpen?: Effect.Effect<void> | undefined
+    }
+  ) => Effect.Effect<void, SocketError | E, R>
+  readonly runString?: <_, E, R>(
+    handler: (_: string) => Effect.Effect<_, E, R> | void,
+    options?: {
+      readonly onOpen?: Effect.Effect<void> | undefined
+    }
+  ) => Effect.Effect<void, SocketError | E, R>
+  readonly writer: Effect.Effect<
+    (chunk: Uint8Array | string | CloseEvent) => Effect.Effect<void, SocketError>,
+    never,
+    Scope.Scope
+  >
+}): Socket =>
+  Socket.of({
+    [TypeId]: TypeId,
+    runRaw: options.runRaw,
+    run: options.run ?? ((handler, opts) =>
+      options.runRaw((data) =>
+        typeof data === "string"
+          ? handler(encoder.encode(data))
+          : data instanceof Uint8Array
+          ? handler(data)
+          : handler(new Uint8Array(data)), opts)),
+    runString: options.runString ??
+      (options.run ?
+        (handler, opts) => options.run!((data) => handler(decoder.decode(data)), opts) :
+        (handler, opts) =>
+          options.runRaw((data) =>
+            typeof data === "string"
+              ? handler(data)
+              : data instanceof Uint8Array
+              ? handler(decoder.decode(data))
+              : handler(decoder.decode(new Uint8Array(data))), opts)),
+    writer: options.writer
+  })
+
+const encoder = new TextEncoder()
+const decoder = new TextDecoder()
 
 const CloseEventTypeId = "~effect/socket/Socket/CloseEvent"
 
@@ -382,7 +443,7 @@ export const makeChannel = <IE = never>(): Channel.Channel<
   IE,
   unknown,
   Socket
-> => Channel.unwrap(Effect.map(Socket.asEffect(), toChannelWith<IE>()))
+> => Channel.unwrap(Effect.map(Socket, toChannelWith<IE>()))
 
 /**
  * @since 4.0.0
@@ -393,7 +454,7 @@ export const defaultCloseCodeIsError = (_code: number) => true
  * @since 4.0.0
  * @category tags
  */
-export class WebSocket extends ServiceMap.Service<WebSocket, globalThis.WebSocket>()(
+export class WebSocket extends Context.Service<WebSocket, globalThis.WebSocket>()(
   "~effect/socket/Socket/WebSocket"
 ) {}
 
@@ -401,7 +462,7 @@ export class WebSocket extends ServiceMap.Service<WebSocket, globalThis.WebSocke
  * @since 4.0.0
  * @category tags
  */
-export class WebSocketConstructor extends ServiceMap.Service<
+export class WebSocketConstructor extends Context.Service<
   WebSocketConstructor,
   (url: string, protocols?: string | Array<string> | undefined) => globalThis.WebSocket
 >()("@effect/platform/Socket/WebSocketConstructor") {}
@@ -449,7 +510,7 @@ export const fromWebSocket = <RO>(
   Effect.withFiber((fiber) => {
     let currentWS: globalThis.WebSocket | undefined
     const latch = Latch.makeUnsafe(false)
-    const acquireContext = fiber.services as ServiceMap.ServiceMap<RO>
+    const acquireContext = fiber.context as Context.Context<RO>
     const closeCodeIsError = options?.closeCodeIsError ?? defaultCloseCodeIsError
 
     const runRaw = <_, E, R>(handler: (_: string | Uint8Array) => Effect.Effect<_, E, R> | void, opts?: {
@@ -551,23 +612,12 @@ export const fromWebSocket = <RO>(
           () => Effect.void
         )
       })).pipe(
-        Effect.updateServices((input: ServiceMap.ServiceMap<R>) => ServiceMap.merge(acquireContext, input)),
+        Effect.updateContext((input: Context.Context<R>) => Context.merge(acquireContext, input)),
         Effect.ensuring(Effect.sync(() => {
           latch.closeUnsafe()
           currentWS = undefined
         }))
       )
-
-    const encoder = new TextEncoder()
-    const run = <_, E, R>(handler: (_: Uint8Array) => Effect.Effect<_, E, R> | void, opts?: {
-      readonly onOpen?: Effect.Effect<void> | undefined
-    }) =>
-      runRaw((data) =>
-        typeof data === "string"
-          ? handler(encoder.encode(data))
-          : data instanceof Uint8Array
-          ? handler(data)
-          : handler(new Uint8Array(data)), opts)
 
     const write = (chunk: Uint8Array | string | CloseEvent) =>
       latch.whenOpen(Effect.sync(() => {
@@ -575,14 +625,12 @@ export const fromWebSocket = <RO>(
         if (isCloseEvent(chunk)) {
           ws.close(chunk.code, chunk.reason)
         } else {
-          ws.send(chunk)
+          ws.send(chunk as string | Uint8Array<ArrayBuffer>)
         }
       }))
     const writer = Effect.succeed(write)
 
-    return Effect.succeed(Socket.of({
-      [TypeId]: TypeId,
-      run,
+    return Effect.succeed(make({
       runRaw,
       writer
     }))
@@ -627,7 +675,7 @@ export const layerWebSocket: (
  * @since 4.0.0
  * @category fiber refs
  */
-export const SendQueueCapacity = ServiceMap.Reference<number>("~effect/socket/Socket/SendQueueCapacity", {
+export const SendQueueCapacity = Context.Reference<number>("~effect/socket/Socket/SendQueueCapacity", {
   defaultValue: () => 16
 })
 
@@ -653,7 +701,7 @@ export const fromTransformStream = <R>(acquire: Effect.Effect<InputTransformStre
       readonly stream: InputTransformStream
       readonly fiberSet: FiberSet.FiberSet<any, any>
     } | undefined
-    const acquireServices = fiber.services as ServiceMap.ServiceMap<R>
+    const acquireServices = fiber.context as Context.Context<R>
     const closeCodeIsError = options?.closeCodeIsError ?? defaultCloseCodeIsError
     const runRaw = <_, E, R>(handler: (_: string | Uint8Array) => Effect.Effect<_, E, R> | void, opts?: {
       readonly onOpen?: Effect.Effect<void> | undefined
@@ -699,21 +747,12 @@ export const fromTransformStream = <R>(acquire: Effect.Effect<InputTransformStre
         )
       })).pipe(
         (_) => _,
-        Effect.updateServices((input: ServiceMap.ServiceMap<R>) => ServiceMap.merge(acquireServices, input)),
+        Effect.updateContext((input: Context.Context<R>) => Context.merge(acquireServices, input)),
         Effect.ensuring(Effect.sync(() => {
           latch.closeUnsafe()
           currentStream = undefined
         }))
       )
-
-    const encoder = new TextEncoder()
-    const run = <_, E, R>(handler: (_: Uint8Array) => Effect.Effect<_, E, R> | void, opts?: {
-      readonly onOpen?: Effect.Effect<void> | undefined
-    }) =>
-      runRaw((data) =>
-        typeof data === "string"
-          ? handler(encoder.encode(data))
-          : handler(data), opts)
 
     const writers = new WeakMap<InputTransformStream, WritableStreamDefaultWriter<Uint8Array>>()
     const getWriter = (stream: InputTransformStream) => {
@@ -746,9 +785,7 @@ export const fromTransformStream = <R>(acquire: Effect.Effect<InputTransformStre
         })
     )
 
-    return Effect.succeed(Socket.of({
-      [TypeId]: TypeId,
-      run,
+    return Effect.succeed(make({
       runRaw,
       writer
     }))

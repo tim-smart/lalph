@@ -2,6 +2,7 @@
  * @since 1.0.0
  */
 import * as Config from "effect/Config"
+import * as Context from "effect/Context"
 import * as Duration from "effect/Duration"
 import * as Effect from "effect/Effect"
 import { identity } from "effect/Function"
@@ -9,7 +10,6 @@ import * as Layer from "effect/Layer"
 import * as Pool from "effect/Pool"
 import * as Redacted from "effect/Redacted"
 import * as Scope from "effect/Scope"
-import * as ServiceMap from "effect/ServiceMap"
 import * as Stream from "effect/Stream"
 import * as Reactivity from "effect/unstable/reactivity/Reactivity"
 import * as Client from "effect/unstable/sql/SqlClient"
@@ -24,6 +24,7 @@ import {
   SerializationError,
   SqlError,
   SqlSyntaxError,
+  UniqueViolation,
   UnknownError
 } from "effect/unstable/sql/SqlError"
 import * as Statement from "effect/unstable/sql/Statement"
@@ -51,7 +52,42 @@ const mssqlConnectionErrorCodes = new Set([233, 10054])
 const mssqlAuthenticationErrorCodes = new Set([4060, 18452, 18456])
 const mssqlAuthorizationErrorCodes = new Set([229, 230, 262, 297, 300])
 const mssqlSyntaxErrorCodes = new Set([102, 207, 208, 2714])
-const mssqlConstraintErrorCodes = new Set([515, 547, 2601, 2627])
+const mssqlConstraintErrorCodes = new Set([515, 547])
+
+const UNKNOWN_CONSTRAINT = "unknown"
+
+const normalizeConstraintIdentifier = (identifier: unknown): string => {
+  if (typeof identifier !== "string") {
+    return UNKNOWN_CONSTRAINT
+  }
+  const trimmed = identifier.trim()
+  return trimmed.length === 0 ? UNKNOWN_CONSTRAINT : trimmed
+}
+
+const mssqlCauseProperty = (cause: unknown, property: "constraint" | "message"): unknown => {
+  if (typeof cause !== "object" || cause === null || !(property in cause)) {
+    return undefined
+  }
+  return (cause as Record<string, unknown>)[property]
+}
+
+const mssqlUniqueViolationConstraintFromMessage = (number: 2601 | 2627, message: unknown): string => {
+  if (typeof message !== "string") {
+    return UNKNOWN_CONSTRAINT
+  }
+  const match = number === 2627 ?
+    /\bconstraint\s+'([^']*)'/i.exec(message) :
+    /\bunique index\s+'([^']*)'/i.exec(message)
+  return match === null ? UNKNOWN_CONSTRAINT : normalizeConstraintIdentifier(match[1])
+}
+
+const mssqlUniqueViolationConstraintFromCause = (number: 2601 | 2627, cause: unknown): string => {
+  const constraint = normalizeConstraintIdentifier(mssqlCauseProperty(cause, "constraint"))
+  if (constraint !== UNKNOWN_CONSTRAINT) {
+    return constraint
+  }
+  return mssqlUniqueViolationConstraintFromMessage(number, mssqlCauseProperty(cause, "message"))
+}
 
 const classifyError = (
   cause: unknown,
@@ -73,6 +109,9 @@ const classifyError = (
     }
     if (mssqlSyntaxErrorCodes.has(number)) {
       return new SqlSyntaxError(props)
+    }
+    if (number === 2601 || number === 2627) {
+      return new UniqueViolation({ ...props, constraint: mssqlUniqueViolationConstraintFromCause(number, cause) })
     }
     if (mssqlConstraintErrorCodes.has(number)) {
       return new ConstraintError(props)
@@ -130,7 +169,7 @@ export interface MssqlClient extends Client.SqlClient {
  * @category tags
  * @since 1.0.0
  */
-export const MssqlClient = ServiceMap.Service<MssqlClient>("@effect/sql-mssql/MssqlClient")
+export const MssqlClient = Context.Service<MssqlClient>("@effect/sql-mssql/MssqlClient")
 
 /**
  * @category models
@@ -173,10 +212,12 @@ interface MssqlConnection extends Connection {
   readonly rollback: (name?: string) => Effect.Effect<void, SqlError>
 }
 
-const TransactionConnection = Client.TransactionConnection as unknown as ServiceMap.Service<
+const TransactionConnection = Client.TransactionConnection as unknown as (clientId: number) => Context.Service<
   readonly [conn: MssqlConnection, counter: number],
   readonly [conn: MssqlConnection, counter: number]
 >
+
+let clientIdCounter = 0
 
 /**
  * @category constructors
@@ -458,8 +499,10 @@ export const make = (
       })
     )
 
+    const transactionService = TransactionConnection(clientIdCounter++)
+
     const withTransaction = Client.makeWithTransaction({
-      transactionService: TransactionConnection,
+      transactionService,
       spanAttributes,
       acquireConnection: Effect.gen(function*() {
         const scope = Scope.makeUnsafe()
@@ -477,6 +520,7 @@ export const make = (
       yield* Client.make({
         acquirer: Pool.get(pool),
         compiler,
+        transactionService: transactionService as any,
         spanAttributes,
         transformRows
       }),
@@ -529,12 +573,12 @@ export const layerConfig: (
 ) => Layer.Layer<Client.SqlClient | MssqlClient, Config.ConfigError | SqlError> = (
   config: Config.Wrap<MssqlClientConfig>
 ): Layer.Layer<Client.SqlClient | MssqlClient, Config.ConfigError | SqlError> =>
-  Layer.effectServices(
-    Config.unwrap(config).asEffect().pipe(
+  Layer.effectContext(
+    Config.unwrap(config).pipe(
       Effect.flatMap(make),
       Effect.map((client) =>
-        ServiceMap.make(MssqlClient, client).pipe(
-          ServiceMap.add(Client.SqlClient, client)
+        Context.make(MssqlClient, client).pipe(
+          Context.add(Client.SqlClient, client)
         )
       )
     )
@@ -547,10 +591,10 @@ export const layerConfig: (
 export const layer = (
   config: MssqlClientConfig
 ): Layer.Layer<Client.SqlClient | MssqlClient, never | SqlError> =>
-  Layer.effectServices(
+  Layer.effectContext(
     Effect.map(make(config), (client) =>
-      ServiceMap.make(MssqlClient, client).pipe(
-        ServiceMap.add(Client.SqlClient, client)
+      Context.make(MssqlClient, client).pipe(
+        Context.add(Client.SqlClient, client)
       ))
   ).pipe(Layer.provide(Reactivity.layer))
 

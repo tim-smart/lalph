@@ -34,6 +34,7 @@ export interface IndexedDbTable<
   readonly keyPath: KeyPath
   readonly indexes: Indexes
   readonly autoIncrement: AutoIncrement
+  readonly durability: IDBTransactionDurability
 }
 
 /**
@@ -42,14 +43,6 @@ export interface IndexedDbTable<
  */
 export type AnySchemaStruct = Schema.Top & {
   readonly fields: Schema.Struct.Fields
-  mapFields<To extends Schema.Struct.Fields>(
-    f: (fields: Schema.Struct.Fields) => To,
-    options?:
-      | {
-        readonly unsafePreserveChecks?: boolean | undefined
-      }
-      | undefined
-  ): Schema.Struct<To>
 }
 
 /**
@@ -167,6 +160,7 @@ export const make = <
     KeyPath
   > extends true ? AutoIncrement | undefined
     : never
+  readonly durability?: IDBTransactionDurability | undefined
 }): IndexedDbTable<
   Name,
   TableSchema,
@@ -178,18 +172,22 @@ export const make = <
   class Table {}
   Object.assign(Table, Proto)
   const readSchema = options.keyPath === undefined
-    ? (options.schema as Schema.Struct<{}>).mapFields(Struct.assign({ key: IndexedDb.IDBValidKey }))
+    ? Schema.Struct({
+      ...(options.schema as Schema.Struct<{}>).fields,
+      key: IndexedDb.IDBValidKey
+    })
     : options.schema
   ;(Table as any).tableName = options.name
   ;(Table as any).tableSchema = options.schema
   ;(Table as any).readSchema = readSchema
   ;(Table as any).arraySchema = Schema.Array(readSchema as any)
   ;(Table as any).autoincrementSchema = options.autoIncrement
-    ? (options.schema as Schema.Struct<{}>).mapFields(Struct.omit([options.keyPath!] as any))
+    ? Schema.Struct(Struct.omit((options.schema as Schema.Struct<{}>).fields, [options.keyPath!] as any))
     : options.schema
   ;(Table as any).keyPath = options.keyPath
   ;(Table as any).indexes = options.indexes
   ;(Table as any).autoIncrement = options.autoIncrement === true
+  ;(Table as any).durability = options.durability ?? "relaxed"
   return Table as any
 }
 

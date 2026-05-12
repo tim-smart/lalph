@@ -1,8 +1,8 @@
+import * as Context from "effect/Context"
 import * as Effect from "effect/Effect"
 import type * as JsonSchema from "effect/JsonSchema"
 import * as Layer from "effect/Layer"
 import * as Predicate from "effect/Predicate"
-import * as ServiceMap from "effect/ServiceMap"
 import * as String from "effect/String"
 import type { OpenAPISecurityScheme, OpenAPISpec, OpenAPISpecMethodName } from "effect/unstable/httpapi/OpenApi"
 import SwaggerToOpenApi from "swagger2openapi"
@@ -12,7 +12,7 @@ import * as OpenApiTransformer from "./OpenApiTransformer.ts"
 import * as ParsedOperation from "./ParsedOperation.ts"
 import * as Utils from "./Utils.ts"
 
-export class OpenApiGenerator extends ServiceMap.Service<
+export class OpenApiGenerator extends Context.Service<
   OpenApiGenerator,
   { readonly generate: (spec: OpenAPISpec, options: OpenApiGenerateOptions) => Effect.Effect<string> }
 >()("OpenApiGenerator") {}
@@ -372,6 +372,16 @@ const parseOpenApi = (
           )
           op.payloadFormData = true
           requestSchemaNames.set("multipart/form-data", op.payload)
+        }
+
+        if (Predicate.isNotUndefined(content["application/x-www-form-urlencoded"]?.schema)) {
+          op.payload = addSchema(
+            `${schemaId}RequestFormUrlEncoded`,
+            content["application/x-www-form-urlencoded"].schema,
+            op
+          )
+          op.payloadFormUrlEncoded = true
+          requestSchemaNames.set("application/x-www-form-urlencoded", op.payload)
         }
 
         if (isHttpApi) {

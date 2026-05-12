@@ -35,10 +35,13 @@
  * - Trim/case strings → {@link trim}, {@link toLowerCase}, {@link toUpperCase}, {@link capitalize}, {@link uncapitalize}, {@link snakeToCamel}
  * - Parse key-value strings → {@link splitKeyValue}
  * - Coerce string ↔ number/bigint → {@link numberFromString}, {@link bigintFromString}
+ * - Coerce string ↔ Date/Duration → {@link dateFromString}, {@link durationFromString}
  * - Decode durations → {@link durationFromNanos}, {@link durationFromMillis}
  * - Wrap nullable/optional as Option → {@link optionFromNullOr}, {@link optionFromOptionalKey}, {@link optionFromOptional}
  * - Parse URLs → {@link urlFromString}
  * - Base64 ↔ Uint8Array → {@link uint8ArrayFromBase64String}
+ * - Base64 ↔ string → {@link stringFromBase64String}
+ * - URI component ↔ string → {@link stringFromUriComponent}
  * - JSON string ↔ unknown → {@link fromJsonString}
  * - FormData/URLSearchParams ↔ unknown → {@link fromFormData}, {@link fromURLSearchParams}
  * - Check if a value is a Transformation → {@link isTransformation}
@@ -86,6 +89,7 @@ import * as BigDecimal from "./BigDecimal.ts"
 import * as DateTime from "./DateTime.ts"
 import * as Duration from "./Duration.ts"
 import * as Effect from "./Effect.ts"
+import { formatDate } from "./Formatter.ts"
 import * as Option from "./Option.ts"
 import * as Predicate from "./Predicate.ts"
 import type * as AST from "./SchemaAST.ts"
@@ -879,6 +883,80 @@ export const bigintFromString = new Transformation(
 )
 
 /**
+ * Decodes a `string` into a `Date` and encodes a `Date` back to a `string`.
+ *
+ * When to use this:
+ * - Parsing ISO 8601 date strings from APIs or user input.
+ *
+ * Behavior:
+ * - Decode: creates a `Date` from the string (like `new Date(s)`).
+ * - Encode: converts the `Date` to an ISO string (like `date.toISOString()`),
+ *   returning `"Invalid Date"` for invalid dates.
+ *
+ * **Example** (Date from string)
+ *
+ * ```ts
+ * import { Schema, SchemaTransformation } from "effect"
+ *
+ * const schema = Schema.String.pipe(
+ *   Schema.decodeTo(Schema.Date, SchemaTransformation.dateFromString)
+ * )
+ * ```
+ *
+ * See also:
+ * - {@link numberFromString}
+ * - {@link dateTimeUtcFromString}
+ *
+ * @category Coercions
+ * @since 4.0.0
+ */
+export const dateFromString: Transformation<globalThis.Date, string> = new Transformation(
+  Getter.Date(),
+  Getter.transform(formatDate)
+)
+
+/**
+ * Decodes a `string` into a `Duration` and encodes a `Duration` back to a
+ * parseable `string`.
+ *
+ * When to use this:
+ * - Parsing human-readable duration strings from APIs, config, or user input.
+ *
+ * Behavior:
+ * - Decode: accepts any string that `Duration.fromInput` can parse, including
+ *   `"Infinity"` and `"-Infinity"`.
+ * - Encode: returns `String(duration)`, producing strings like `"2000 millis"`
+ *   or `"10 nanos"` that round-trip through the parser.
+ *
+ * **Example** (Duration from string)
+ *
+ * ```ts
+ * import { Schema, SchemaTransformation } from "effect"
+ *
+ * const schema = Schema.String.pipe(
+ *   Schema.decodeTo(Schema.Duration, SchemaTransformation.durationFromString)
+ * )
+ * ```
+ *
+ * See also:
+ * - {@link durationFromNanos}
+ * - {@link durationFromMillis}
+ *
+ * @since 4.0.0
+ */
+export const durationFromString: Transformation<Duration.Duration, string> = transformOrFail<
+  Duration.Duration,
+  string
+>({
+  decode: (s) =>
+    Option.match(Duration.fromInput(s as Duration.Input), {
+      onNone: () => Effect.fail(new Issue.InvalidValue(Option.some(s), { message: `Invalid Duration string: ${s}` })),
+      onSome: Effect.succeed
+    }),
+  encode: (duration) => Effect.succeed(globalThis.String(duration))
+})
+
+/**
  * Decodes a `bigint` (nanoseconds) into a `Duration` and encodes a
  * `Duration` back to `bigint` nanoseconds.
  *
@@ -1213,7 +1291,7 @@ export const urlFromString: Transformation<URL, string> = transformOrFail<URL, s
   decode: (s) =>
     Effect.try({
       try: () => new URL(s),
-      catch: (e) => new Issue.InvalidValue(Option.some(s), { message: globalThis.String(e) })
+      catch: () => new Issue.InvalidValue(Option.some(s), { message: `Invalid URL string: ${s}` })
     }),
   encode: (url) => Effect.succeed(url.href)
 })
@@ -1269,12 +1347,141 @@ export const bigDecimalFromString: Transformation<BigDecimal.BigDecimal, string>
  *
  * See also:
  * - {@link fromJsonString}
+ * - `Schema.Uint8ArrayFromBase64` - a ready-made schema wrapping this transformation.
  *
  * @since 4.0.0
  */
 export const uint8ArrayFromBase64String: Transformation<Uint8Array<ArrayBufferLike>, string> = new Transformation(
   Getter.decodeBase64(),
   Getter.encodeBase64()
+)
+
+/**
+ * Decodes a Base64-encoded `string` into a UTF-8 `string` and encodes a
+ * UTF-8 `string` back to a Base64 string.
+ *
+ * When to use this:
+ * - Handling text data transmitted as Base64 strings.
+ *
+ * Behavior:
+ * - Decode: parses the Base64 string into a UTF-8 string.
+ * - Encode: encodes the string as a Base64 string.
+ *
+ * **Example** (String from Base64)
+ *
+ * ```ts
+ * import { Schema, SchemaTransformation } from "effect"
+ *
+ * const schema = Schema.String.pipe(
+ *   Schema.decodeTo(Schema.String, SchemaTransformation.stringFromBase64String)
+ * )
+ * ```
+ *
+ * See also:
+ * - {@link uint8ArrayFromBase64String}
+ * - `Schema.StringFromBase64` - a ready-made schema wrapping this transformation.
+ *
+ * @since 4.0.0
+ */
+export const stringFromBase64String: Transformation<string, string> = new Transformation(
+  Getter.decodeBase64String(),
+  Getter.encodeBase64()
+)
+
+/**
+ * Decodes a base64 (URL) encoded `string` into a UTF-8 `string` and encodes it back.
+ *
+ * When to use this:
+ * - Handling text data transmitted as Base64 URL-safe strings.
+ *
+ * Behavior:
+ * - Decode: parses the Base64 URL string into a UTF-8 string.
+ * - Encode: encodes the string as a Base64 URL string.
+ *
+ * **Example** (String from Base64Url)
+ *
+ * ```ts
+ * import { Schema, SchemaTransformation } from "effect"
+ *
+ * const schema = Schema.String.pipe(
+ *   Schema.decodeTo(Schema.String, SchemaTransformation.stringFromBase64UrlString)
+ * )
+ * ```
+ *
+ * See also:
+ * - {@link stringFromBase64String}
+ * - `Schema.StringFromBase64Url` - a ready-made schema wrapping this transformation.
+ *
+ * @since 4.0.0
+ */
+export const stringFromBase64UrlString: Transformation<string, string> = new Transformation(
+  Getter.decodeBase64UrlString(),
+  Getter.encodeBase64Url()
+)
+
+/**
+ * Decodes a hex encoded `string` into a UTF-8 `string` and encodes it back.
+ *
+ * When to use this:
+ * - Handling text data transmitted as hexadecimal strings.
+ *
+ * Behavior:
+ * - Decode: parses the hex string into a UTF-8 string.
+ * - Encode: encodes the string as a hex string.
+ *
+ * **Example** (String from Hex)
+ *
+ * ```ts
+ * import { Schema, SchemaTransformation } from "effect"
+ *
+ * const schema = Schema.String.pipe(
+ *   Schema.decodeTo(Schema.String, SchemaTransformation.stringFromHexString)
+ * )
+ * ```
+ *
+ * See also:
+ * - {@link stringFromBase64String}
+ * - `Schema.StringFromHex` - a ready-made schema wrapping this transformation.
+ *
+ * @since 4.0.0
+ */
+export const stringFromHexString: Transformation<string, string> = new Transformation(
+  Getter.decodeHexString(),
+  Getter.encodeHex()
+)
+
+/**
+ * Decodes a URI component encoded string into a UTF-8 string and encodes a
+ * UTF-8 string into a URI component encoded string.
+ *
+ * When to use this:
+ * - Storing structured data in URL query parameters or fragments.
+ * - Composing with `Schema.parseJson` to round-trip JSON through a URL.
+ *
+ * Behavior:
+ * - Decode: calls `decodeURIComponent`. Fails if the input contains malformed
+ *   percent-encoding sequences.
+ * - Encode: calls `encodeURIComponent`.
+ *
+ * **Example** (URI component schema)
+ *
+ * ```ts
+ * import { Schema, SchemaTransformation } from "effect"
+ *
+ * const schema = Schema.String.pipe(
+ *   Schema.decodeTo(Schema.String, SchemaTransformation.stringFromUriComponent)
+ * )
+ * ```
+ *
+ * See also:
+ * - {@link stringFromBase64String}
+ * - `Schema.StringFromUriComponent` - a ready-made schema wrapping this transformation.
+ *
+ * @since 4.0.0
+ */
+export const stringFromUriComponent: Transformation<string, string> = new Transformation(
+  Getter.decodeUriComponent(),
+  Getter.encodeUriComponent()
 )
 
 /**
@@ -1426,7 +1633,8 @@ export const dateTimeUtcFromString: Transformation<DateTime.Utc, string> = trans
 >({
   decode: (s) => {
     return Option.match(DateTime.make(s), {
-      onNone: () => Effect.fail(new Issue.InvalidValue(Option.some(s), { message: "Invalid DateTime input" })),
+      onNone: () =>
+        Effect.fail(new Issue.InvalidValue(Option.some(s), { message: `Invalid UTC DateTime string: ${s}` })),
       onSome: (result) => Effect.succeed(DateTime.toUtc(result))
     })
   },
@@ -1443,7 +1651,7 @@ export const dateTimeZonedFromString: Transformation<DateTime.Zoned, string> = t
   decode: (s) => {
     return Option.match(DateTime.makeZonedFromString(s), {
       onNone: () =>
-        Effect.fail(new Issue.InvalidValue(Option.some(s), { message: `Invalid zoned DateTime string: ${s}` })),
+        Effect.fail(new Issue.InvalidValue(Option.some(s), { message: `Invalid Zoned DateTime string: ${s}` })),
       onSome: Effect.succeed
     })
   },

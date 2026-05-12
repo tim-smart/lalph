@@ -53,4 +53,11 @@ describe("TestClock", () => {
       yield* TestClock.setTime(Duration.toMillis(Duration.hours(11)))
       assert.isTrue(elapsed)
     }))
+
+  it.effect("setTime - floors nanoseconds for fractional millisecond instants", () =>
+    Effect.gen(function*() {
+      const testClock = yield* TestClock.make()
+      yield* testClock.setTime(199023438.0000004)
+      assert.strictEqual(testClock.currentTimeNanosUnsafe(), 199023438000000n)
+    }))
 })

@@ -8,6 +8,7 @@
   },
   "rules": {
     // Effect custom rules
+    "effect/no-bigint-literals": "error",
     "effect/no-import-from-barrel-package": ["error", {
       "checkPatterns": [
         "^effect$",
@@ -57,6 +58,7 @@
     "unicorn/require-post-message-target-origin": "off",
     "unicorn/prefer-add-event-listener": "off",
     "unicorn/prefer-set-has": "off",
+    "no-dangling-underscore": "off",
     "typescript/no-explicit-any": "off",
     "typescript/no-empty-interface": "off",
     "typescript/ban-ts-comment": "off",

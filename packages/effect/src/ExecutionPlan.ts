@@ -2,6 +2,7 @@
  * @since 3.16.0
  */
 import type { NonEmptyReadonlyArray } from "./Array.ts"
+import * as Context from "./Context.ts"
 import type * as Effect from "./Effect.ts"
 import { constant } from "./Function.ts"
 import * as effect from "./internal/effect.ts"
@@ -10,7 +11,6 @@ import type { Pipeable } from "./Pipeable.ts"
 import { pipeArguments } from "./Pipeable.ts"
 import * as Predicate from "./Predicate.ts"
 import type * as Schedule from "./Schedule.ts"
-import * as ServiceMap from "./ServiceMap.ts"
 
 /**
  * @since 3.16.0
@@ -84,7 +84,7 @@ export interface ExecutionPlan<
   readonly [TypeId]: TypeId
   readonly steps: NonEmptyReadonlyArray<{
     readonly provide:
-      | ServiceMap.ServiceMap<Config["provides"]>
+      | Context.Context<Config["provides"]>
       | Layer.Layer<Config["provides"], Config["error"], Config["requirements"]>
     readonly attempts?: number | undefined
     readonly while?:
@@ -94,10 +94,9 @@ export interface ExecutionPlan<
   }>
 
   /**
-   * Returns an equivalent `ExecutionPlan` with the requirements satisfied,
-   * using the current context.
+   * Returns an equivalent `ExecutionPlan` with the requirements satisfied, using the current context.
    */
-  readonly withRequirements: Effect.Effect<
+  readonly captureRequirements: Effect.Effect<
     ExecutionPlan<{
       provides: Config["provides"]
       input: Config["input"]
@@ -169,7 +168,7 @@ export const make = <const Steps extends NonEmptyReadonlyArray<make.Step>>(
   provides: make.StepProvides<Steps>
   input: make.StepInput<Steps>
   error:
-    | (Steps[number]["provide"] extends ServiceMap.ServiceMap<infer _P> | Layer.Layer<infer _P, infer E, infer _R> ? E
+    | (Steps[number]["provide"] extends Context.Context<infer _P> | Layer.Layer<infer _P, infer E, infer _R> ? E
       : never)
     | (Steps[number]["while"] extends (input: infer _I) => Effect.Effect<infer _A, infer _E, infer _R> ? _E : never)
   requirements:
@@ -203,7 +202,7 @@ export declare namespace make {
    * @since 3.16.0
    */
   export type Step = {
-    readonly provide: ServiceMap.ServiceMap<any> | ServiceMap.ServiceMap<never> | Layer.Any
+    readonly provide: Context.Context<any> | Context.Context<never> | Layer.Any
     readonly attempts?: number | undefined
     readonly while?: ((input: any) => boolean | Effect.Effect<boolean, any, any>) | undefined
     readonly schedule?: Schedule.Schedule<any, any, any> | undefined
@@ -217,8 +216,7 @@ export declare namespace make {
       Rest,
       & Out
       & (
-        (Step extends { readonly provide: ServiceMap.ServiceMap<infer P> | Layer.Layer<infer P, infer _E, infer _R> } ?
-          P
+        (Step extends { readonly provide: Context.Context<infer P> | Layer.Layer<infer P, infer _E, infer _R> } ? P
           : unknown)
       )
     > :
@@ -257,13 +255,13 @@ export declare namespace make {
 
 const Proto: Omit<ExecutionPlan<any>, "steps"> = {
   [TypeId]: TypeId,
-  get withRequirements() {
+  get captureRequirements() {
     const self = this as any as ExecutionPlan<any>
-    return effect.servicesWith((services: ServiceMap.ServiceMap<any>) =>
+    return effect.contextWith((context: Context.Context<any>) =>
       effect.succeed(makeProto(self.steps.map((step) => ({
         ...step,
         provide: Layer.isLayer(step.provide)
-          ? Layer.provide(step.provide, Layer.succeedServices(services))
+          ? Layer.provide(step.provide, Layer.succeedContext(context))
           : step.provide
       })) as any))
     )
@@ -312,7 +310,7 @@ export interface Metadata {
  * @since 4.0.0
  * @category Metadata
  */
-export const CurrentMetadata = ServiceMap.Reference<Metadata>("effect/ExecutionPlan/CurrentMetadata", {
+export const CurrentMetadata = Context.Reference<Metadata>("effect/ExecutionPlan/CurrentMetadata", {
   defaultValue: constant({
     attempt: 0,
     stepIndex: 0

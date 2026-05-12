@@ -44,7 +44,7 @@ export const make = (self: MessagePort | Window): WorkerRunner.WorkerRunnerPlatf
       Effect.scopedWith(Effect.fnUntraced(function*(scope) {
         const closeLatch = Deferred.makeUnsafe<void, WorkerError>()
         const trackFiber = Fiber.runIn(scope)
-        const services = yield* Effect.services<R>()
+        const services = yield* Effect.context<R>()
         const runFork = Effect.runForkWith(services)
         const onExit = (exit: Exit.Exit<any, E>) => {
           if (exit._tag === "Failure" && !Cause.hasInterruptsOnly(exit.cause)) {
@@ -83,7 +83,7 @@ export const make = (self: MessagePort | Window): WorkerRunner.WorkerRunnerPlatf
                 message: "An messageerror event was emitted",
                 cause: error.data
               })
-            }).asEffect()
+            })
           )
         }
         function onError(error: any) {
@@ -94,7 +94,7 @@ export const make = (self: MessagePort | Window): WorkerRunner.WorkerRunnerPlatf
                 message: "An error event was emitted",
                 cause: error.data
               })
-            }).asEffect()
+            })
           )
         }
         function handlePort(port: MessagePort) {

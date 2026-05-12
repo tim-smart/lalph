@@ -3,6 +3,7 @@ import { assert, describe, expect, it } from "@effect/vitest"
 import {
   Array,
   Cause,
+  Context,
   DateTime,
   Effect,
   Equal,
@@ -13,7 +14,6 @@ import {
   Schema,
   SchemaGetter,
   SchemaTransformation,
-  ServiceMap,
   Stream,
   Struct
 } from "effect"
@@ -39,6 +39,7 @@ import {
   HttpApiMiddleware,
   HttpApiSchema,
   HttpApiSecurity,
+  HttpApiTest,
   OpenApi
 } from "effect/unstable/httpapi"
 
@@ -102,7 +103,7 @@ describe("HttpApi", () => {
       class M extends HttpApiMiddleware.Service<M>()("Http/Logger", {
         error: Schema.String
           .pipe(
-            HttpApiSchema.status(405),
+            HttpApiSchema.status("MethodNotAllowed"),
             HttpApiSchema.asText()
           )
       }) {}
@@ -389,7 +390,7 @@ describe("HttpApi", () => {
     })
 
     it.effect("layerClient supports effectful construction", () => {
-      class HeaderValue extends ServiceMap.Service<HeaderValue, string>()("HeaderValue") {}
+      class HeaderValue extends Context.Service<HeaderValue, string>()("HeaderValue") {}
 
       class M extends HttpApiMiddleware.Service<M>()("Client/Effectful", {
         requiredForClient: true
@@ -435,7 +436,7 @@ describe("HttpApi", () => {
     })
 
     it.effect("security middleware can be implemented with layerClient", () => {
-      class CurrentToken extends ServiceMap.Service<CurrentToken, string>()("CurrentToken") {}
+      class CurrentToken extends Context.Service<CurrentToken, string>()("CurrentToken") {}
 
       class M extends HttpApiMiddleware.Service<M, {
         provides: CurrentToken
@@ -458,7 +459,7 @@ describe("HttpApi", () => {
       const GroupLive = HttpApiBuilder.group(
         Api,
         "group",
-        (handlers) => handlers.handle("a", () => CurrentToken.asEffect())
+        (handlers) => handlers.handle("a", () => CurrentToken)
       )
       const MLive = Layer.succeed(M)({
         apiKey: (effect, options) => Effect.provideService(effect, CurrentToken, Redacted.value(options.credential))
@@ -484,7 +485,7 @@ describe("HttpApi", () => {
     })
 
     it("security middleware cache does not reuse the first service impl", async () => {
-      class CurrentMarker extends ServiceMap.Service<CurrentMarker, string>()("CurrentMarker") {}
+      class CurrentMarker extends Context.Service<CurrentMarker, string>()("CurrentMarker") {}
 
       class M extends HttpApiMiddleware.Service<M, {
         provides: CurrentMarker
@@ -511,7 +512,7 @@ describe("HttpApi", () => {
         const GroupLive = HttpApiBuilder.group(
           Api,
           "group",
-          (handlers) => handlers.handle("a", () => Effect.map(CurrentMarker.asEffect(), (marker) => ({ marker })))
+          (handlers) => handlers.handle("a", () => Effect.map(CurrentMarker, (marker) => ({ marker })))
         )
         const MLive = Layer.succeed(M)({
           apiKey: (effect) => Effect.provideService(effect, CurrentMarker, marker)
@@ -904,7 +905,7 @@ describe("HttpApi", () => {
         (handlers) =>
           handlers
             .handle("a", () => Effect.void)
-            .handle("b", () => Effect.succeed(HttpApiSchema.NoContent.makeUnsafe()))
+            .handle("b", () => Effect.succeed(HttpApiSchema.NoContent.make()))
             .handle("c", () => Effect.succeed("-"))
       )
 
@@ -998,7 +999,7 @@ describe("HttpApi", () => {
           HttpApiGroup.make("group")
             .add(
               HttpApiEndpoint.get("a", "/a", {
-                error: Schema.Void.pipe(HttpApiSchema.status(403))
+                error: Schema.Void.pipe(HttpApiSchema.status("Forbidden"))
               }),
               HttpApiEndpoint.get("b", "/b", {
                 error: HttpApiSchema.NoContent,
@@ -1007,7 +1008,7 @@ describe("HttpApi", () => {
               HttpApiEndpoint.get("c", "/c", {
                 error: Schema.String.pipe(
                   HttpApiSchema.asNoContent({ decode: () => "c" }),
-                  HttpApiSchema.status(403)
+                  HttpApiSchema.status("Forbidden")
                 )
               }),
               HttpApiEndpoint.get("d", "/d", {
@@ -1027,7 +1028,7 @@ describe("HttpApi", () => {
         (handlers) =>
           handlers
             .handle("a", () => Effect.fail(undefined))
-            .handle("b", () => Effect.fail(HttpApiSchema.NoContent.makeUnsafe()))
+            .handle("b", () => Effect.fail(HttpApiSchema.NoContent.make()))
             .handle("c", () => Effect.fail(""))
             .handle("d", () => Effect.fail(void 0))
             .handle("e", () => Effect.fail(new HttpApiError.Unauthorized({})))
@@ -1227,7 +1228,8 @@ describe("HttpApi", () => {
           const error = yield* client.users.upload({ params: {}, payload: new FormData() }).pipe(
             Effect.flip
           )
-          assert.deepStrictEqual(error, new HttpApiError.BadRequest({}))
+          assert(error._tag === "HttpClientError" && error.reason._tag === "DecodeError")
+          assert.strictEqual(error.reason.response.status, 400)
         }).pipe(Effect.provide(HttpLive)))
     })
 
@@ -1432,7 +1434,7 @@ describe("HttpApi", () => {
             decode: (message) => new RateLimitError({ message })
           })
         ),
-        HttpApiSchema.status(429),
+        HttpApiSchema.status("TooManyRequests"),
         HttpApiSchema.asText()
       )
 
@@ -1448,8 +1450,7 @@ describe("HttpApi", () => {
           HttpApiBuilder.group(
             Api,
             "group",
-            (handlers) =>
-              handlers.handle("error", () => new RateLimitError({ message: "Rate limit exceeded" }).asEffect())
+            (handlers) => handlers.handle("error", () => new RateLimitError({ message: "Rate limit exceeded" }))
           )
         ),
         HttpRouter.serve,
@@ -1461,6 +1462,29 @@ describe("HttpApi", () => {
         assert.deepStrictEqual(response, new RateLimitError({ message: "Rate limit exceeded" }))
       }).pipe(Effect.provide(ApiLive))
     })
+  })
+
+  describe("HttpApiTest", () => {
+    it.effect("works", () =>
+      Effect.gen(function*() {
+        const client = yield* HttpApiTest.groups(Api, ["groups"])
+        const result = yield* client.groups.findById({ params: { id: 0 } })
+        assert.deepStrictEqual(result, new Group({ id: 1, name: "foo" }))
+      }).pipe(
+        Effect.provide([
+          NodeHttpServer.layerHttpServices,
+          AuthorizationLive,
+          HttpApiBuilder.group(Api, "groups", (handlers) =>
+            handlers
+              .handle("findById", () => Effect.succeed(new Group({ id: 1, name: "foo" })))
+              .handle(
+                "handle",
+                () => Effect.die("unimplemented")
+              )
+              .handle("create", () => Effect.die("unimplemented"))
+              .handle("handleRaw", () => Effect.die("unimplemented")))
+        ])
+      ))
   })
 })
 
@@ -1502,7 +1526,7 @@ const securityQuery = HttpApiSecurity.apiKey({
   key: "api_key"
 })
 
-class CurrentUser extends ServiceMap.Service<CurrentUser, User>()("CurrentUser") {}
+class CurrentUser extends Context.Service<CurrentUser, User>()("CurrentUser") {}
 
 class Authorization extends HttpApiMiddleware.Service<Authorization, {
   provides: CurrentUser
@@ -1585,7 +1609,7 @@ class UsersApi extends HttpApiGroup.make("users")
         page: Schema.Finite.pipe(
           Schema.optionalKey,
           Schema.decode({
-            decode: SchemaGetter.withDefault(() => 1),
+            decode: SchemaGetter.withDefault(Effect.succeed(1)),
             encode: SchemaGetter.passthrough()
           })
         )
@@ -1664,7 +1688,7 @@ class Api extends HttpApi.make("api")
 
 // impl
 
-class UserRepo extends ServiceMap.Service<UserRepo, {
+class UserRepo extends Context.Service<UserRepo, {
   readonly findById: (id: number) => Effect.Effect<User>
 }>()("UserRepo") {
   static Live = Layer.succeed(this)({
@@ -1694,7 +1718,7 @@ const HttpUsersLive = HttpApiBuilder.group(
     const fs = yield* FileSystem.FileSystem
     const repo = yield* UserRepo
     return handlers
-      .handle("findById", (_) => _.params.id === -1 ? CurrentUser.asEffect() : repo.findById(_.params.id))
+      .handle("findById", (_) => _.params.id === -1 ? CurrentUser : repo.findById(_.params.id))
       .handle("create", (_) =>
         _.payload.name === "boom"
           ? Effect.fail(new UserError({}))
@@ -1733,7 +1757,7 @@ const HttpUsersLive = HttpApiBuilder.group(
               )
             ),
             Stream.runCollect,
-            Effect.flatMap((_) => Array.head(_).asEffect()),
+            Effect.flatMap((_) => Effect.fromOption(Array.head(_))),
             Effect.orDie
           )
           return {

@@ -3,6 +3,7 @@
  */
 import * as Arr from "../../Array.ts"
 import { Clock } from "../../Clock.ts"
+import * as Context from "../../Context.ts"
 import * as Data from "../../Data.ts"
 import * as Effect from "../../Effect.ts"
 import * as Exit from "../../Exit.ts"
@@ -12,7 +13,6 @@ import * as Layer from "../../Layer.ts"
 import * as Option from "../../Option.ts"
 import type { Predicate } from "../../Predicate.ts"
 import * as Schema from "../../Schema.ts"
-import * as ServiceMap from "../../ServiceMap.ts"
 import type * as Rpc from "../rpc/Rpc.ts"
 import { EntityNotAssignedToRunner, MalformedMessage, type PersistenceError } from "./ClusterError.ts"
 import * as DeliverAt from "./DeliverAt.ts"
@@ -20,7 +20,7 @@ import type { EntityAddress } from "./EntityAddress.ts"
 import * as Envelope from "./Envelope.ts"
 import * as Message from "./Message.ts"
 import * as Reply from "./Reply.ts"
-import { ShardId } from "./ShardId.ts"
+import * as ShardId from "./ShardId.ts"
 import type { ShardingConfig } from "./ShardingConfig.ts"
 import * as Snowflake from "./Snowflake.ts"
 
@@ -28,7 +28,7 @@ import * as Snowflake from "./Snowflake.ts"
  * @since 4.0.0
  * @category context
  */
-export class MessageStorage extends ServiceMap.Service<MessageStorage, {
+export class MessageStorage extends Context.Service<MessageStorage, {
   /**
    * Save the provided message and its associated metadata.
    */
@@ -98,7 +98,7 @@ export class MessageStorage extends ServiceMap.Service<MessageStorage, {
   /**
    * Unregister the reply handlers for the specified ShardId.
    */
-  readonly unregisterShardReplyHandlers: (shardId: ShardId) => Effect.Effect<void>
+  readonly unregisterShardReplyHandlers: (shardId: ShardId.ShardId) => Effect.Effect<void>
 
   /**
    * Retrieves the unprocessed messages for the specified shards.
@@ -111,7 +111,7 @@ export class MessageStorage extends ServiceMap.Service<MessageStorage, {
    * - All Interrupt's for unprocessed requests
    */
   readonly unprocessedMessages: (
-    shardIds: Iterable<ShardId>
+    shardIds: Iterable<ShardId.ShardId>
   ) => Effect.Effect<Array<Message.Incoming<any>>, PersistenceError>
 
   /**
@@ -125,7 +125,7 @@ export class MessageStorage extends ServiceMap.Service<MessageStorage, {
    * Reset the mailbox state for the provided shards.
    */
   readonly resetShards: (
-    shardIds: Iterable<ShardId>
+    shardIds: Iterable<ShardId.ShardId>
   ) => Effect.Effect<void, PersistenceError>
 
   /**
@@ -483,7 +483,7 @@ export const makeEncoded: (encoded: Encoded) => Effect.Effect<
           const duplicate = result
           const schema = Reply.Reply(message.rpc)
           return Schema.decodeEffect(schema)(result.lastReceivedReply.value).pipe(
-            Effect.provideServices(message.services),
+            Effect.provideContext(message.context),
             MalformedMessage.refail,
             Effect.map((reply) =>
               SaveResult.Duplicate({
@@ -630,7 +630,7 @@ export const makeEncoded: (encoded: Encoded) => Effect.Effect<
         if (!message) return Effect.void
         const schema = Reply.Reply(message.rpc)
         return Schema.decodeEffect(schema)(reply).pipe(
-          Effect.provideServices(message.services)
+          Effect.provideContext(message.context)
         ) as Effect.Effect<Reply.Reply<any>, Schema.SchemaError>
       }),
       (error) => {
@@ -699,7 +699,7 @@ export type MemoryEntry = {
  * @since 4.0.0
  * @category Memory
  */
-export const MemoryTransaction = ServiceMap.Reference<boolean>("effect/cluster/MessageStorage/MemoryTransaction", {
+export const MemoryTransaction = Context.Reference<boolean>("effect/cluster/MessageStorage/MemoryTransaction", {
   defaultValue: constFalse
 })
 
@@ -707,7 +707,7 @@ export const MemoryTransaction = ServiceMap.Reference<boolean>("effect/cluster/M
  * @since 4.0.0
  * @category Memory
  */
-export class MemoryDriver extends ServiceMap.Service<MemoryDriver>()("effect/cluster/MessageStorage/MemoryDriver", {
+export class MemoryDriver extends Context.Service<MemoryDriver>()("effect/cluster/MessageStorage/MemoryDriver", {
   make: Effect.gen(function*() {
     const clock = yield* Clock
     const requests = new Map<string, MemoryEntry>()
@@ -843,7 +843,7 @@ export class MemoryDriver extends ServiceMap.Service<MemoryDriver>()("effect/clu
           }>()
           for (let index = 0; index < journal.length; index++) {
             const envelope = journal[index]
-            const shardId = ShardId.makeUnsafe(envelope.address.shardId)
+            const shardId = ShardId.make(envelope.address.shardId.group, envelope.address.shardId.id)
             if (!unprocessed.has(envelope as any) || !shardIds.includes(shardId.toString())) {
               continue
             }
@@ -929,7 +929,7 @@ export const layerMemory: Layer.Layer<
   MessageStorage | MemoryDriver,
   never,
   ShardingConfig
-> = Layer.effect(MessageStorage, Effect.map(MemoryDriver.asEffect(), (_) => _.storage)).pipe(
+> = Layer.effect(MessageStorage, Effect.map(MemoryDriver, (_) => _.storage)).pipe(
   Layer.provideMerge(MemoryDriver.layer)
 )
 

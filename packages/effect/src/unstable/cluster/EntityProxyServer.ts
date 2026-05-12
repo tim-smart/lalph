@@ -1,9 +1,9 @@
 /**
  * @since 4.0.0
  */
+import * as Context from "../../Context.ts"
 import * as Effect from "../../Effect.ts"
 import * as Layer from "../../Layer.ts"
-import * as ServiceMap from "../../ServiceMap.ts"
 import type * as HttpApi from "../httpapi/HttpApi.ts"
 import * as HttpApiBuilder from "../httpapi/HttpApiBuilder.ts"
 import type * as HttpApiGroup from "../httpapi/HttpApiGroup.ts"
@@ -81,8 +81,8 @@ export const layerRpcHandlers = <
 >(
   entity: Entity.Entity<Type, Rpcs>
 ): Layer.Layer<RpcHandlers<Rpcs, Type>, never, Sharding | Rpc.ServicesServer<Rpcs>> =>
-  Layer.effectServices(Effect.gen(function*() {
-    const services = yield* Effect.services<never>()
+  Layer.effectContext(Effect.gen(function*() {
+    const context = yield* Effect.context<never>()
     const client = yield* entity.client
     const handlers = new Map<string, Rpc.Handler<string>>()
     for (const parentRpc_ of entity.protocol.requests.values()) {
@@ -90,18 +90,18 @@ export const layerRpcHandlers = <
       const tag = `${entity.type}.${parentRpc._tag}` as const
       const key = `effect/rpc/Rpc/${tag}`
       handlers.set(key, {
-        services,
+        context,
         tag,
         handler: ({ entityId, payload }: any) => (client(entityId) as any)[parentRpc._tag](payload) as any
       } as any)
       handlers.set(`${key}Discard`, {
-        services,
+        context,
         tag,
         handler: ({ entityId, payload }: any) =>
           (client(entityId) as any)[parentRpc._tag](payload, { discard: true }) as any
       } as any)
     }
-    return ServiceMap.makeUnsafe(handlers)
+    return Context.makeUnsafe(handlers)
   }))
 
 /**

@@ -32,7 +32,7 @@ export const layer: Layer.Layer<WorkerRunner.WorkerRunnerPlatform> = Layer.succe
       Effect.scopedWith(Effect.fnUntraced(function*(scope) {
         const closeLatch = Deferred.makeUnsafe<void, WorkerError>()
         const trackFiber = Fiber.runIn(scope)
-        const services = yield* Effect.services<R>()
+        const services = yield* Effect.context<R>()
         const runFork = Effect.runForkWith(services)
         const onExit = (exit: Exit.Exit<any, E>) => {
           if (exit._tag === "Failure" && !Cause.hasInterruptsOnly(exit.cause)) {
@@ -62,7 +62,7 @@ export const layer: Layer.Layer<WorkerRunner.WorkerRunnerPlatform> = Layer.succe
                 message: "received messageerror event",
                 cause: error.data
               })
-            }).asEffect()
+            })
           )
         }
         function onError(error: MessageEvent) {
@@ -73,7 +73,7 @@ export const layer: Layer.Layer<WorkerRunner.WorkerRunnerPlatform> = Layer.succe
                 message: "received error event",
                 cause: error.data
               })
-            }).asEffect()
+            })
           )
         }
         yield* Scope.addFinalizer(

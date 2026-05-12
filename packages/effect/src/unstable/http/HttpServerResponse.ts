@@ -1,6 +1,7 @@
 /**
  * @since 4.0.0
  */
+import * as Context from "../../Context.ts"
 import * as Effect from "../../Effect.ts"
 import * as ErrorReporter from "../../ErrorReporter.ts"
 import type * as FileSystem from "../../FileSystem.ts"
@@ -14,7 +15,6 @@ import { hasProperty } from "../../Predicate.ts"
 import { redact } from "../../Redactable.ts"
 import type * as Schema from "../../Schema.ts"
 import type { ParseOptions } from "../../SchemaAST.ts"
-import * as ServiceMap from "../../ServiceMap.ts"
 import * as Stream from "../../Stream.ts"
 import type { Mutable } from "../../Types.ts"
 import * as Cookies from "./Cookies.ts"
@@ -202,10 +202,10 @@ export const htmlStream = <
   Template.Interpolated.Context<A[number]>
 > =>
   Effect.map(
-    Effect.services<Template.Interpolated.Context<A[number]>>(),
+    Effect.context<Template.Interpolated.Context<A[number]>>(),
     (context) =>
       stream(
-        Stream.provideServices(
+        Stream.provideContext(
           Stream.encodeText(Template.stream(strings, ...args)),
           context
         ),
@@ -355,7 +355,7 @@ export const stream = <E>(
   })
 }
 
-const HttpPlatformKey = ServiceMap.Service<
+const HttpPlatformKey = Context.Service<
   HttpPlatform,
   HttpPlatform["Service"]
 >("effect/http/HttpPlatform" satisfies typeof HttpPlatform.key)
@@ -374,7 +374,7 @@ export const file = (
     })
     | undefined
 ): Effect.Effect<HttpServerResponse, PlatformError, HttpPlatform> =>
-  Effect.flatMap(HttpPlatformKey.asEffect(), (platform) => platform.fileResponse(path, options))
+  Effect.flatMap(HttpPlatformKey, (platform) => platform.fileResponse(path, options))
 
 /**
  * @since 4.0.0
@@ -390,7 +390,7 @@ export const fileWeb = (
     })
     | undefined
 ): Effect.Effect<HttpServerResponse, never, HttpPlatform> =>
-  Effect.flatMap(HttpPlatformKey.asEffect(), (platform) => platform.fileWebResponse(file, options))
+  Effect.flatMap(HttpPlatformKey, (platform) => platform.fileWebResponse(file, options))
 
 /**
  * @since 4.0.0
@@ -482,7 +482,7 @@ export const setCookie: {
     options?: Cookies.Cookie["options"]
   ): Effect.Effect<HttpServerResponse, Cookies.CookiesError> =>
     Effect.map(
-      Cookies.set(self.cookies, name, value, options).asEffect(),
+      Effect.fromResult(Cookies.set(self.cookies, name, value, options)),
       (cookies) =>
         makeResponse({
           ...self,
@@ -515,7 +515,7 @@ export const expireCookie: {
     options?: Omit<NonNullable<Cookies.Cookie["options"]>, "expires" | "maxAge">
   ): Effect.Effect<HttpServerResponse, Cookies.CookiesError> =>
     Effect.map(
-      Cookies.expireCookie(self.cookies, name, options).asEffect(),
+      Effect.fromResult(Cookies.expireCookie(self.cookies, name, options)),
       (cookies) =>
         makeResponse({
           ...self,
@@ -656,7 +656,7 @@ export const setCookies: {
       ]
     >
   ): Effect.Effect<HttpServerResponse, Cookies.CookiesError> =>
-    Effect.map(Cookies.setAll(self.cookies, cookies).asEffect(), (cookies) =>
+    Effect.map(Effect.fromResult(Cookies.setAll(self.cookies, cookies)), (cookies) =>
       makeResponse({
         ...self,
         cookies
@@ -753,7 +753,7 @@ export const toWeb = (
   response: HttpServerResponse,
   options?: {
     readonly withoutBody?: boolean | undefined
-    readonly services?: ServiceMap.ServiceMap<never> | undefined
+    readonly context?: Context.Context<never> | undefined
   }
 ): Response => {
   const headers = new globalThis.Headers(response.headers)
@@ -804,7 +804,7 @@ export const toWeb = (
       return new Response(
         Stream.toReadableStreamWith(
           body.stream,
-          options?.services ?? ServiceMap.empty()
+          options?.context ?? Context.empty()
         ),
         {
           status: response.status,
@@ -995,8 +995,8 @@ class ServerHttpClientResponse extends Inspectable.Class implements HttpClientRe
     if (body._tag === "FormData") {
       return Effect.succeed(body.formData)
     }
-    return Effect.servicesWith((services: ServiceMap.ServiceMap<never>) => {
-      const readableStream = Stream.toReadableStreamWith(this.stream, services)
+    return Effect.contextWith((context: Context.Context<never>) => {
+      const readableStream = Stream.toReadableStreamWith(this.stream, context)
       return Effect.tryPromise({
         try: () => new Response(readableStream, { headers: this.headers }).formData(),
         catch: (cause) => this.decodeError(cause)
