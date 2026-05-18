@@ -61,7 +61,7 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
           gitFlow,
         }),
       ),
-      prdFilePath: pathService.join(".lalph", "prd.yml"),
+      prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
       extraArgs: options.preset.extraArgs,
     }),
     ChildProcess.setCwd(worktree.directory),
