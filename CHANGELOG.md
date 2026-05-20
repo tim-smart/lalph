@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.131
+
+### Patch Changes
+
+- [`08fee6d`](https://github.com/tim-smart/lalph/commit/08fee6dc032fe61552fc747e558b1264d4b5b703) Thanks [@tim-smart](https://github.com/tim-smart)! - update deps
+
 ## 0.3.130
 
 ### Patch Changes
