@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.132
+
+### Patch Changes
+
+- [`fb935d4`](https://github.com/tim-smart/lalph/commit/fb935d433039458d7bc7bfba170d638ebb1d2e1c) Thanks [@tim-smart](https://github.com/tim-smart)! - disallow open questions
+
 ## 0.3.131
 
 ### Patch Changes
