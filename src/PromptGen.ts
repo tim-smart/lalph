@@ -384,9 +384,11 @@ ${options.plan}
      accordingly.
    - When interviewing the user, ask one question at a time about anything that
      needs clarification.
+   - At the end of the interview, there should be no open questions left.
 2. Add a detailed implementation plan to the specification, breaking down the work into
    smaller, manageable tasks.
-3. Start two subagents to review the plan:
+3. If there are any open questions, restart the interview process from step 1.
+4. Start two subagents to review the plan:
    - The first subagent will recieve the following prompt:
      \`\`\`
      Your job is to thoroughly review the specification created for the request,
@@ -414,13 +416,13 @@ ${options.plan}
      {insert original prompt here}
      \`\`\`
 
-4. Write the specification details to a \`.lalph/plan.json\` file using the following format:
+5. Write the specification details to a \`.lalph/plan.json\` file using the following format:
    \`\`\`json
    {
      "specification": "path/to/specification/file.md"
    }
    \`\`\`
-5. Present the full path to the specification file for review.
+6. Present the full absolute path to the specification file for review.
 
 **Important:** You are only creating or updating a plan, not implementing any tasks yet.
 
