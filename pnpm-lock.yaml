@@ -28,17 +28,17 @@ importers:
         specifier: ^2.31.0
         version: 2.31.0(@types/node@25.7.0)
       '@effect/ai-openai':
-        specifier: 4.0.0-beta.71
-        version: 4.0.0-beta.71(effect@4.0.0-beta.71)
+        specifier: 4.0.0-beta.72
+        version: 4.0.0-beta.72(effect@4.0.0-beta.72)
       '@effect/ai-openai-compat':
-        specifier: 4.0.0-beta.71
-        version: 4.0.0-beta.71(effect@4.0.0-beta.71)
+        specifier: 4.0.0-beta.72
+        version: 4.0.0-beta.72(effect@4.0.0-beta.72)
       '@effect/language-service':
         specifier: ^0.86.2
         version: 0.86.2
       '@effect/platform-node':
-        specifier: 4.0.0-beta.71
-        version: 4.0.0-beta.71(effect@4.0.0-beta.71)(ioredis@5.10.1)
+        specifier: 4.0.0-beta.72
+        version: 4.0.0-beta.72(effect@4.0.0-beta.72)(ioredis@5.10.1)
       '@linear/sdk':
         specifier: ^86.0.0
         version: 86.0.0(graphql@16.14.0)
@@ -53,13 +53,13 @@ importers:
         version: 7.0.0-dev.20260527.1
       clanka:
         specifier: ^0.2.67
-        version: 0.2.67(@effect/ai-openai-compat@4.0.0-beta.71(effect@4.0.0-beta.71))(@effect/ai-openai@4.0.0-beta.71(effect@4.0.0-beta.71))(@effect/platform-node@4.0.0-beta.71(effect@4.0.0-beta.71)(ioredis@5.10.1))(@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.71))(effect@4.0.0-beta.71)(zod@4.4.3)
+        version: 0.2.67(@effect/ai-openai-compat@4.0.0-beta.72(effect@4.0.0-beta.72))(@effect/ai-openai@4.0.0-beta.72(effect@4.0.0-beta.72))(@effect/platform-node@4.0.0-beta.72(effect@4.0.0-beta.72)(ioredis@5.10.1))(@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.72))(effect@4.0.0-beta.72)(zod@4.4.3)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
       effect:
-        specifier: 4.0.0-beta.71
-        version: 4.0.0-beta.71
+        specifier: 4.0.0-beta.72
+        version: 4.0.0-beta.72
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -195,31 +195,31 @@ packages:
   '@changesets/write@0.4.0':
     resolution: {integrity: sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q==}
 
-  '@effect/ai-openai-compat@4.0.0-beta.71':
-    resolution: {integrity: sha512-jQ/HYhdqahaeLByNjoAQqiu9mcXvbShhfWR5KM1/3dh2iCghmTGq/Y9bSJ5grkM5Ba5lqYrXdBDUGh7kPoUY6Q==}
+  '@effect/ai-openai-compat@4.0.0-beta.72':
+    resolution: {integrity: sha512-WTnbhq2KDH3DpcFwJ/Y4m3TcJet08B/YQrUVlQlogSA1lDnBNsQoODzquPS5hvIMiZzs1lGSVgaXWMETLKIxtg==}
     peerDependencies:
-      effect: ^4.0.0-beta.71
+      effect: ^4.0.0-beta.72
 
-  '@effect/ai-openai@4.0.0-beta.71':
-    resolution: {integrity: sha512-yY38Ownqh+F2yHzX33uyoJJciXYWn5F5CbXMkew46z3c0+Q2PljwSC69Os0Uy7Pzh5kb5YRZE2oWmKVUzVSw/w==}
+  '@effect/ai-openai@4.0.0-beta.72':
+    resolution: {integrity: sha512-5j468EzyS7g8ZxIjt6/nn8vyM+nQHvbJGv8xNObHdnu2kcp1fxSyuYEhlK4eCpD2LrUA9IB6jgzT6QxMXp2XgQ==}
     peerDependencies:
-      effect: ^4.0.0-beta.71
+      effect: ^4.0.0-beta.72
 
   '@effect/language-service@0.86.2':
     resolution: {integrity: sha512-SaPln+8srOqDJDUwNTDmP5e+IYpEDr9+1epGznnsLqu8xvo6VnxyWARdeLpqvZJlb0Pgy9ca7ppqvvdWbHPXAg==}
     hasBin: true
 
-  '@effect/platform-node-shared@4.0.0-beta.71':
-    resolution: {integrity: sha512-wTMfzEjNggk6Yi4IEo7JyyOeIeQOLpcoOQVc8c446ubOmNsDJVdsIFTB00Nk/CCWm6mxV0C3Vm5tYEB2Z08swg==}
+  '@effect/platform-node-shared@4.0.0-beta.72':
+    resolution: {integrity: sha512-BP0migc1dxUxqNsaf6MZx9yo+m/gpw5+AlsTBUWRw14h4Vb/GiZbS7rFDZY0ofJ9z1BYails9F6IaiEP+P27sQ==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      effect: ^4.0.0-beta.71
+      effect: ^4.0.0-beta.72
 
-  '@effect/platform-node@4.0.0-beta.71':
-    resolution: {integrity: sha512-Jh+gmqDyhtPL5PRsgptTOQaKSVUxGzNdaB0sUX1oHSS3Ez38tmQRNELNTVTm9v/7CSH8aIurgY9mgQ7ZMb5Ktg==}
+  '@effect/platform-node@4.0.0-beta.72':
+    resolution: {integrity: sha512-QbHFPI8JRa74ytvgz4xMNwryJvyvLj5wCCwm0uzJDhTseNIv22VnqjmneEmPAfqCorGE1mG+K0kcMC7162g3sg==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      effect: ^4.0.0-beta.71
+      effect: ^4.0.0-beta.72
       ioredis: ^5.7.0
 
   '@effect/sql-sqlite-node@4.0.0-beta.66':
@@ -1141,8 +1141,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  effect@4.0.0-beta.71:
-    resolution: {integrity: sha512-DKnsUK3/DnCU4GfiOnw7DVXkKeg+UTh2J92rgVLpLZYUrfvQd5h7FasFm125/613Cbn/P0iPXkMnmFCd0fxV4g==}
+  effect@4.0.0-beta.72:
+    resolution: {integrity: sha512-EMmlKthKQ3xyb+Waev3DWlMWYY2ZSnr8GensPc2APInw5seTHLkhrTxeWu1Yb+t5nuqMmV7RUkaW+vgWB0N8gA==}
 
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
@@ -2372,29 +2372,29 @@ snapshots:
       human-id: 4.1.3
       prettier: 2.8.8
 
-  '@effect/ai-openai-compat@4.0.0-beta.71(effect@4.0.0-beta.71)':
+  '@effect/ai-openai-compat@4.0.0-beta.72(effect@4.0.0-beta.72)':
     dependencies:
-      effect: 4.0.0-beta.71
+      effect: 4.0.0-beta.72
 
-  '@effect/ai-openai@4.0.0-beta.71(effect@4.0.0-beta.71)':
+  '@effect/ai-openai@4.0.0-beta.72(effect@4.0.0-beta.72)':
     dependencies:
-      effect: 4.0.0-beta.71
+      effect: 4.0.0-beta.72
 
   '@effect/language-service@0.86.2': {}
 
-  '@effect/platform-node-shared@4.0.0-beta.71(effect@4.0.0-beta.71)':
+  '@effect/platform-node-shared@4.0.0-beta.72(effect@4.0.0-beta.72)':
     dependencies:
       '@types/ws': 8.18.1
-      effect: 4.0.0-beta.71
+      effect: 4.0.0-beta.72
       ws: 8.20.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@effect/platform-node@4.0.0-beta.71(effect@4.0.0-beta.71)(ioredis@5.10.1)':
+  '@effect/platform-node@4.0.0-beta.72(effect@4.0.0-beta.72)(ioredis@5.10.1)':
     dependencies:
-      '@effect/platform-node-shared': 4.0.0-beta.71(effect@4.0.0-beta.71)
-      effect: 4.0.0-beta.71
+      '@effect/platform-node-shared': 4.0.0-beta.72(effect@4.0.0-beta.72)
+      effect: 4.0.0-beta.72
       ioredis: 5.10.1
       mime: 4.1.0
       undici: 8.2.0
@@ -2402,10 +2402,10 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.71)':
+  '@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.72)':
     dependencies:
       better-sqlite3: 12.10.0
-      effect: 4.0.0-beta.71
+      effect: 4.0.0-beta.72
 
   '@emnapi/core@1.10.0':
     dependencies:
@@ -3075,16 +3075,16 @@ snapshots:
 
   chownr@1.1.4: {}
 
-  clanka@0.2.67(@effect/ai-openai-compat@4.0.0-beta.71(effect@4.0.0-beta.71))(@effect/ai-openai@4.0.0-beta.71(effect@4.0.0-beta.71))(@effect/platform-node@4.0.0-beta.71(effect@4.0.0-beta.71)(ioredis@5.10.1))(@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.71))(effect@4.0.0-beta.71)(zod@4.4.3):
+  clanka@0.2.67(@effect/ai-openai-compat@4.0.0-beta.72(effect@4.0.0-beta.72))(@effect/ai-openai@4.0.0-beta.72(effect@4.0.0-beta.72))(@effect/platform-node@4.0.0-beta.72(effect@4.0.0-beta.72)(ioredis@5.10.1))(@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.72))(effect@4.0.0-beta.72)(zod@4.4.3):
     dependencies:
-      '@effect/ai-openai': 4.0.0-beta.71(effect@4.0.0-beta.71)
-      '@effect/ai-openai-compat': 4.0.0-beta.71(effect@4.0.0-beta.71)
-      '@effect/platform-node': 4.0.0-beta.71(effect@4.0.0-beta.71)(ioredis@5.10.1)
-      '@effect/sql-sqlite-node': 4.0.0-beta.66(effect@4.0.0-beta.71)
+      '@effect/ai-openai': 4.0.0-beta.72(effect@4.0.0-beta.72)
+      '@effect/ai-openai-compat': 4.0.0-beta.72(effect@4.0.0-beta.72)
+      '@effect/platform-node': 4.0.0-beta.72(effect@4.0.0-beta.72)(ioredis@5.10.1)
+      '@effect/sql-sqlite-node': 4.0.0-beta.66(effect@4.0.0-beta.72)
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
       '@vscode/ripgrep': 1.18.0
       chalk: 5.6.2
-      effect: 4.0.0-beta.71
+      effect: 4.0.0-beta.72
       glob: 13.0.6
       tree-sitter: 0.21.1
       tree-sitter-javascript: 0.23.1(tree-sitter@0.21.1)
@@ -3194,7 +3194,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  effect@4.0.0-beta.71:
+  effect@4.0.0-beta.72:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 4.8.0
