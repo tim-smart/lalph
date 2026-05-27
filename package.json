@@ -33,13 +33,13 @@
     "tree-sitter-typescript": "^0.23.2"
   },
   "optionalDependencies": {
-    "@sqliteai/sqlite-vector-darwin-arm64": "0.9.95",
-    "@sqliteai/sqlite-vector-darwin-x86_64": "0.9.95",
-    "@sqliteai/sqlite-vector-linux-arm64": "0.9.95",
-    "@sqliteai/sqlite-vector-linux-arm64-musl": "0.9.95",
-    "@sqliteai/sqlite-vector-linux-x86_64": "0.9.95",
-    "@sqliteai/sqlite-vector-linux-x86_64-musl": "0.9.95",
-    "@sqliteai/sqlite-vector-win32-x86_64": "0.9.95"
+    "@sqliteai/sqlite-vector-darwin-arm64": "1.0.0",
+    "@sqliteai/sqlite-vector-darwin-x86_64": "1.0.0",
+    "@sqliteai/sqlite-vector-linux-arm64": "1.0.0",
+    "@sqliteai/sqlite-vector-linux-arm64-musl": "1.0.0",
+    "@sqliteai/sqlite-vector-linux-x86_64": "1.0.0",
+    "@sqliteai/sqlite-vector-linux-x86_64-musl": "1.0.0",
+    "@sqliteai/sqlite-vector-win32-x86_64": "1.0.0"
   },
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",
@@ -51,8 +51,8 @@
     "@linear/sdk": "^86.0.0",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@octokit/types": "^16.0.0",
-    "@typescript/native-preview": "7.0.0-dev.20260526.1",
-    "clanka": "^0.2.66",
+    "@typescript/native-preview": "7.0.0-dev.20260527.1",
+    "clanka": "^0.2.67",
     "concurrently": "^9.2.1",
     "effect": "4.0.0-beta.71",
     "husky": "^9.1.7",
