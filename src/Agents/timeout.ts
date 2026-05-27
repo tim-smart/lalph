@@ -29,7 +29,7 @@ export const agentTimeout = Effect.fnUntraced(function* (options: {
         taskId: task.id!,
         specsDirectory: options.specsDirectory,
       }),
-      prdFilePath: pathService.join(".lalph", "prd.yml"),
+      prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
     }),
     ralph: ({ task, specFile }) => ({
       mode: "ralph" as const,

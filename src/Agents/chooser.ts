@@ -63,7 +63,7 @@ export const agentChooser = Effect.fnUntraced(function* (options: {
   yield* pipe(
     options.preset.cliAgent.command({
       prompt: promptGen.promptChoose({ gitFlow }),
-      prdFilePath: pathService.join(".lalph", "prd.yml"),
+      prdFilePath: pathService.join(worktree.directory, ".lalph", "prd.yml"),
       extraArgs: options.preset.extraArgs,
     }),
     ChildProcess.setCwd(worktree.directory),
