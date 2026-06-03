@@ -18,7 +18,7 @@ export const commandAgentsEdit = Command.make("edit").pipe(
       if (presets.length === 0) {
         return yield* Effect.log("No presets available to edit.")
       }
-      const preset = yield* selectCliAgentPreset
+      const preset = yield* selectCliAgentPreset()
       yield* addOrUpdatePreset({ existing: preset })
     }),
   ),

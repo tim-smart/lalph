@@ -67,7 +67,9 @@ export const welcomeWizard = Effect.gen(function* () {
   })
 })
 
-export const selectCliAgentPreset = Effect.gen(function* () {
+export const selectCliAgentPreset = Effect.fnUntraced(function* (
+  initial?: CliAgentPresetId,
+) {
   const presets = yield* getAllCliAgentPresets
   if (presets.length === 0) {
     return yield* welcomeWizard
@@ -81,6 +83,7 @@ export const selectCliAgentPreset = Effect.gen(function* () {
     choices: presets.map((p) => ({
       title: p.id,
       value: p,
+      selected: p.id === initial,
     })),
   })
   return selection!

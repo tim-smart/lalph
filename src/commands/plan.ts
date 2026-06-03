@@ -85,7 +85,7 @@ export const commandPlan = Command.make("plan", {
             ? yield* addOrUpdateProject(undefined, true)
             : yield* selectProject
           const { specsDirectory } = yield* commandRoot
-          const preset = yield* selectCliAgentPreset
+          const preset = yield* selectCliAgentPreset()
 
           yield* plan({
             plan: thePlan.value,

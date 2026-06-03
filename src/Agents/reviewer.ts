@@ -34,6 +34,11 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
   const customInstructions = yield* pipe(
     fs.readFileString(pathService.join(worktree.directory, "LALPH_REVIEW.md")),
     Effect.option,
+    Effect.map(
+      Option.map((content) =>
+        content.replaceAll("{TASK_INSTRUCTIONS}", options.instructions),
+      ),
+    ),
   )
 
   // use clanka
@@ -61,7 +66,10 @@ export const agentReviewer = Effect.fnUntraced(function* (options: {
           gitFlow,
         }),
       ),
-      prdFilePath: pathService.join(".lalph", "prd.yml"),
+      prdFilePath: CurrentTask.$match(options.currentTask, {
+        task: () => pathService.join(".lalph", "prd.yml"),
+        ralph: () => undefined,
+      }),
       extraArgs: options.preset.extraArgs,
     }),
     ChildProcess.setCwd(worktree.directory),

@@ -25,18 +25,7 @@ export const layerClankaModel = (input: string) =>
     Effect.gen(function* () {
       const [provider, model, reasoning] = yield* parseInput(input.split("/"))
       const layer = resolve(provider, model, reasoning)
-      return Layer.merge(
-        layer,
-        Agent.layerSubagentModel(
-          reasoning === "low"
-            ? layer
-            : resolveSubagent(
-                provider,
-                model,
-                reasoning === "medium" ? "low" : "medium",
-              ),
-        ),
-      )
+      return Layer.merge(layer, Agent.layerSubagentModel(layer))
     }),
   )
 
@@ -60,35 +49,6 @@ const resolve = (
     case "copilot": {
       return Copilot.model(model, {
         ...reasoningToCopilotConfig(model, reasoning),
-      }).pipe(
-        Layer.provide(Copilot.layerClient),
-        Layer.provide(DeviceCodeHandler.layerConsole),
-      )
-    }
-  }
-}
-
-const resolveSubagent = (
-  provider: "openai" | "copilot",
-  model: string,
-  reasoning: typeof Reasoning.Type,
-) => {
-  const flooredReasoning = reasoning === "medium" ? "low" : "medium"
-  switch (provider) {
-    case "openai": {
-      return Codex.modelWebSocket("gpt-5.4-mini", {
-        reasoning: {
-          effort: "high",
-        },
-      }).pipe(
-        Layer.provide(NodeSocket.layerWebSocketConstructorWS),
-        Layer.provide(Codex.layerClient),
-        Layer.provide(DeviceCodeHandler.layerConsole),
-      )
-    }
-    case "copilot": {
-      return Copilot.model(model, {
-        ...reasoningToCopilotConfig(model, flooredReasoning),
       }).pipe(
         Layer.provide(Copilot.layerClient),
         Layer.provide(DeviceCodeHandler.layerConsole),

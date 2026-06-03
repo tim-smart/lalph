@@ -28,17 +28,17 @@ importers:
         specifier: ^2.31.0
         version: 2.31.0(@types/node@25.7.0)
       '@effect/ai-openai':
-        specifier: 4.0.0-beta.72
-        version: 4.0.0-beta.72(effect@4.0.0-beta.72)
+        specifier: 4.0.0-beta.75
+        version: 4.0.0-beta.75(effect@4.0.0-beta.75)
       '@effect/ai-openai-compat':
-        specifier: 4.0.0-beta.72
-        version: 4.0.0-beta.72(effect@4.0.0-beta.72)
+        specifier: 4.0.0-beta.75
+        version: 4.0.0-beta.75(effect@4.0.0-beta.75)
       '@effect/language-service':
         specifier: ^0.86.2
         version: 0.86.2
       '@effect/platform-node':
-        specifier: 4.0.0-beta.72
-        version: 4.0.0-beta.72(effect@4.0.0-beta.72)(ioredis@5.10.1)
+        specifier: 4.0.0-beta.75
+        version: 4.0.0-beta.75(effect@4.0.0-beta.75)(ioredis@5.10.1)
       '@linear/sdk':
         specifier: ^86.0.0
         version: 86.0.0(graphql@16.14.0)
@@ -49,17 +49,17 @@ importers:
         specifier: ^16.0.0
         version: 16.0.0
       '@typescript/native-preview':
-        specifier: 7.0.0-dev.20260527.1
-        version: 7.0.0-dev.20260527.1
+        specifier: 7.0.0-dev.20260527.2
+        version: 7.0.0-dev.20260527.2
       clanka:
         specifier: ^0.2.67
-        version: 0.2.67(@effect/ai-openai-compat@4.0.0-beta.72(effect@4.0.0-beta.72))(@effect/ai-openai@4.0.0-beta.72(effect@4.0.0-beta.72))(@effect/platform-node@4.0.0-beta.72(effect@4.0.0-beta.72)(ioredis@5.10.1))(@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.72))(effect@4.0.0-beta.72)(zod@4.4.3)
+        version: 0.2.67(@effect/ai-openai-compat@4.0.0-beta.75(effect@4.0.0-beta.75))(@effect/ai-openai@4.0.0-beta.75(effect@4.0.0-beta.75))(@effect/platform-node@4.0.0-beta.75(effect@4.0.0-beta.75)(ioredis@5.10.1))(@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.75))(effect@4.0.0-beta.75)(zod@4.4.3)
       concurrently:
         specifier: ^9.2.1
         version: 9.2.1
       effect:
-        specifier: 4.0.0-beta.72
-        version: 4.0.0-beta.72
+        specifier: 4.0.0-beta.75
+        version: 4.0.0-beta.75
       husky:
         specifier: ^9.1.7
         version: 9.1.7
@@ -77,7 +77,7 @@ importers:
         version: 3.8.3
       tsdown:
         specifier: ^0.22.0
-        version: 0.22.0(@typescript/native-preview@7.0.0-dev.20260527.1)(typescript@6.0.3)
+        version: 0.22.0(@typescript/native-preview@7.0.0-dev.20260527.2)(typescript@6.0.3)
       typescript:
         specifier: ^6.0.3
         version: 6.0.3
@@ -195,31 +195,31 @@ packages:
   '@changesets/write@0.4.0':
     resolution: {integrity: sha512-CdTLvIOPiCNuH71pyDu3rA+Q0n65cmAbXnwWH84rKGiFumFzkmHNT8KHTMEchcxN+Kl8I54xGUhJ7l3E7X396Q==}
 
-  '@effect/ai-openai-compat@4.0.0-beta.72':
-    resolution: {integrity: sha512-WTnbhq2KDH3DpcFwJ/Y4m3TcJet08B/YQrUVlQlogSA1lDnBNsQoODzquPS5hvIMiZzs1lGSVgaXWMETLKIxtg==}
+  '@effect/ai-openai-compat@4.0.0-beta.75':
+    resolution: {integrity: sha512-v0cf5ZpojEJtrNav9kDMC1lKFDyzavRBuaUcMqNxtPVd+xIk64PjX1aoHn4gb0OCAkulGGwkky+Y+WtSr/QOnQ==}
     peerDependencies:
-      effect: ^4.0.0-beta.72
+      effect: ^4.0.0-beta.75
 
-  '@effect/ai-openai@4.0.0-beta.72':
-    resolution: {integrity: sha512-5j468EzyS7g8ZxIjt6/nn8vyM+nQHvbJGv8xNObHdnu2kcp1fxSyuYEhlK4eCpD2LrUA9IB6jgzT6QxMXp2XgQ==}
+  '@effect/ai-openai@4.0.0-beta.75':
+    resolution: {integrity: sha512-Qp6h8TwAdIxiU6ASW3h4R8b0XgnJv/+gviQsPs9kkhRr73O3ctvBnDeq3G0zyFCoKPx57PUDKKdkR0GAE8vZsw==}
     peerDependencies:
-      effect: ^4.0.0-beta.72
+      effect: ^4.0.0-beta.75
 
   '@effect/language-service@0.86.2':
     resolution: {integrity: sha512-SaPln+8srOqDJDUwNTDmP5e+IYpEDr9+1epGznnsLqu8xvo6VnxyWARdeLpqvZJlb0Pgy9ca7ppqvvdWbHPXAg==}
     hasBin: true
 
-  '@effect/platform-node-shared@4.0.0-beta.72':
-    resolution: {integrity: sha512-BP0migc1dxUxqNsaf6MZx9yo+m/gpw5+AlsTBUWRw14h4Vb/GiZbS7rFDZY0ofJ9z1BYails9F6IaiEP+P27sQ==}
+  '@effect/platform-node-shared@4.0.0-beta.75':
+    resolution: {integrity: sha512-ERxuFDuCuMAiSHLrNVTvSXPnUajcZV4PUVibXbk1lwiymhbkxRRBs1Zeuicwho8jZdpn7niXCDI24CiB9PIozA==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      effect: ^4.0.0-beta.72
+      effect: ^4.0.0-beta.75
 
-  '@effect/platform-node@4.0.0-beta.72':
-    resolution: {integrity: sha512-QbHFPI8JRa74ytvgz4xMNwryJvyvLj5wCCwm0uzJDhTseNIv22VnqjmneEmPAfqCorGE1mG+K0kcMC7162g3sg==}
+  '@effect/platform-node@4.0.0-beta.75':
+    resolution: {integrity: sha512-3A7yOMwQUV8p743QRWC2Qqao3ASmolbh2i4TGbJZ3bZLBGVcRQqBSg1sg2zpSFihf0R+RZg/dlV6OYFIanK/zA==}
     engines: {node: '>=18.0.0'}
     peerDependencies:
-      effect: ^4.0.0-beta.72
+      effect: ^4.0.0-beta.75
       ioredis: ^5.7.0
 
   '@effect/sql-sqlite-node@4.0.0-beta.66':
@@ -770,50 +770,50 @@ packages:
   '@types/ws@8.18.1':
     resolution: {integrity: sha512-ThVF6DCVhA8kUGy+aazFQ4kXQ7E1Ty7A3ypFOe0IcJV8O/M511G99AW24irKrW56Wt44yG9+ij8FaqoBGkuBXg==}
 
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260527.1':
-    resolution: {integrity: sha512-bDi6FJ644n3uKdp/ZI7j50ChVyGOsrJrkwihQb6x3yByFQkTINLu3e6ZkY+HveQ2Zw2vy9SGN8E7b3A5iSOO0A==}
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260527.2':
+    resolution: {integrity: sha512-3LqSu4DlxkEfeC/Z/29QMCJn5jjkDtXI7LYuxfmjdmAatS6umDKqm8J17fnP/7fyrZUMBTIYRwSDpChGV3G1ew==}
     engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [darwin]
 
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260527.1':
-    resolution: {integrity: sha512-r6GXrTdalXZu1/b5goMpAe+efZvOfwdE45gl8Tti3fckP9icK3xdiN+VnNi0RL2/c2L86RyN8nGxihaCHGCKbw==}
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260527.2':
+    resolution: {integrity: sha512-H4+sxE9qaBbLF83wMdWE0FsgfK0Pom+/O+/oxqyGzhVkDJlNt3vfpgQZMit48/Gm44AacGfBggJ9Dhbi3aeSFw==}
     engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [darwin]
 
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260527.1':
-    resolution: {integrity: sha512-QJAFyPJgJqJVLbVPHl5xL7FCn3HNPLdpEm8l7KBgiYpltLhU1p/LJ3iN0XpFRAhq9ojWbZebo8t/h8MX35QjTQ==}
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260527.2':
+    resolution: {integrity: sha512-BGUDMjC2Z3TTdZRkGGwhBLelkP5UYgO2rbep8aF4dS3fu7T5lFPPrnfS6EgqJgie+cF5Fsev7xEq8wWyBDM+lg==}
     engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [linux]
 
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260527.1':
-    resolution: {integrity: sha512-BlfQBatMkZHi3o+atxoUW0czGJNjo9cpO1BoQeB3gxZ7D/cDZHYHmKFSSRx8UxMktwP5k5lPxi0wgA3Ic2mQyQ==}
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20260527.2':
+    resolution: {integrity: sha512-6I9Cv9ozwfS9zB9vRQDPIYseLX3artEO9jl3yVgLj4ishwlSF4cWAbIsjl5IztPaEgHv8coej/6tX1D0uaBzXg==}
     engines: {node: '>=16.20.0'}
     cpu: [arm]
     os: [linux]
 
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260527.1':
-    resolution: {integrity: sha512-UFB7ZdK2/vIIi62nfn3JhyGV7qR/qXjKPQaPVXwzCvaPieTZcsNsALjKU0W5WHThyi+5p3U7O3dGE7n6P4q4Yw==}
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20260527.2':
+    resolution: {integrity: sha512-vpazOu+ozlxBo8U57YJMzsOPuxAV8H7fu36KJ8ea8At/D8pdGmOAy5TuB+9OBQV9JDe0OXJMy2kmbhOpmkTAmA==}
     engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [linux]
 
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260527.1':
-    resolution: {integrity: sha512-rp/q9+9H77JQvepC/UpDP8CdeTGSGyhp9BVbmFwqUV2NhMHPldfys3ihY7OQdoVBgWIKQyxEHB+FTr8Z7kre1Q==}
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260527.2':
+    resolution: {integrity: sha512-DBFnFE3V6AITkPO1K1VxXf3yEZKjU2FwtXlNwRqhzDu0rrL2SsJHOSrBDX+OacTxQFzZMxFcpiuhV8jHZALPEg==}
     engines: {node: '>=16.20.0'}
     cpu: [arm64]
     os: [win32]
 
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260527.1':
-    resolution: {integrity: sha512-864Pq4qoDcacUJhs2/kQplyfwNO0APUmx1k8qUaJt2P9ZGF0Pu++afJi7OagImHMiEQcmigjmZPuOodOk5YmqQ==}
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20260527.2':
+    resolution: {integrity: sha512-1tBlErMvQgcMqqYwsx4tytupcjCJcOUXD3vBn1Wb/kAvus1FzWQAFE0fcKBvLfcqLQfTiiEwKKEtbLjGmakqqg==}
     engines: {node: '>=16.20.0'}
     cpu: [x64]
     os: [win32]
 
-  '@typescript/native-preview@7.0.0-dev.20260527.1':
-    resolution: {integrity: sha512-j81qKiwCPgMEjtk8uDLP+TDW60l6mugoJ7SNzfHWv1PJ6bUjIAHuag4P1jSLm1IpKuMuB3TTi4f61n7TJi8Jog==}
+  '@typescript/native-preview@7.0.0-dev.20260527.2':
+    resolution: {integrity: sha512-piqkDwikVeizCFqA1lcwI5F4wOAtBdxuliWe77ApBNRyBPPvfCJB+u/HYi9/8t5nd0sWvFs6/qt/AzJ1CCoykQ==}
     engines: {node: '>=16.20.0'}
     hasBin: true
 
@@ -1141,8 +1141,8 @@ packages:
   ee-first@1.1.1:
     resolution: {integrity: sha512-WMwm9LhRUo+WUaRN+vRuETqG89IgZphVSNkdFgeb6sS/E4OrDIN7t48CAewSHXc6C8lefD8KKfr5vY61brQlow==}
 
-  effect@4.0.0-beta.72:
-    resolution: {integrity: sha512-EMmlKthKQ3xyb+Waev3DWlMWYY2ZSnr8GensPc2APInw5seTHLkhrTxeWu1Yb+t5nuqMmV7RUkaW+vgWB0N8gA==}
+  effect@4.0.0-beta.75:
+    resolution: {integrity: sha512-KrDuecxuN8rC7dytVs5GFfUhtC+/D8pOyfVb1LNZGjJY7qigQG9xXJ4R1Bp+tBo7sKbZOXBswCfuQ3ombaEldQ==}
 
   emoji-regex@10.6.0:
     resolution: {integrity: sha512-toUI84YS5YmxW219erniWD0CIVOo46xGKColeNQRgOzDorgBi1v4D71/OFzgD9GO2UGKIv1C3Sp8DAn0+j5w7A==}
@@ -2372,29 +2372,29 @@ snapshots:
       human-id: 4.1.3
       prettier: 2.8.8
 
-  '@effect/ai-openai-compat@4.0.0-beta.72(effect@4.0.0-beta.72)':
+  '@effect/ai-openai-compat@4.0.0-beta.75(effect@4.0.0-beta.75)':
     dependencies:
-      effect: 4.0.0-beta.72
+      effect: 4.0.0-beta.75
 
-  '@effect/ai-openai@4.0.0-beta.72(effect@4.0.0-beta.72)':
+  '@effect/ai-openai@4.0.0-beta.75(effect@4.0.0-beta.75)':
     dependencies:
-      effect: 4.0.0-beta.72
+      effect: 4.0.0-beta.75
 
   '@effect/language-service@0.86.2': {}
 
-  '@effect/platform-node-shared@4.0.0-beta.72(effect@4.0.0-beta.72)':
+  '@effect/platform-node-shared@4.0.0-beta.75(effect@4.0.0-beta.75)':
     dependencies:
       '@types/ws': 8.18.1
-      effect: 4.0.0-beta.72
+      effect: 4.0.0-beta.75
       ws: 8.20.0
     transitivePeerDependencies:
       - bufferutil
       - utf-8-validate
 
-  '@effect/platform-node@4.0.0-beta.72(effect@4.0.0-beta.72)(ioredis@5.10.1)':
+  '@effect/platform-node@4.0.0-beta.75(effect@4.0.0-beta.75)(ioredis@5.10.1)':
     dependencies:
-      '@effect/platform-node-shared': 4.0.0-beta.72(effect@4.0.0-beta.72)
-      effect: 4.0.0-beta.72
+      '@effect/platform-node-shared': 4.0.0-beta.75(effect@4.0.0-beta.75)
+      effect: 4.0.0-beta.75
       ioredis: 5.10.1
       mime: 4.1.0
       undici: 8.2.0
@@ -2402,10 +2402,10 @@ snapshots:
       - bufferutil
       - utf-8-validate
 
-  '@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.72)':
+  '@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.75)':
     dependencies:
       better-sqlite3: 12.10.0
-      effect: 4.0.0-beta.72
+      effect: 4.0.0-beta.75
 
   '@emnapi/core@1.10.0':
     dependencies:
@@ -2864,36 +2864,36 @@ snapshots:
     dependencies:
       '@types/node': 25.7.0
 
-  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260527.1':
+  '@typescript/native-preview-darwin-arm64@7.0.0-dev.20260527.2':
     optional: true
 
-  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260527.1':
+  '@typescript/native-preview-darwin-x64@7.0.0-dev.20260527.2':
     optional: true
 
-  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260527.1':
+  '@typescript/native-preview-linux-arm64@7.0.0-dev.20260527.2':
     optional: true
 
-  '@typescript/native-preview-linux-arm@7.0.0-dev.20260527.1':
+  '@typescript/native-preview-linux-arm@7.0.0-dev.20260527.2':
     optional: true
 
-  '@typescript/native-preview-linux-x64@7.0.0-dev.20260527.1':
+  '@typescript/native-preview-linux-x64@7.0.0-dev.20260527.2':
     optional: true
 
-  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260527.1':
+  '@typescript/native-preview-win32-arm64@7.0.0-dev.20260527.2':
     optional: true
 
-  '@typescript/native-preview-win32-x64@7.0.0-dev.20260527.1':
+  '@typescript/native-preview-win32-x64@7.0.0-dev.20260527.2':
     optional: true
 
-  '@typescript/native-preview@7.0.0-dev.20260527.1':
+  '@typescript/native-preview@7.0.0-dev.20260527.2':
     optionalDependencies:
-      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260527.1
-      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260527.1
-      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260527.1
-      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260527.1
-      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260527.1
-      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260527.1
-      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260527.1
+      '@typescript/native-preview-darwin-arm64': 7.0.0-dev.20260527.2
+      '@typescript/native-preview-darwin-x64': 7.0.0-dev.20260527.2
+      '@typescript/native-preview-linux-arm': 7.0.0-dev.20260527.2
+      '@typescript/native-preview-linux-arm64': 7.0.0-dev.20260527.2
+      '@typescript/native-preview-linux-x64': 7.0.0-dev.20260527.2
+      '@typescript/native-preview-win32-arm64': 7.0.0-dev.20260527.2
+      '@typescript/native-preview-win32-x64': 7.0.0-dev.20260527.2
 
   '@vscode/ripgrep-darwin-arm64@1.18.0':
     optional: true
@@ -3075,16 +3075,16 @@ snapshots:
 
   chownr@1.1.4: {}
 
-  clanka@0.2.67(@effect/ai-openai-compat@4.0.0-beta.72(effect@4.0.0-beta.72))(@effect/ai-openai@4.0.0-beta.72(effect@4.0.0-beta.72))(@effect/platform-node@4.0.0-beta.72(effect@4.0.0-beta.72)(ioredis@5.10.1))(@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.72))(effect@4.0.0-beta.72)(zod@4.4.3):
+  clanka@0.2.67(@effect/ai-openai-compat@4.0.0-beta.75(effect@4.0.0-beta.75))(@effect/ai-openai@4.0.0-beta.75(effect@4.0.0-beta.75))(@effect/platform-node@4.0.0-beta.75(effect@4.0.0-beta.75)(ioredis@5.10.1))(@effect/sql-sqlite-node@4.0.0-beta.66(effect@4.0.0-beta.75))(effect@4.0.0-beta.75)(zod@4.4.3):
     dependencies:
-      '@effect/ai-openai': 4.0.0-beta.72(effect@4.0.0-beta.72)
-      '@effect/ai-openai-compat': 4.0.0-beta.72(effect@4.0.0-beta.72)
-      '@effect/platform-node': 4.0.0-beta.72(effect@4.0.0-beta.72)(ioredis@5.10.1)
-      '@effect/sql-sqlite-node': 4.0.0-beta.66(effect@4.0.0-beta.72)
+      '@effect/ai-openai': 4.0.0-beta.75(effect@4.0.0-beta.75)
+      '@effect/ai-openai-compat': 4.0.0-beta.75(effect@4.0.0-beta.75)
+      '@effect/platform-node': 4.0.0-beta.75(effect@4.0.0-beta.75)(ioredis@5.10.1)
+      '@effect/sql-sqlite-node': 4.0.0-beta.66(effect@4.0.0-beta.75)
       '@modelcontextprotocol/sdk': 1.29.0(zod@4.4.3)
       '@vscode/ripgrep': 1.18.0
       chalk: 5.6.2
-      effect: 4.0.0-beta.72
+      effect: 4.0.0-beta.75
       glob: 13.0.6
       tree-sitter: 0.21.1
       tree-sitter-javascript: 0.23.1(tree-sitter@0.21.1)
@@ -3194,7 +3194,7 @@ snapshots:
 
   ee-first@1.1.1: {}
 
-  effect@4.0.0-beta.72:
+  effect@4.0.0-beta.75:
     dependencies:
       '@standard-schema/spec': 1.1.0
       fast-check: 4.8.0
@@ -3837,7 +3837,7 @@ snapshots:
 
   rfdc@1.4.1: {}
 
-  rolldown-plugin-dts@0.25.0(@typescript/native-preview@7.0.0-dev.20260527.1)(rolldown@1.0.0)(typescript@6.0.3):
+  rolldown-plugin-dts@0.25.0(@typescript/native-preview@7.0.0-dev.20260527.2)(rolldown@1.0.0)(typescript@6.0.3):
     dependencies:
       '@babel/generator': 8.0.0-rc.4
       '@babel/helper-validator-identifier': 8.0.0-rc.4
@@ -3849,7 +3849,7 @@ snapshots:
       obug: 2.1.1
       rolldown: 1.0.0
     optionalDependencies:
-      '@typescript/native-preview': 7.0.0-dev.20260527.1
+      '@typescript/native-preview': 7.0.0-dev.20260527.2
       typescript: 6.0.3
     transitivePeerDependencies:
       - oxc-resolver
@@ -4096,7 +4096,7 @@ snapshots:
       node-addon-api: 8.7.0
       node-gyp-build: 4.8.4
 
-  tsdown@0.22.0(@typescript/native-preview@7.0.0-dev.20260527.1)(typescript@6.0.3):
+  tsdown@0.22.0(@typescript/native-preview@7.0.0-dev.20260527.2)(typescript@6.0.3):
     dependencies:
       ansis: 4.3.0
       cac: 7.0.0
@@ -4107,7 +4107,7 @@ snapshots:
       obug: 2.1.1
       picomatch: 4.0.4
       rolldown: 1.0.0
-      rolldown-plugin-dts: 0.25.0(@typescript/native-preview@7.0.0-dev.20260527.1)(rolldown@1.0.0)(typescript@6.0.3)
+      rolldown-plugin-dts: 0.25.0(@typescript/native-preview@7.0.0-dev.20260527.2)(rolldown@1.0.0)(typescript@6.0.3)
       semver: 7.8.0
       tinyexec: 1.1.2
       tinyglobby: 0.2.16

@@ -28,6 +28,11 @@ export type OutputTransformer = (
   stream: Stream.Stream<string, PlatformError.PlatformError>,
 ) => Stream.Stream<string, PlatformError.PlatformError>
 
+const escapeLeadingHyphen = (text: string) => {
+  if (text.startsWith("-")) return `\\${text}`
+  return text
+}
+
 const clanka = new CliAgent({
   id: "clanka",
   name: "clanka",
@@ -66,7 +71,7 @@ const opencode = new CliAgent({
       "opencode",
       [
         "run",
-        prompt,
+        escapeLeadingHyphen(prompt),
         "--thinking",
         ...extraArgs,
         ...(prdFilePath ? ["-f", prdFilePath] : []),
@@ -127,7 +132,7 @@ const claude = new CliAgent({
           ? `@${prdFilePath}
 
 ${prompt}`
-          : prompt,
+          : escapeLeadingHyphen(prompt),
       ],
       {
         stdout: "pipe",
@@ -212,7 +217,7 @@ const amp = new CliAgent({
           ? `@${prdFilePath}
 
 ${prompt}`
-          : prompt,
+          : escapeLeadingHyphen(prompt),
       ],
       {
         stdout: "pipe",

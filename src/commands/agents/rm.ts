@@ -18,7 +18,7 @@ export const commandAgentsRm = Command.make("rm").pipe(
       if (presets.length === 0) {
         return yield* Effect.log("There are no presets to remove.")
       }
-      const preset = yield* selectCliAgentPreset
+      const preset = yield* selectCliAgentPreset()
       const newPresets = presets.filter((p) => p.id !== preset.id)
       yield* Settings.set(allCliAgentPresets, Option.some(newPresets))
     }),

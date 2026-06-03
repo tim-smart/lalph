@@ -5,6 +5,7 @@ import { Prompt } from "effect/unstable/cli"
 import { IssueSource } from "./IssueSource.ts"
 import { CurrentIssueSource } from "./CurrentIssueSource.ts"
 import { findProjectRoot } from "./shared/lalphDirectory.ts"
+import { selectCliAgentPreset } from "./Presets.ts"
 
 export const layerProjectIdPrompt = Layer.effect(
   CurrentProjectId,
@@ -123,6 +124,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
   })
 
   let ralphSpec = Option.none<string>()
+  let ralphPreset = Option.none<Project["ralphPreset"]>()
   if (gitFlow === "ralph" && !fromPlanMode) {
     const cwd = pathService.resolve(".")
     const relativeRoot = pipe(
@@ -137,6 +139,10 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
       ),
       Effect.map(Option.some),
     )
+  }
+  if (gitFlow === "ralph") {
+    const preset = yield* selectCliAgentPreset(existing?.ralphPreset)
+    ralphPreset = Option.some(preset.id)
   }
 
   const researchAgent = yield* Prompt.toggle({
@@ -155,6 +161,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
     targetBranch,
     gitFlow,
     ralphSpec: Option.getOrUndefined(ralphSpec),
+    ralphPreset: Option.getOrUndefined(ralphPreset),
     researchAgent,
     reviewAgent,
   })

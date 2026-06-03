@@ -30,7 +30,7 @@ export const commandPlanTasks = Command.make("tasks", {
   Command.withHandler(
     Effect.fnUntraced(function* ({ specificationPath }) {
       const { specsDirectory } = yield* commandRoot
-      const preset = yield* selectCliAgentPreset
+      const preset = yield* selectCliAgentPreset()
       yield* generateTasks({
         specsDirectory,
         specificationPath,

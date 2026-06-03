@@ -48,12 +48,13 @@ import {
 } from "../GitFlow.ts"
 import { getAllProjects, welcomeWizard } from "../Projects.ts"
 import type { Project } from "../domain/Project.ts"
-import { getDefaultCliAgentPreset } from "../Presets.ts"
+import { cliAgentPresetById, getDefaultCliAgentPreset } from "../Presets.ts"
 import type { QuitError } from "effect/Terminal"
 import type { TimeoutError } from "effect/Cause"
 import type { ChildProcessSpawner } from "effect/unstable/process"
 import type { AiError } from "effect/unstable/ai/AiError"
 import type { PrdIssue } from "../domain/PrdIssue.ts"
+import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 import type { OutputFormatter } from "clanka"
 import { ClankaMuxerLayer, SemanticSearchLayer } from "../Clanka.ts"
 import { agentResearcher } from "../Agents/researcher.ts"
@@ -339,6 +340,7 @@ const runRalph = Effect.fnUntraced(
     readonly research: boolean
     readonly review: boolean
     readonly specFile: string
+    readonly preset: CliAgentPreset
     readonly maxContext: number | undefined
   }): Effect.fn.Return<
     void,
@@ -373,7 +375,7 @@ const runRalph = Effect.fnUntraced(
     const registry = yield* AtomRegistry.AtomRegistry
     const projectId = yield* CurrentProjectId
 
-    const preset = yield* getDefaultCliAgentPreset
+    const preset = options.preset
 
     // ensure cleanup of branch after run
     yield* Effect.addFinalizer(
@@ -477,6 +479,9 @@ const runRalph = Effect.fnUntraced(
             specFile: options.specFile,
           }),
         }).pipe(Effect.withSpan("Main.review"))
+
+        yield* worktree.exec`git add ${options.specFile}`
+        yield* worktree.exec`git commit -m ${"Update spec from review"}`
       }
     }).pipe(
       Effect.timeout(options.runTimeout),
@@ -522,6 +527,7 @@ type ProjectExecutionMode =
   | {
       readonly _tag: "ralph"
       readonly specFile: string
+      readonly preset: CliAgentPreset
     }
 
 const runProject = Effect.fnUntraced(
@@ -547,9 +553,15 @@ const runProject = Effect.fnUntraced(
           projectId: options.project.id,
         })
       }
+      const preset = options.project.ralphPreset
+        ? Option.getOrUndefined(
+            yield* cliAgentPresetById(options.project.ralphPreset),
+          )
+        : undefined
       executionMode = {
         _tag: "ralph",
         specFile: options.project.ralphSpec,
+        preset: preset ?? (yield* getDefaultCliAgentPreset),
       }
     } else {
       executionMode = {
@@ -577,6 +589,7 @@ const runProject = Effect.fnUntraced(
           review: options.project.reviewAgent,
           research: options.project.researchAgent,
           specFile: executionMode.specFile,
+          preset: executionMode.preset,
           maxContext: options.maxContext,
         })
       }

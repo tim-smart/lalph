@@ -33,8 +33,16 @@ export const commandProjectsLs = Command.make("ls").pipe(
           console.log(`  Target Branch: ${project.targetBranch.value}`)
         }
         console.log(
-          `  Git flow: ${project.gitFlow === "pr" ? "Pull Request" : "Commit"}`,
+          `  Git flow: ${project.gitFlow === "pr" ? "Pull Request" : project.gitFlow === "commit" ? "Commit" : "Ralph"}`,
         )
+        if (project.gitFlow === "ralph") {
+          if (project.ralphSpec) {
+            console.log(`  Ralph spec: ${project.ralphSpec}`)
+          }
+          if (project.ralphPreset) {
+            console.log(`  Ralph preset: ${project.ralphPreset}`)
+          }
+        }
         console.log(
           `  Research agent: ${project.researchAgent ? "Enabled" : "Disabled"}`,
         )
