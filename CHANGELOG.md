@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.135
+
+### Patch Changes
+
+- [`2f7cfac`](https://github.com/tim-smart/lalph/commit/2f7cfac1f6ec9064c202dbfc5e0d398ef4cc36b2) Thanks [@tim-smart](https://github.com/tim-smart)! - Add per-project Ralph agent preset selection and use the selected preset when running Ralph mode.
+
 ## 0.3.134
 
 ### Patch Changes
