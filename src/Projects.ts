@@ -88,13 +88,14 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
   const concurrency = yield* Prompt.integer({
     message: "Concurrency (number of tasks to run in parallel)",
     min: 1,
+    default: existing ? existing.concurrency : 1,
   })
   const targetBranch = pipe(
     yield* Prompt.text({
       message: "Target branch (leave empty to use HEAD)",
       default: existing
-        ? Option.getOrElse(existing.targetBranch, () => "")
-        : "",
+        ? Option.getOrElse(existing.targetBranch, () => id)
+        : id,
     }),
     String.trim,
     Option.liftPredicate(String.isNonEmpty),
@@ -133,6 +134,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
     )
     ralphSpec = yield* Prompt.file({
       message: "Path to Ralph spec file",
+      default: existing?.ralphSpec as string,
     }).pipe(
       Effect.map((selectedPath) =>
         pathService.relative(relativeRoot, selectedPath),
