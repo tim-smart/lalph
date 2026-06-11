@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.136
+
+### Patch Changes
+
+- [`f8e584b`](https://github.com/tim-smart/lalph/commit/f8e584b765ed0b714435781865d34b7f25826304) Thanks [@tim-smart](https://github.com/tim-smart)! - update effect
+
+- [`4f233f3`](https://github.com/tim-smart/lalph/commit/4f233f30a7288f59e3fe4443015e8f3b7f1dec04) Thanks [@tim-smart](https://github.com/tim-smart)! - improve project defaults
+
 ## 0.3.135
 
 ### Patch Changes
