@@ -573,7 +573,7 @@ export class LinearError extends Schema.ErrorClass<LinearError>(
   "lalph/LinearError",
 )({
   _tag: Schema.tag("LinearError"),
-  cause: Schema.Defect,
+  cause: Schema.Defect(),
 }) {}
 
 // Project selection

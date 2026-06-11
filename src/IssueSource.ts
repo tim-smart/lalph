@@ -214,11 +214,11 @@ export class IssueSource extends Context.Service<
   }
 }
 
-export class IssueSourceError extends Schema.ErrorClass<IssueSourceError>(
-  "lalph/IssueSourceError",
-)({
-  _tag: Schema.tag("IssueSourceError"),
-  cause: Schema.Defect,
-}) {
+export class IssueSourceError extends Schema.TaggedErrorClass<IssueSourceError>()(
+  "IssueSourceError",
+  {
+    cause: Schema.Defect(),
+  },
+) {
   readonly message = "An error occurred in the IssueSource"
 }
