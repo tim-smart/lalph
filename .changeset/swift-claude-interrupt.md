@@ -1,0 +1,5 @@
+---
+"lalph": patch
+---
+
+Prevent Claude CLI runs from swallowing Ctrl-C by avoiding inherited stdin and terminating Claude with SIGINT, escalating to SIGKILL if needed.

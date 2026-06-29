@@ -1,5 +1,6 @@
 import {
   Data,
+  Duration,
   PlatformError,
   Schema,
   SchemaTransformation,
@@ -32,6 +33,12 @@ const escapeLeadingHyphen = (text: string) => {
   if (text.startsWith("-")) return `\\${text}`
   return text
 }
+
+const claudeInterruptOptions = {
+  stdin: "ignore",
+  killSignal: "SIGINT",
+  forceKillAfter: Duration.seconds(2),
+} as const
 
 const clanka = new CliAgent({
   id: "clanka",
@@ -137,7 +144,7 @@ ${prompt}`
       {
         stdout: "pipe",
         stderr: "pipe",
-        stdin: "inherit",
+        ...claudeInterruptOptions,
       },
     ),
   outputTransformer: claudeOutputTransformer,
@@ -153,7 +160,7 @@ ${prompt}`,
       {
         stdout: "inherit",
         stderr: "inherit",
-        stdin: "inherit",
+        ...claudeInterruptOptions,
       },
     ),
 })
