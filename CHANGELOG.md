@@ -1,5 +1,13 @@
 # lalph
 
+## 0.3.138
+
+### Patch Changes
+
+- [`e61593e`](https://github.com/tim-smart/lalph/commit/e61593e058b7a621de069bb931fa41d83e4425eb) Thanks [@tim-smart](https://github.com/tim-smart)! - Prevent Claude CLI runs from swallowing Ctrl-C by avoiding inherited stdin and terminating Claude with SIGINT, escalating to SIGKILL if needed.
+
+  Inject GitHub PR feedback in commit mode when the configured target branch has an open PR.
+
 ## 0.3.137
 
 ### Patch Changes
