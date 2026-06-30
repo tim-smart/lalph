@@ -176,17 +176,26 @@ const run = Effect.fnUntraced(
 
     yield* Deferred.completeWith(options.startedDeferred, Effect.void)
 
-    if (gitFlow.requiresGithubPr && chosenTask.githubPrNumber) {
-      yield* worktree.exec`gh pr checkout ${chosenTask.githubPrNumber}`
-      const feedback = yield* gh.prFeedbackMd(chosenTask.githubPrNumber)
-      yield* fs.writeFileString(
-        pathService.join(worktree.directory, ".lalph", "feedback.md"),
-        feedback,
-      )
+    let githubPrNumber = chosenTask.githubPrNumber ?? undefined
+    if (gitFlow.requiresGithubPr && githubPrNumber) {
+      yield* worktree.exec`gh pr checkout ${githubPrNumber}`
     } else if (gitFlow.requiresGithubPr) {
       const branchName = `lalph/${taskId.replace(/#/g, "").replace(/[^a-zA-Z0-9-_]/g, "-")}`
       yield* worktree.exec`git branch -D ${branchName}`
       yield* worktree.exec`git checkout -b ${branchName}`
+    } else if (Option.isSome(options.targetBranch)) {
+      const prState = yield* gh.openPrForBranch(options.targetBranch.value)
+      if (Option.isSome(prState) && prState.value.state === "OPEN") {
+        githubPrNumber = prState.value.number
+      }
+    }
+
+    if (githubPrNumber !== undefined) {
+      const feedback = yield* gh.prFeedbackMd(githubPrNumber)
+      yield* fs.writeFileString(
+        pathService.join(worktree.directory, ".lalph", "feedback.md"),
+        feedback,
+      )
     }
 
     const taskPreset = Option.getOrElse(
@@ -232,14 +241,14 @@ const run = Effect.fnUntraced(
             specsDirectory: options.specsDirectory,
             targetBranch: Option.getOrUndefined(options.targetBranch),
             task: chosenTask.prd,
-            githubPrNumber: chosenTask.githubPrNumber ?? undefined,
+            githubPrNumber,
             gitFlow,
           })
         : promptGen.promptClanka({
             specsDirectory: options.specsDirectory,
             targetBranch: Option.getOrUndefined(options.targetBranch),
             task: chosenTask.prd,
-            githubPrNumber: chosenTask.githubPrNumber ?? undefined,
+            githubPrNumber,
             gitFlow,
           })
 

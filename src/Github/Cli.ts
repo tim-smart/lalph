@@ -14,6 +14,7 @@ import {
   GithubPullRequestData,
   ReviewComment,
 } from "../domain/GithubComment.ts"
+import { parseBranch } from "../shared/git.ts"
 
 export class GithubCli extends Context.Service<GithubCli>()(
   "lalph/Github/Cli",
@@ -60,6 +61,28 @@ export class GithubCli extends Context.Service<GithubCli>()(
             spawner,
           ),
         )
+
+      const openPrForBranch = (targetBranch: string) => {
+        const branch = parseBranch(targetBranch).branch
+        return ChildProcess.make`gh pr list --head ${branch} --state open --limit 1 --json number,state`.pipe(
+          spawner.string,
+          Effect.flatMap(Schema.decodeEffect(OpenPullRequestsFromJson)),
+          Effect.option,
+          Effect.map(
+            Option.match({
+              onNone: () => Option.none<OpenPullRequest>(),
+              onSome: (prs) =>
+                prs.length > 0
+                  ? Option.some(prs[0]!)
+                  : Option.none<OpenPullRequest>(),
+            }),
+          ),
+          Effect.provideService(
+            ChildProcessSpawner.ChildProcessSpawner,
+            spawner,
+          ),
+        )
+      }
 
       const prFeedbackMd = (pr: number) =>
         reviewComments(pr).pipe(
@@ -130,7 +153,13 @@ ${generalCommentsXml}
           }),
         )
 
-      return { owner, repo, reviewComments, prFeedbackMd } as const
+      return {
+        owner,
+        repo,
+        reviewComments,
+        openPrForBranch,
+        prFeedbackMd,
+      } as const
     }),
   },
 ) {
@@ -180,6 +209,16 @@ const renderGeneralComment = (
 // Schema definitions and GraphQL query
 
 const PullRequestDataFromJson = Schema.fromJsonString(GithubPullRequestData)
+
+const OpenPullRequest = Schema.Struct({
+  number: Schema.Finite,
+  state: Schema.String,
+})
+type OpenPullRequest = Schema.Schema.Type<typeof OpenPullRequest>
+
+const OpenPullRequestsFromJson = Schema.fromJsonString(
+  Schema.Array(OpenPullRequest),
+)
 
 const githubReviewCommentsQuery = `
 query FetchPRComments($owner: String!, $repo: String!, $pr: Int!) {

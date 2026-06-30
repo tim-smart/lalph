@@ -130,8 +130,12 @@ export const GitFlowCommit = Layer.effect(
       requiresGithubPr: false,
       branch: `lalph/worker-${workerState.id}`,
 
-      setupInstructions: () =>
-        `You are already on a new branch for this task. You do not need to checkout any other branches.`,
+      setupInstructions: ({ githubPrNumber }) =>
+        githubPrNumber
+          ? `You are already on a new branch for this task. Github PR #${githubPrNumber} has been detected.
+   - **REVIEW ALL FEEDBACK** in the .lalph/feedback.md file.
+   - Do not checkout any other branches.`
+          : `You are already on a new branch for this task. You do not need to checkout any other branches.`,
 
       commitInstructions: (
         options,
