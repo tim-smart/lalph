@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.139
+
+### Patch Changes
+
+- [`0855017`](https://github.com/tim-smart/lalph/commit/08550174cfd362946326b8ac59eea32e9f80e497) Thanks [@tim-smart](https://github.com/tim-smart)! - prevent orphaned auto-merge tasks
+
 ## 0.3.138
 
 ### Patch Changes
