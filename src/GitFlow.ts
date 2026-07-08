@@ -8,6 +8,7 @@ import { Atom } from "effect/unstable/reactivity"
 import { parseBranch } from "./shared/git.ts"
 import { AtomRegistry } from "effect/unstable/reactivity"
 import { CurrentProjectId } from "./Settings.ts"
+import type { PrdIssue } from "./domain/PrdIssue.ts"
 
 // @effect-diagnostics-next-line leakingRequirements:off
 export class GitFlow extends Context.Service<
@@ -189,13 +190,18 @@ But you **do not** need to git push your changes or switch branches.
         const source = yield* IssueSource
         const projectId = yield* CurrentProjectId
         const issue = yield* source.findById(projectId, options.issueId)
-        if (!issue || issue.state !== "in-review") {
+        let nextStatus: PrdIssue["state"] = "done"
+        if (!issue) {
+          return
+        } else if (issue.state === "in-progress") {
+          nextStatus = "todo"
+        } else if (issue.state !== "in-review") {
           return
         }
         yield* source.updateIssue({
           projectId,
           issueId: options.issueId,
-          state: "done",
+          state: nextStatus,
         })
       }),
     })
