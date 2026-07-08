@@ -110,6 +110,7 @@ export class TokenManager extends Context.Service<TokenManager>()(
             NodeHttpServer.layer(createServer, {
               port: 34338,
               disablePreemptiveShutdown: true,
+              gracefulShutdownTimeout: 0,
             }),
           ),
           Layer.build,

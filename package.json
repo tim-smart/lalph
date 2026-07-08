@@ -27,7 +27,6 @@
   },
   "packageManager": "pnpm@10.28.0+sha512.05df71d1421f21399e053fde567cea34d446fa02c76571441bfc1c7956e98e363088982d940465fd34480d4d90a0668bc12362f8aa88000a64e83d0b0e47be48",
   "dependencies": {
-    "better-sqlite3": "^12.10.0",
     "tree-sitter": "^0.21.1",
     "tree-sitter-javascript": "^0.23.1",
     "tree-sitter-typescript": "^0.23.2"
@@ -44,23 +43,23 @@
   "devDependencies": {
     "@changesets/changelog-github": "^0.7.0",
     "@changesets/cli": "^2.31.0",
-    "@effect/ai-openai": "4.0.0-beta.78",
-    "@effect/ai-openai-compat": "4.0.0-beta.79",
-    "@effect/language-service": "^0.86.2",
-    "@effect/platform-node": "4.0.0-beta.78",
-    "@linear/sdk": "^86.0.0",
+    "@effect/ai-openai": "4.0.0-beta.94",
+    "@effect/ai-openai-compat": "4.0.0-beta.94",
+    "@effect/language-service": "^0.86.4",
+    "@effect/platform-node": "4.0.0-beta.94",
+    "@linear/sdk": "^88.0.0",
     "@octokit/plugin-rest-endpoint-methods": "^17.0.0",
     "@octokit/types": "^16.0.0",
-    "@typescript/native-preview": "7.0.0-dev.20260610.1",
-    "clanka": "^0.2.68",
+    "@typescript/native-preview": "7.0.0-dev.20260707.2",
+    "clanka": "^0.2.69",
     "concurrently": "^10.0.3",
-    "effect": "4.0.0-beta.78",
+    "effect": "4.0.0-beta.94",
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.7",
+    "lint-staged": "^17.0.8",
     "octokit": "^5.0.5",
-    "oxlint": "^1.69.0",
-    "prettier": "^3.8.4",
-    "tsdown": "^0.22.2",
+    "oxlint": "^1.73.0",
+    "prettier": "^3.9.4",
+    "tsdown": "^0.22.3",
     "typescript": "^6.0.3",
     "yaml": "^2.9.0"
   },
@@ -76,7 +75,6 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@vscode/ripgrep",
-      "better-sqlite3",
       "tree-sitter",
       "tree-sitter-javascript",
       "tree-sitter-typescript"
