@@ -22,7 +22,7 @@ import {
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { Worktree } from "../Worktree.ts"
-import { Flag, Command, Prompt } from "effect/unstable/cli"
+import { Flag, Command, Prompt } from "effect/cli"
 import { IssueSource, IssueSourceError } from "../IssueSource.ts"
 import { CurrentIssueSource, resetInProgress } from "../CurrentIssueSource.ts"
 import { GithubCli } from "../Github/Cli.ts"
@@ -32,7 +32,7 @@ import { RunnerStalled, TaskStateChanged } from "../domain/Errors.ts"
 import { agentReviewer } from "../Agents/reviewer.ts"
 import { agentTimeout } from "../Agents/timeout.ts"
 import { allProjects, CurrentProjectId, Settings } from "../Settings.ts"
-import { Atom, AtomRegistry, Reactivity } from "effect/unstable/reactivity"
+import { Atom, AtomRegistry, Reactivity } from "effect/reactivity"
 import {
   activeWorkerLoggingAtom,
   CurrentWorkerState,
@@ -51,8 +51,8 @@ import type { Project } from "../domain/Project.ts"
 import { cliAgentPresetById, getDefaultCliAgentPreset } from "../Presets.ts"
 import type { QuitError } from "effect/Terminal"
 import type { TimeoutError } from "effect/Cause"
-import type { ChildProcessSpawner } from "effect/unstable/process"
-import type { AiError } from "effect/unstable/ai/AiError"
+import type { ChildProcessSpawner } from "effect/process"
+import type { AiError } from "effect/ai/AiError"
 import type { PrdIssue } from "../domain/PrdIssue.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 import type { OutputFormatter } from "clanka"
@@ -716,7 +716,7 @@ const runProject = Effect.fnUntraced(
 
 // Command
 
-const iterations = Flag.integer("iterations").pipe(
+const iterations = Flag.Int("iterations").pipe(
   Flag.withDescription(
     "Limit how many task iterations run per enabled project (default: unlimited). Use -i 1 to run a single iteration and exit.",
   ),
@@ -724,40 +724,41 @@ const iterations = Flag.integer("iterations").pipe(
   Flag.withDefault(Number.POSITIVE_INFINITY),
 )
 
-const maxIterationMinutes = Flag.integer("max-minutes").pipe(
+const maxIterationMinutes = Flag.Int("max-minutes").pipe(
   Flag.withDescription(
     "Timeout an iteration if execution (and review, if enabled) exceeds this many minutes (default: LALPH_MAX_MINUTES or 90).",
   ),
-  Flag.withFallbackConfig(Config.int("LALPH_MAX_MINUTES")),
+  Flag.withFallbackConfig(Config.Int("LALPH_MAX_MINUTES")),
   Flag.withDefault(90),
 )
 
-const maxContext = Flag.integer("max-context").pipe(
+const maxContext = Flag.Int("max-context").pipe(
   Flag.withDescription(
     "If the context window reaches this number of tokens, try again (default: LALPH_MAX_CONTEXT or 250,000).",
   ),
-  Flag.withFallbackConfig(Config.int("LALPH_MAX_TOKENS")),
+  Flag.withFallbackConfig(Config.Int("LALPH_MAX_TOKENS")),
   Flag.withDefault(250000),
 )
 
-const stallMinutes = Flag.integer("stall-minutes").pipe(
+const stallMinutes = Flag.Int("stall-minutes").pipe(
   Flag.withDescription(
     "Fail an iteration if the agent stops responding for this many minutes (default: LALPH_STALL_MINUTES or 5).",
   ),
-  Flag.withFallbackConfig(Config.int("LALPH_STALL_MINUTES")),
+  Flag.withFallbackConfig(Config.Int("LALPH_STALL_MINUTES")),
   Flag.withDefault(5),
 )
 
-const specsDirectory = Flag.directory("specs").pipe(
+const specsDirectory = Flag.Directory("specs").pipe(
   Flag.withDescription(
     "Directory where plan specs are written and read (default: LALPH_SPECS or .specs).",
   ),
   Flag.withAlias("s"),
-  Flag.withFallbackConfig(Config.string("LALPH_SPECS")),
+  Flag.withFallbackConfig(Config.String("LALPH_SPECS")),
   Flag.withDefault(".specs"),
 )
 
-const verbose = Flag.boolean("verbose").pipe(
+const verbose = Flag.Boolean("verbose").pipe(
+  Flag.withDefault(false),
   Flag.withDescription(
     "Increase log output for debugging. Use -v when you need detailed logs.",
   ),

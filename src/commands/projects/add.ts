@@ -1,4 +1,4 @@
-import { Command } from "effect/unstable/cli"
+import { Command } from "effect/cli"
 import { addOrUpdateProject } from "../../Projects.ts"
 import { CurrentIssueSource } from "../../CurrentIssueSource.ts"
 import { Settings } from "../../Settings.ts"

@@ -1,6 +1,6 @@
-import { Command } from "effect/unstable/cli"
+import { Command } from "effect/cli"
 import { Effect, FileSystem, Layer, Path } from "effect"
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Prd } from "../Prd.ts"
 import { Worktree } from "../Worktree.ts"
 import { layerProjectIdPrompt } from "../Projects.ts"

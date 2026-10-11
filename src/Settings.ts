@@ -1,10 +1,10 @@
 // oxlint-disable typescript/no-explicit-any
 import { Cache, Effect, Layer, Option, Schema, Context } from "effect"
-import { KeyValueStore } from "effect/unstable/persistence"
+import { KeyValueStore } from "effect/persistence"
 import { layerKvs, ProjectsKvs } from "./Kvs.ts"
 import { allCliAgents } from "./domain/CliAgent.ts"
 import { Project, ProjectId } from "./domain/Project.ts"
-import { Reactivity } from "effect/unstable/reactivity"
+import { Reactivity } from "effect/reactivity"
 
 export class Settings extends Context.Service<Settings>()("lalph/Settings", {
   make: Effect.gen(function* () {

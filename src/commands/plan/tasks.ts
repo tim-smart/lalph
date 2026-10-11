@@ -1,5 +1,5 @@
 import { Effect, FileSystem, Layer, Path } from "effect"
-import { Argument, Command } from "effect/unstable/cli"
+import { Argument, Command } from "effect/cli"
 import { agentTasker } from "../../Agents/tasker.ts"
 import { Prd } from "../../Prd.ts"
 import { layerProjectIdPrompt } from "../../Projects.ts"
@@ -12,7 +12,7 @@ import { CurrentIssueSource } from "../../CurrentIssueSource.ts"
 import type { CliAgentPreset } from "../../domain/CliAgentPreset.ts"
 import { ClankaMuxerLayer } from "../../Clanka.ts"
 
-const specificationPath = Argument.path("spec", {
+const specificationPath = Argument.Path("spec", {
   pathType: "file",
   mustExist: true,
 }).pipe(

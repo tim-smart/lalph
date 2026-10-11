@@ -1,4 +1,4 @@
-import { Command } from "effect/unstable/cli"
+import { Command } from "effect/cli"
 import { Effect, Layer } from "effect"
 import { Prd } from "../Prd.ts"
 import { layerProjectIdPrompt } from "../Projects.ts"

@@ -11,7 +11,7 @@ import {
 import { PromptGen } from "../PromptGen.ts"
 import { Prd } from "../Prd.ts"
 import { Worktree } from "../Worktree.ts"
-import { Command, Flag } from "effect/unstable/cli"
+import { Command, Flag } from "effect/cli"
 import { CurrentIssueSource } from "../CurrentIssueSource.ts"
 import { commandRoot } from "./root.ts"
 import { allProjects, CurrentProjectId, Settings } from "../Settings.ts"
@@ -21,26 +21,28 @@ import { agentTasker } from "../Agents/tasker.ts"
 import { commandPlanTasks } from "./plan/tasks.ts"
 import { Editor } from "../Editor.ts"
 import { selectCliAgentPreset } from "../Presets.ts"
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { parseBranch } from "../shared/git.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 import { ClankaMuxerLayer } from "../Clanka.ts"
 
-const dangerous = Flag.boolean("dangerous").pipe(
+const dangerous = Flag.Boolean("dangerous").pipe(
+  Flag.withDefault(false),
   Flag.withAlias("d"),
   Flag.withDescription(
     "Skip permission prompts while generating the specification from your plan",
   ),
 )
 
-const withNewProject = Flag.boolean("new").pipe(
+const withNewProject = Flag.Boolean("new").pipe(
+  Flag.withDefault(false),
   Flag.withAlias("n"),
   Flag.withDescription(
     "Create a new project (via prompts) before starting plan mode",
   ),
 )
 
-const file = Flag.file("file", { mustExist: true }).pipe(
+const file = Flag.File("file", { mustExist: true }).pipe(
   Flag.withAlias("f"),
   Flag.withDescription(
     "Read the plan from a markdown file instead of opening an editor",

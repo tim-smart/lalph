@@ -14,7 +14,7 @@ import {
 } from "effect"
 import { Connection, IssueRelationType, LinearClient } from "@linear/sdk"
 import { TokenManager } from "./Linear/TokenManager.ts"
-import { Prompt } from "effect/unstable/cli"
+import { Prompt } from "effect/cli"
 import { CurrentProjectId, ProjectSetting, Settings } from "./Settings.ts"
 import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
@@ -23,11 +23,11 @@ import {
   LinearIssuesData,
   State,
 } from "./domain/LinearIssues.ts"
-import { Reactivity } from "effect/unstable/reactivity"
+import { Reactivity } from "effect/reactivity"
 import type { ProjectId } from "./domain/Project.ts"
 import { getPresetsWithMetadata } from "./Presets.ts"
 import type { CliAgentPreset } from "./domain/CliAgentPreset.ts"
-import { Persistable, PersistedCache } from "effect/unstable/persistence"
+import { Persistable, PersistedCache } from "effect/persistence"
 import { layerPersistence } from "./Persistence.ts"
 
 class Linear extends Context.Service<Linear>()("lalph/Linear", {
@@ -536,7 +536,7 @@ export const LinearIssueSource = Layer.effect(
           Effect.andThen(linear.getState),
           Effect.mapError((cause) => new IssueSourceError({ cause })),
         )
-        const labelId = yield* Prompt.autoComplete({
+        const labelId = yield* Prompt.AutoComplete({
           message: "Select a label for this preset",
           choices: state.labels.map((label) => ({
             title: label.name,
@@ -569,12 +569,12 @@ export const LinearIssueSource = Layer.effect(
   }),
 ).pipe(Layer.provide([Linear.layer, Reactivity.layer, Settings.layer]))
 
-export class LinearError extends Schema.ErrorClass<LinearError>(
-  "lalph/LinearError",
-)({
-  _tag: Schema.tag("LinearError"),
-  cause: Schema.Defect(),
-}) {}
+export class LinearError extends Schema.Error<LinearError>("lalph/LinearError")(
+  {
+    _tag: Schema.tag("LinearError"),
+    cause: Schema.Defect(),
+  },
+) {}
 
 // Project selection
 
@@ -605,7 +605,7 @@ const selectProject = Effect.gen(function* () {
     })),
   ]
 
-  const selected = yield* Prompt.autoComplete({
+  const selected = yield* Prompt.AutoComplete({
     message: "Select a Linear project",
     choices,
   })
@@ -639,7 +639,7 @@ type ProjectSelection =
 const createLinearProject = Effect.gen(function* () {
   const linear = yield* Linear
   const state = yield* linear.getState
-  const projectName = yield* Prompt.text({
+  const projectName = yield* Prompt.String({
     message: "Linear project name",
     validate(input) {
       const name = input.trim()
@@ -659,7 +659,7 @@ const createLinearProject = Effect.gen(function* () {
   const teams = yield* linear
     .use((client) => client.teams())
     .pipe(Effect.map((teamConnection) => teamConnection.nodes))
-  const teamId = yield* Prompt.autoComplete({
+  const teamId = yield* Prompt.AutoComplete({
     message: "Select a team for the new project",
     choices: teams.map((team) => ({
       title: team.name,
@@ -688,7 +688,7 @@ const selectedTeamId = new ProjectSetting(
 const teamSelect = Effect.fnUntraced(function* (
   project: typeof ProjectSchema.Type,
 ) {
-  const teamId = yield* Prompt.autoComplete({
+  const teamId = yield* Prompt.AutoComplete({
     message: "Select a team for new issues",
     choices: project.teams.map((team) => ({
       title: team.name,
@@ -718,7 +718,7 @@ const labelIdSelect = Effect.gen(function* () {
   const linear = yield* Linear
   yield* linear.invalidate
   const state = yield* linear.getState
-  const labelId = yield* Prompt.autoComplete({
+  const labelId = yield* Prompt.AutoComplete({
     message: "Select a label to filter issues by",
     choices: [
       {
@@ -752,7 +752,7 @@ const selectedAutoMergeLabelId = new ProjectSetting(
 const autoMergeLabelIdSelect = Effect.gen(function* () {
   const linear = yield* Linear
   const state = yield* linear.getState
-  const labelId = yield* Prompt.autoComplete({
+  const labelId = yield* Prompt.AutoComplete({
     message: "Select a label to mark issues for auto merge",
     choices: [
       {

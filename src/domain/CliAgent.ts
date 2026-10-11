@@ -6,7 +6,7 @@ import {
   SchemaTransformation,
   Stream,
 } from "effect"
-import { ChildProcess } from "effect/unstable/process"
+import { ChildProcess } from "effect/process"
 import { claudeOutputTransformer } from "../CliAgent/claude.ts"
 
 export class CliAgent<const Id extends string> extends Data.Class<{

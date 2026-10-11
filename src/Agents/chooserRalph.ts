@@ -1,6 +1,6 @@
 import { Data, Duration, Effect, FileSystem, Path, pipe } from "effect"
 import { PromptGen } from "../PromptGen.ts"
-import { ChildProcess } from "effect/unstable/process"
+import { ChildProcess } from "effect/process"
 import { Worktree } from "../Worktree.ts"
 import { RunnerStalled } from "../domain/Errors.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"

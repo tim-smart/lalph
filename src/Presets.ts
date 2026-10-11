@@ -1,12 +1,12 @@
 import { Array, Effect, Option, Schema } from "effect"
 import { Setting, Settings } from "./Settings.ts"
 import { CliAgentPreset, CliAgentPresetId } from "./domain/CliAgentPreset.ts"
-import { Prompt } from "effect/unstable/cli"
+import { Prompt } from "effect/cli"
 import { allCliAgents, type AnyCliAgent } from "./domain/CliAgent.ts"
 import { parseCommand } from "./shared/child-process.ts"
 import { IssueSource } from "./IssueSource.ts"
 import { layerClankaModel, ModelServices } from "./ClankaModels.ts"
-import { LanguageModel } from "effect/unstable/ai"
+import { LanguageModel } from "effect/ai"
 
 export const allCliAgentPresets = new Setting(
   "cliAgentPresets",
@@ -78,7 +78,7 @@ export const selectCliAgentPreset = Effect.fnUntraced(function* (
     yield* Effect.log(`Using agent preset: ${preset.id}`)
     return preset
   }
-  const selection = yield* Prompt.autoComplete({
+  const selection = yield* Prompt.AutoComplete({
     message: "Select a preset:",
     choices: presets.map((p) => ({
       title: p.id,
@@ -99,7 +99,7 @@ export const addOrUpdatePreset = Effect.fnUntraced(function* (options?: {
     ? options.existing.id
     : (options?.idOverride ??
       CliAgentPresetId.make(
-        yield* Prompt.text({
+        yield* Prompt.String({
           message: "Preset name",
           validate(input) {
             input = input.trim()
@@ -114,7 +114,7 @@ export const addOrUpdatePreset = Effect.fnUntraced(function* (options?: {
       ))
 
   const cliAgent = yield* selectCliAgent(options?.existing?.cliAgent.id)
-  const extraArgs = yield* Prompt.text({
+  const extraArgs = yield* Prompt.String({
     message: "Extra arguments? (leave empty for none)",
     default: options?.existing?.extraArgs.join(" ") ?? "",
   }).pipe(Effect.map(parseCommand))
@@ -160,7 +160,7 @@ export const addOrUpdatePreset = Effect.fnUntraced(function* (options?: {
 })
 
 const selectCliAgent = (initial?: AnyCliAgent["id"]) =>
-  Prompt.select({
+  Prompt.Select({
     message: "Select the CLI agent to use",
     choices: allCliAgents.map((agent) => ({
       title: agent.name,
@@ -172,7 +172,7 @@ const selectCliAgent = (initial?: AnyCliAgent["id"]) =>
 const promptForCommandPrefix = Effect.fnUntraced(function* (
   initial?: ReadonlyArray<string>,
 ) {
-  const prefix = yield* Prompt.text({
+  const prefix = yield* Prompt.String({
     message: "Command prefix? (leave empty for none)",
     default: initial ? initial.join(" ") : "",
   })

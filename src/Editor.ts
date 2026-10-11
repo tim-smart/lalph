@@ -1,6 +1,6 @@
 import { Cause, Effect, FileSystem, Layer, Context } from "effect"
 import { configEditor } from "./shared/config.ts"
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { PlatformServices } from "./shared/platform.ts"
 
 export class Editor extends Context.Service<Editor>()("lalph/Editor", {

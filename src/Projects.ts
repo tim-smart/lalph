@@ -1,7 +1,7 @@
 import { Array, Data, Effect, Layer, Option, Path, pipe, String } from "effect"
 import { Project, ProjectId } from "./domain/Project.ts"
 import { allProjects, CurrentProjectId, Settings } from "./Settings.ts"
-import { Prompt } from "effect/unstable/cli"
+import { Prompt } from "effect/cli"
 import { IssueSource } from "./IssueSource.ts"
 import { CurrentIssueSource } from "./CurrentIssueSource.ts"
 import { findProjectRoot } from "./shared/lalphDirectory.ts"
@@ -41,7 +41,7 @@ export const selectProject = Effect.gen(function* () {
     yield* Effect.log(`Using project: ${project.id}`)
     return project
   }
-  const selection = yield* Prompt.autoComplete({
+  const selection = yield* Prompt.AutoComplete({
     message: "Select a project:",
     choices: projects.map((p) => ({
       title: p.id,
@@ -73,7 +73,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
   const projects = yield* getAllProjects
   const id = existing
     ? existing.id
-    : yield* Prompt.text({
+    : yield* Prompt.String({
         message: "Project name",
         validate(input) {
           input = input.trim()
@@ -85,13 +85,13 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
           return Effect.succeed(input)
         },
       })
-  const concurrency = yield* Prompt.integer({
+  const concurrency = yield* Prompt.Int({
     message: "Concurrency (number of tasks to run in parallel)",
     min: 1,
     default: existing ? existing.concurrency : 1,
   })
   const targetBranch = pipe(
-    yield* Prompt.text({
+    yield* Prompt.String({
       message: "Target branch (leave empty to use HEAD)",
       default: existing
         ? Option.getOrElse(existing.targetBranch, () => id)
@@ -100,7 +100,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
     String.trim,
     Option.liftPredicate(String.isNonEmpty),
   )
-  const gitFlow = yield* Prompt.select({
+  const gitFlow = yield* Prompt.Select({
     message: "Git flow",
     choices: [
       {
@@ -132,7 +132,7 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
       yield* findProjectRoot(cwd),
       Option.getOrElse(() => cwd),
     )
-    ralphSpec = yield* Prompt.file({
+    ralphSpec = yield* Prompt.File({
       message: "Path to Ralph spec file",
       default: existing?.ralphSpec as string,
     }).pipe(
@@ -147,11 +147,11 @@ export const addOrUpdateProject = Effect.fnUntraced(function* (
     ralphPreset = Option.some(preset.id)
   }
 
-  const researchAgent = yield* Prompt.toggle({
+  const researchAgent = yield* Prompt.Toggle({
     message: "Enable research agent?",
     initial: existing ? existing.researchAgent : false,
   })
-  const reviewAgent = yield* Prompt.toggle({
+  const reviewAgent = yield* Prompt.Toggle({
     message: "Enable review agent?",
     initial: existing ? existing.reviewAgent : false,
   })
