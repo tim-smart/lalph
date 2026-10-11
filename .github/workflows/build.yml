@@ -29,7 +29,8 @@ jobs:
       - run: pnpm check
       - run: pnpm build
       - name: Upgrade npm for OIDC support
-        run: npm install -g npm@latest
+        # npm 11.6.2 supports trusted publishing and the pinned Node 24.12.0.
+        run: npm install -g npm@11.6.2
       - name: Create Release Pull Request or Publish
         if: github.event_name == 'push' && github.ref == 'refs/heads/master'
         id: changesets
