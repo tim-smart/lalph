@@ -1,5 +1,11 @@
 # lalph
 
+## 0.3.140
+
+### Patch Changes
+
+- [#470](https://github.com/tim-smart/lalph/pull/470) [`52fe89f`](https://github.com/tim-smart/lalph/commit/52fe89fe75681e7ff8dfbd1991522067d6748022) Thanks [@tim-smart](https://github.com/tim-smart)! - upgrade to effect 4.0.3 and clanka 0.8.5
+
 ## 0.3.139
 
 ### Patch Changes
