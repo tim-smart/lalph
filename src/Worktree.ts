@@ -13,10 +13,10 @@ import {
   Context,
   Stream,
 } from "effect"
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import type { AnyCliAgent } from "./domain/CliAgent.ts"
 import { constWorkerMaxOutputChunks, CurrentWorkerState } from "./Workers.ts"
-import { AtomRegistry } from "effect/unstable/reactivity"
+import { AtomRegistry } from "effect/reactivity"
 import { CurrentProjectId } from "./Settings.ts"
 import { projectById } from "./Projects.ts"
 import { parseBranch } from "./shared/git.ts"

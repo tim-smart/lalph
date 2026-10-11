@@ -1,4 +1,4 @@
-import { Command } from "effect/unstable/cli"
+import { Command } from "effect/cli"
 import { CurrentIssueSource } from "../CurrentIssueSource.ts"
 import { Effect, Exit, flow, Option, pipe, Schema } from "effect"
 import { IssueSource } from "../IssueSource.ts"

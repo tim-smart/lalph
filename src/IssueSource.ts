@@ -17,7 +17,7 @@ import { PrdIssue } from "./domain/PrdIssue.ts"
 import type { ProjectId } from "./domain/Project.ts"
 import type { CurrentProjectId, Settings } from "./Settings.ts"
 import type { CliAgentPreset } from "./domain/CliAgentPreset.ts"
-import type { Environment } from "effect/unstable/cli/Prompt"
+import type { Environment } from "effect/cli/Prompt"
 import type { QuitError } from "effect/Terminal"
 
 export type IssuesChange = Data.TaggedEnum<{
@@ -214,7 +214,7 @@ export class IssueSource extends Context.Service<
   }
 }
 
-export class IssueSourceError extends Schema.TaggedErrorClass<IssueSourceError>()(
+export class IssueSourceError extends Schema.TaggedError<IssueSourceError>()(
   "IssueSourceError",
   {
     cause: Schema.Defect(),

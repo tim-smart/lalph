@@ -1,5 +1,5 @@
 import { Deferred, Effect, Random, Schema, Context, Struct } from "effect"
-import { Tool, Toolkit } from "effect/unstable/ai"
+import { Tool, Toolkit } from "effect/ai"
 import { PrdIssue } from "./domain/PrdIssue.ts"
 import { IssueSource } from "./IssueSource.ts"
 import { CurrentProjectId } from "./Settings.ts"

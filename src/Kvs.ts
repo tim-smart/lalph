@@ -1,5 +1,5 @@
 import { Effect, Layer, LayerMap, Path } from "effect"
-import { KeyValueStore } from "effect/unstable/persistence"
+import { KeyValueStore } from "effect/persistence"
 import { PlatformServices } from "./shared/platform.ts"
 import { ProjectId } from "./domain/Project.ts"
 import { resolveLalphDirectory } from "./shared/lalphDirectory.ts"

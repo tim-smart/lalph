@@ -15,9 +15,9 @@ import {
   HttpClientError,
   HttpClientRequest,
   HttpClientResponse,
-} from "effect/unstable/http"
-import { KeyValueStore } from "effect/unstable/persistence"
-import { Prompt } from "effect/unstable/cli"
+} from "effect/http"
+import { KeyValueStore } from "effect/persistence"
+import { Prompt } from "effect/cli"
 import { layerKvs } from "../Kvs.ts"
 import type { QuitError } from "effect/Terminal"
 
@@ -59,7 +59,7 @@ export class TokenManager extends Context.Service<TokenManager>()(
         })
 
       const promptPat = Effect.gen(function* () {
-        return yield* Prompt.password({
+        return yield* Prompt.Password({
           message:
             "GitHub PAT with repo, read:user, read:project scopes (leave empty for OAuth)",
           validate: (value) => Effect.succeed(value.trim()),

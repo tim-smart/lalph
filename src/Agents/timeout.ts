@@ -1,9 +1,9 @@
 import { Duration, Effect, Path, pipe } from "effect"
 import { PromptGen } from "../PromptGen.ts"
-import { ChildProcess } from "effect/unstable/process"
+import { ChildProcess } from "effect/process"
 import { Worktree } from "../Worktree.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
-import { ExitCode } from "effect/unstable/process/ChildProcessSpawner"
+import { ExitCode } from "effect/process/ChildProcessSpawner"
 import { runClanka } from "../Clanka.ts"
 import { CurrentTask } from "../domain/CurrentTask.ts"
 

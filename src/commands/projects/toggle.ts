@@ -1,5 +1,5 @@
 import { Array, Effect, Option } from "effect"
-import { Command, Prompt } from "effect/unstable/cli"
+import { Command, Prompt } from "effect/cli"
 import { getAllProjects } from "../../Projects.ts"
 import { allProjects, Settings } from "../../Settings.ts"
 import { Project } from "../../domain/Project.ts"
@@ -14,7 +14,7 @@ export const commandProjectsToggle = Command.make("toggle").pipe(
       if (projects.length === 0) {
         return yield* Effect.log("No projects available to toggle.")
       }
-      const enabled = yield* Prompt.multiSelect({
+      const enabled = yield* Prompt.MultiSelect({
         message: "Select projects to enable",
         choices: projects.map((project) => ({
           title: project.id,

@@ -11,11 +11,11 @@ import {
   Stdio,
   Stream,
 } from "effect"
-import { Prompt as CliPrompt } from "effect/unstable/cli"
+import { Prompt as CliPrompt } from "effect/cli"
 import { TaskChooseTools, TaskTools, TaskToolsHandlers } from "./TaskTools.ts"
 import { layerClankaModel, ModelServices } from "./ClankaModels.ts"
 import { NodeHttpClient } from "@effect/platform-node"
-import type { Prompt } from "effect/unstable/ai"
+import type { Prompt } from "effect/ai"
 import { OpenAiClient, OpenAiEmbeddingModel } from "@effect/ai-openai"
 import { Worktree } from "./Worktree.ts"
 import { SemanticSearch } from "clanka"
@@ -32,7 +32,7 @@ export const SemanticSearchLayer = Layer.unwrap(
   Effect.gen(function* () {
     const worktree = yield* Worktree
     const pathService = yield* Path.Path
-    const apiKey = yield* Config.redacted("LALPH_OPENAI_API_KEY").pipe(
+    const apiKey = yield* Config.Redacted("LALPH_OPENAI_API_KEY").pipe(
       Config.option,
     )
     if (Option.isNone(apiKey)) {
@@ -155,7 +155,7 @@ export const runClankaPlan = Effect.fnUntraced(
       )
 
       console.log("")
-      nextPrompt = yield* CliPrompt.text({
+      nextPrompt = yield* CliPrompt.String({
         message: ">",
       })
     }

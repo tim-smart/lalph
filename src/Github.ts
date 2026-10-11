@@ -21,10 +21,10 @@ import { Octokit } from "octokit"
 import { IssueSource, IssueSourceError } from "./IssueSource.ts"
 import { PrdIssue } from "./domain/PrdIssue.ts"
 import { CurrentProjectId, ProjectSetting, Settings } from "./Settings.ts"
-import { Prompt } from "effect/unstable/cli"
+import { Prompt } from "effect/cli"
 import { TokenManager } from "./Github/TokenManager.ts"
 import { GithubCli } from "./Github/Cli.ts"
-import { Reactivity } from "effect/unstable/reactivity"
+import { Reactivity } from "effect/reactivity"
 import type { ProjectId } from "./domain/Project.ts"
 import type { CliAgentPreset } from "./domain/CliAgentPreset.ts"
 import { getPresetsWithMetadata } from "./Presets.ts"
@@ -292,7 +292,7 @@ export const GithubIssueSource = Layer.effect(
 
     const projectFilterSelect = Effect.gen(function* () {
       const projects = yield* listProjects
-      const selectedProject = yield* Prompt.autoComplete({
+      const selectedProject = yield* Prompt.AutoComplete({
         message: "Select a GitHub project to filter issues by",
         choices: [
           {
@@ -712,7 +712,7 @@ export const GithubIssueSource = Layer.effect(
           Option.fromUndefinedOr(issuePresetMap.get(issue.id!)),
         ),
       updateCliAgentPreset: Effect.fnUntraced(function* (preset) {
-        const label = yield* Prompt.text({
+        const label = yield* Prompt.String({
           message: "Enter a label for this preset",
           validate(value) {
             value = value.trim()
@@ -785,7 +785,7 @@ const labelFilter = new ProjectSetting(
   Schema.Option(Schema.String),
 )
 const labelSelect = Effect.gen(function* () {
-  const label = yield* Prompt.text({
+  const label = yield* Prompt.String({
     message:
       "What label do you want to filter issues by? (leave empty for none)",
   })
@@ -810,7 +810,7 @@ const autoMergeLabel = new ProjectSetting(
   Schema.Option(Schema.String),
 )
 const autoMergeLabelSelect = Effect.gen(function* () {
-  const label = yield* Prompt.text({
+  const label = yield* Prompt.String({
     message:
       "What label do you want to use for auto-mergable issues? (leave empty for none)",
   })

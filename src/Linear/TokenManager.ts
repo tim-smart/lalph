@@ -2,7 +2,6 @@ import {
   DateTime,
   Deferred,
   Effect,
-  Encoding,
   Layer,
   Option,
   Schedule,
@@ -10,6 +9,7 @@ import {
   Semaphore,
   Context,
 } from "effect"
+import { Base64Url } from "effect/encoding"
 import {
   FetchHttpClient,
   HttpClient,
@@ -19,10 +19,10 @@ import {
   HttpRouter,
   HttpServerRequest,
   HttpServerResponse,
-} from "effect/unstable/http"
+} from "effect/http"
 import { NodeHttpServer } from "@effect/platform-node"
 import { createServer } from "node:http"
-import { KeyValueStore } from "effect/unstable/persistence"
+import { KeyValueStore } from "effect/persistence"
 import { layerKvs } from "../Kvs.ts"
 
 const clientId = "852ed0906088135c1f591d234a4eaa4b"
@@ -123,9 +123,7 @@ export class TokenManager extends Context.Service<TokenManager>()(
         const verifierSha256 = yield* Effect.promise(() =>
           crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier)),
         )
-        const challenge = Encoding.encodeBase64Url(
-          new Uint8Array(verifierSha256),
-        )
+        const challenge = Base64Url.encode(new Uint8Array(verifierSha256))
 
         const url = `https://linear.app/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=read,write&code_challenge=${challenge}&code_challenge_method=S256`
 

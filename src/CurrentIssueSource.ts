@@ -12,13 +12,13 @@ import {
 } from "effect"
 import { allProjects, CurrentProjectId, Setting, Settings } from "./Settings.ts"
 import { LinearIssueSource } from "./Linear.ts"
-import { Prompt } from "effect/unstable/cli"
+import { Prompt } from "effect/cli"
 import { GithubIssueSource } from "./Github.ts"
 import { IssuesChange, IssueSource } from "./IssueSource.ts"
 import { PlatformServices } from "./shared/platform.ts"
 import type { PrdIssue } from "./domain/PrdIssue.ts"
 import type { ProjectId } from "./domain/Project.ts"
-import type { ChildProcessSpawner } from "effect/unstable/process/ChildProcessSpawner"
+import type { ChildProcessSpawner } from "effect/process/ChildProcessSpawner"
 
 const issueSources: ReadonlyArray<typeof CurrentIssueSource.Service> = [
   {
@@ -41,7 +41,7 @@ const selectedIssueSource = new Setting(
 )
 
 export const selectIssueSource = Effect.gen(function* () {
-  const source = yield* Prompt.select({
+  const source = yield* Prompt.Select({
     message: "Select issue source:",
     choices: issueSources.map((s) => ({
       title: s.name,
@@ -191,9 +191,10 @@ export class CurrentIssueSource extends Context.Service<
   ).pipe(Layer.provide([Settings.layer, PlatformServices]))
 }
 
-const refreshSchedule = Schedule.exponential(100, 1.5).pipe(
-  Schedule.either(Schedule.spaced("30 seconds")),
-)
+const refreshSchedule = Schedule.min([
+  Schedule.exponential(100, 1.5),
+  Schedule.spaced("30 seconds"),
+])
 
 // Helpers
 

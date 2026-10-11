@@ -1,6 +1,6 @@
 import { Array, Effect, identity, Option, Schema } from "effect"
 import { CliAgentFromId } from "./CliAgent.ts"
-import { ChildProcess } from "effect/unstable/process"
+import { ChildProcess } from "effect/process"
 
 export const CliAgentPresetId = Schema.NonEmptyString.pipe(
   Schema.brand("lalph/CliAgentPresetId"),

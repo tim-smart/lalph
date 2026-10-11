@@ -8,7 +8,7 @@ import {
   Context,
   Stream,
 } from "effect"
-import { Atom, AtomRegistry } from "effect/unstable/reactivity"
+import { Atom, AtomRegistry } from "effect/reactivity"
 import { WorkerState, WorkerStatus } from "./domain/WorkerState.ts"
 import type { ProjectId } from "./domain/Project.ts"
 

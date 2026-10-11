@@ -1,6 +1,6 @@
 import { Effect, Path, pipe } from "effect"
 import { PromptGen } from "../PromptGen.ts"
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import { Worktree } from "../Worktree.ts"
 import type { CliAgentPreset } from "../domain/CliAgentPreset.ts"
 import { runClankaPlan } from "../Clanka.ts"

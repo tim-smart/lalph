@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import { Command } from "effect/unstable/cli"
+import { Command } from "effect/cli"
 import { Effect, Layer } from "effect"
 import { NodeRuntime } from "@effect/platform-node"
 import { Settings } from "./Settings.ts"

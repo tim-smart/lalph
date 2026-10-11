@@ -8,7 +8,7 @@ import {
   Context,
   String,
 } from "effect"
-import { ChildProcess, ChildProcessSpawner } from "effect/unstable/process"
+import { ChildProcess, ChildProcessSpawner } from "effect/process"
 import {
   Comment,
   GithubPullRequestData,

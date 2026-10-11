@@ -1,4 +1,4 @@
-import { Command } from "effect/unstable/cli"
+import { Command } from "effect/cli"
 import { commandProjectsLs } from "./projects/ls.ts"
 import { commandProjectsAdd } from "./projects/add.ts"
 import { commandProjectsRm } from "./projects/rm.ts"
